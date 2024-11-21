@@ -85,7 +85,7 @@ public class UIManager : BaseManager<UIManager>
                     father = top;
                     break;
                 case E_UI_Layer.Syestem:
-                    father = top;
+                    father = system;
                     break;
             }
             go.transform.SetParent(father);
@@ -106,7 +106,7 @@ public class UIManager : BaseManager<UIManager>
         if (panelDictionary.ContainsKey(panelName))
         {
             panelDictionary[panelName].HideMe();
-            ResourcesManager.GetInstance().Recycle(panelName, panelDictionary[panelName].gameObject);
+            ResourcesManager.GetInstance().Recycle("UI/" + panelName, panelDictionary[panelName].gameObject);
             panelDictionary.Remove(panelName);
         }
     }

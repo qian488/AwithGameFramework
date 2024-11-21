@@ -38,6 +38,7 @@ public class InputTest : MonoBehaviour
                 break;
             case KeyCode.R:
                 Debug.Log("R Down");
+                PoolManager.GetInstance().Clear();
                 break;
             case KeyCode.T:
                 Debug.Log("T Down");

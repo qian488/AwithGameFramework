@@ -24,18 +24,13 @@ public class PoolManager : BaseManager<PoolManager>
         }
         else
         {
-            MonoManager.GetInstance().StartCoroutine(LoadGameObjectAsync(name, callback));
+            // 如果池中没有，让ResourcesManager去加载
+            ResourcesManager.GetInstance().LoadAsync<GameObject>(name, (go) =>
+            {
+                go.name = name;
+                callback(go);
+            }, false);  // usePool设为false 池中没有，故等价于不使用对象池
         }
-    }
-
-    private IEnumerator LoadGameObjectAsync(string name, UnityAction<GameObject> callback)
-    {
-        ResourceRequest request = Resources.LoadAsync<GameObject>(name);
-        yield return request;
-        
-        GameObject go = GameObject.Instantiate(request.asset as GameObject);
-        go.name = name;
-        callback(go);
     }
 
     /// <summary>
@@ -57,10 +52,58 @@ public class PoolManager : BaseManager<PoolManager>
         }
     }
 
-    public void Clear()
+    /// <summary>
+    /// 清空对象池
+    /// </summary>
+    /// <param name="destroyPoolGO">是否同时销毁对象池根节点</param>
+    public void Clear(bool destroyPoolGO = true)
     {
+        // 遍历字典中的所有PoolData
+        foreach (var poolData in poolDictionary.Values)
+        {
+            // 销毁池中的所有游戏对象
+            foreach (var go in poolData.poolList)
+            {
+                if(go != null)
+                    GameObject.Destroy(go);
+            }
+            // 销毁父节点游戏对象
+            if(poolData.fatherGameObject != null)
+                GameObject.Destroy(poolData.fatherGameObject);
+        }
+
+        // 清空字典
         poolDictionary.Clear();
-        poolGO = null;
+
+        // 根据参数决定是否销毁对象池的根节点
+        if (destroyPoolGO && poolGO != null)
+        {
+            GameObject.Destroy(poolGO);
+            poolGO = null;
+        }
+    }
+
+    /// <summary>
+    /// 清除指定名称的对象池
+    /// </summary>
+    /// <param name="name">对象池名称</param>
+    public void ClearPool(string name)
+    {
+        if (poolDictionary.ContainsKey(name))
+        {
+            // 销毁池中的所有游戏对象
+            foreach (var go in poolDictionary[name].poolList)
+            {
+                if(go != null)
+                    GameObject.Destroy(go);
+            }
+            // 销毁父节点游戏对象
+            if(poolDictionary[name].fatherGameObject != null)
+                GameObject.Destroy(poolDictionary[name].fatherGameObject);
+            
+            // 从字典中移除
+            poolDictionary.Remove(name);
+        }
     }
 
     public bool CheckGameObjectInPool(string name)
