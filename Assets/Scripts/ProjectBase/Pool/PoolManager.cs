@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// »º´æ³ØÄ£¿é
+/// ç¼“å­˜æ± æ¨¡å—
 /// </summary>
 public class PoolManager : BaseManager<PoolManager>
 {
@@ -12,27 +12,34 @@ public class PoolManager : BaseManager<PoolManager>
 
     private GameObject poolGO;
     /// <summary>
-    /// »ñÈ¡³ØÖĞ¶ÔÏó
+    /// è·å–æ± ä¸­å¯¹è±¡
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
     public void GetGameObject(string name,UnityAction<GameObject> callback)
     {
-        if (poolDictionary.ContainsKey(name) && poolDictionary[name].poolList.Count > 0)
+        if (CheckGameObjectInPool(name))
         {
             callback(poolDictionary[name].GetGameObject());
         }
         else
         {
-            ResourcesManager.GetInstance().LoadAsync<GameObject>(name, (go) =>
-            {
-                go.name = name;
-                callback(go);
-            });
+            MonoManager.GetInstance().StartCoroutine(LoadGameObjectAsync(name, callback));
         }
     }
+
+    private IEnumerator LoadGameObjectAsync(string name, UnityAction<GameObject> callback)
+    {
+        ResourceRequest request = Resources.LoadAsync<GameObject>(name);
+        yield return request;
+        
+        GameObject go = GameObject.Instantiate(request.asset as GameObject);
+        go.name = name;
+        callback(go);
+    }
+
     /// <summary>
-    /// ½«¶ÔÏóÑ¹Èë³ØÖĞ
+    /// å°†å¯¹è±¡å‹å…¥æ± ä¸­
     /// </summary>
     /// <param name="name"></param>
     /// <param name="go"></param>
@@ -54,5 +61,10 @@ public class PoolManager : BaseManager<PoolManager>
     {
         poolDictionary.Clear();
         poolGO = null;
+    }
+
+    public bool CheckGameObjectInPool(string name)
+    {
+        return poolDictionary.ContainsKey(name) && poolDictionary[name].poolList.Count > 0;
     }
 }

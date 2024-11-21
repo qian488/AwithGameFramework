@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// fatherGameObject ÊÇÕâÒ»Àà¶ÔÏóµÄÈÝÆ÷ ¸¸½Úµã
-/// poolList ÊÇ³ØÖÐµÄ¶ÔÏóÈÝÆ÷
+/// fatherGameObject æ˜¯è¿™ä¸€ç±»å¯¹è±¡çš„å®¹å™¨ çˆ¶èŠ‚ç‚¹
+/// poolList æ˜¯æ± ä¸­çš„å¯¹è±¡å®¹å™¨
 /// </summary>
 public class PoolData
 { 
@@ -14,7 +14,7 @@ public class PoolData
     public PoolData(GameObject go, GameObject poolGO)
     {
         fatherGameObject = new GameObject(go.name);
-        fatherGameObject.transform.parent = poolGO.transform;
+        fatherGameObject.transform.SetParent(poolGO.transform, false);
         poolList = new List<GameObject>() { };
         PushGameObject(go);
     }
@@ -23,16 +23,27 @@ public class PoolData
     {
         go.SetActive(false);
         poolList.Add(go);
-        go.transform.parent = fatherGameObject.transform;
+        if (go.transform is RectTransform)
+        {
+            go.transform.SetParent(fatherGameObject.transform, false);
+            RectTransform rectTrans = go.transform as RectTransform;
+            rectTrans.localPosition = Vector3.zero;
+            rectTrans.localScale = Vector3.one;
+            rectTrans.offsetMax = Vector2.zero;
+            rectTrans.offsetMin = Vector2.zero;
+        }
+        else
+        {
+            go.transform.SetParent(fatherGameObject.transform, false);
+        }
     }
 
-    // Ä¬ÈÏÄÃÈ¡µÚÒ»¸ö
     public GameObject GetGameObject()
     {
         GameObject go = poolList[0];
         poolList.RemoveAt(0);
         go.SetActive(true);
-        go.transform.parent = null;
+        go.transform.SetParent(null, false);
         return go;
     }
 }

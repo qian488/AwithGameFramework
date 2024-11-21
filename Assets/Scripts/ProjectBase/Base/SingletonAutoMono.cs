@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// ¼Ì³ĞÁËmonoµÄµ¥ÀıÄ£Ê½¶ÔÏó µ«×Ô¶¯Ìí¼Ó½Å±¾
+// ç»§æ‰¿äº†monoçš„å•ä¾‹æ¨¡å¼å¯¹è±¡ ä½†è‡ªåŠ¨æ·»åŠ è„šæœ¬
 public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T instance;

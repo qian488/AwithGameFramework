@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-#region ÊÂ¼şĞÅÏ¢·â×° »ùÀà×°×ÓÀà
+#region äº‹ä»¶ä¿¡æ¯å°è£… åŸºç±»è£…å­ç±»
 public interface IEventInfo { }
-// ´«µİ·ºĞÍ²ÎÊı
+// ä¼ é€’ä¸€ä¸ªæ³›å‹å‚æ•°
 public class EventInfo<T> : IEventInfo
 {
     public UnityAction<T> actions;
@@ -16,7 +16,17 @@ public class EventInfo<T> : IEventInfo
     }
 
 }
-// ²»´«µİ²ÎÊı
+public class EventInfo<T0,T1> : IEventInfo
+{
+    public UnityAction<T0,T1> actions;
+
+    public EventInfo(UnityAction<T0,T1> action)
+    {
+        actions += action;
+    }
+
+}
+// ä¸ä¼ é€’å‚æ•°
 public class EventInfo : IEventInfo
 {
     public UnityAction actions;
@@ -30,21 +40,21 @@ public class EventInfo : IEventInfo
 #endregion
 
 /// <summary>
-/// ÊÂ¼şÖĞĞÄ µ¥ÀıÄ£Ê½¶ÔÏó
-/// ¹Û²ìÕßÉè¼ÆÄ£Ê½
+/// äº‹ä»¶ä¸­å¿ƒ å•ä¾‹æ¨¡å¼å¯¹è±¡
+/// è§‚å¯Ÿè€…è®¾è®¡æ¨¡å¼
 /// </summary>
 public class EventCenter : BaseManager<EventCenter>
 {
-    // key ÊÂ¼şÃû×Ö
-    // value ¼àÌıÊÂ¼şµÄÎ¯ÍĞº¯Êı
-    // ÓÃ»ùÀà×°×ÓÀà ÏëÒªÊ¹ÓÃ·ºĞÍ ¿ªÒ»¸ö¿Õ½Ó¿Ú ·â×°Ò»¸ö·ºĞÍ Ô­Òò£º±ÜÃâÔ­À´µÄobjectÀàĞÍ²ğ×°Ïä
+   // key äº‹ä»¶åå­—
+    // value ç›‘å¬äº‹ä»¶çš„å§”æ‰˜å‡½æ•°
+    // ç”¨åŸºç±»è£…å­ç±» æƒ³è¦ä½¿ç”¨æ³›å‹ å¼€ä¸€ä¸ªç©ºæ¥å£ å°è£…ä¸€ä¸ªæ³›å‹ åŸå› ï¼šé¿å…åŸæ¥çš„objectç±»å‹æ‹†è£…ç®±
     private Dictionary<string, IEventInfo> evenDictionary = new Dictionary<string, IEventInfo>();
-    #region ÊÂ¼ş¼àÌı
+    #region äº‹ä»¶ç›‘å¬
     /// <summary>
-    /// Ìí¼ÓÊÂ¼ş¼àÌı
+    /// æ·»åŠ äº‹ä»¶ç›‘å¬
     /// </summary>
-    /// <param name="eventName">ÊÂ¼şÃû×Ö</param>
-    /// <param name="action">´¦ÀíÊÂ¼şµÄÎ¯ÍĞº¯Êı</param>
+    /// <param name="eventName">äº‹ä»¶åå­—</param>
+    /// <param name="action">å¤„ç†äº‹ä»¶çš„å§”æ‰˜å‡½æ•°</param>
     public void AddEventListener<T>(string eventName, UnityAction<T> action)
     {
         if (evenDictionary.ContainsKey(eventName))
@@ -54,6 +64,17 @@ public class EventCenter : BaseManager<EventCenter>
         else
         {
             evenDictionary.Add(eventName, new EventInfo<T>(action));
+        }
+    }
+
+    public void AddEventListener<T0,T1>(string eventName, UnityAction<T0,T1> action){
+        if (evenDictionary.ContainsKey(eventName))
+        {
+            (evenDictionary[eventName] as EventInfo<T0,T1>).actions += action;
+        }
+        else
+        {
+            evenDictionary.Add(eventName, new EventInfo<T0,T1>(action));
         }
     }
 
@@ -70,17 +91,24 @@ public class EventCenter : BaseManager<EventCenter>
     }
     #endregion
 
-    #region ÒÆ³ıÊÂ¼ş¼àÌı
+    #region ç§»é™¤äº‹ä»¶ç›‘å¬
     /// <summary>
-    /// ÒÆ³ıÊÂ¼ş¼àÌı
+    /// ç§»é™¤äº‹ä»¶ç›‘å¬
     /// </summary>
-    /// <param name="eventName">ÊÂ¼şÃû×Ö</param>
-    /// <param name="action">¶ÔÓ¦Ö®Ç°Ìí¼ÓµÄÎ¯ÍĞº¯Êı</param>
+    /// <param name="eventName">äº‹ä»¶åå­—</param>
+    /// <param name="action">å¯¹åº”ä¹‹å‰æ·»åŠ çš„å§”æ‰˜å‡½æ•°</param>
     public void RemoveEventListener<T>(string eventName, UnityAction<T> action)
     {
         if (evenDictionary.ContainsKey(eventName))
         {
             (evenDictionary[eventName] as EventInfo<T>).actions -= action;
+        }
+    }
+    public void RemoveEventListener<T0,T1>(string eventName, UnityAction<T0,T1> action)
+    {
+        if (evenDictionary.ContainsKey(eventName))
+        {
+            (evenDictionary[eventName] as EventInfo<T0,T1>).actions -= action;
         }
     }
     public void RemoveEventListener(string eventName, UnityAction action)
@@ -92,17 +120,25 @@ public class EventCenter : BaseManager<EventCenter>
     }
     #endregion
 
-    #region ÊÂ¼ş´¥·¢
+    #region äº‹ä»¶è§¦å‘
     /// <summary>
-    /// ÊÂ¼ş´¥·¢
+    /// äº‹ä»¶è§¦å‘
     /// </summary>
-    /// <param name="eventName">ÄÄ¸öÃû×ÖµÄÊÂ¼ş´¥·¢</param>
-    /// <param name="info">Î¯ÍĞº¯Êı¸½´øµÄĞÅÏ¢</param>
+    /// <param name="eventName">å“ªä¸ªåå­—çš„äº‹ä»¶è§¦å‘</param>
+    /// <param name="info">å§”æ‰˜å‡½æ•°é™„å¸¦çš„ä¿¡æ¯</param>
     public void EventTrigger<T>(string eventName,T info)
     {
         if(evenDictionary.ContainsKey(eventName))
         {
             (evenDictionary[eventName] as EventInfo<T>).actions?.Invoke(info);
+        }
+
+    }
+    public void EventTrigger<T0,T1>(string eventName,T0 info0,T1 info1)
+    {
+        if(evenDictionary.ContainsKey(eventName))
+        {
+            (evenDictionary[eventName] as EventInfo<T0,T1>).actions?.Invoke(info0,info1);
         }
 
     }

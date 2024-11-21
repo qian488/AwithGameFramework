@@ -20,11 +20,11 @@ public class testpanel : BasePanel
 
         UIManager.AddCustomEventListener(GetUIComponent<Button>("ButtonStart"), EventTriggerType.PointerEnter, (data) =>
         {
-            Debug.Log("½øÈëButtonStart");
+            Debug.Log("è¿›å…¥ButtonStart");
         });
         UIManager.AddCustomEventListener(GetUIComponent<Button>("ButtonStart"), EventTriggerType.PointerExit, (data) =>
         {
-            Debug.Log("Àë¿ªButtonStart");
+            Debug.Log("ç¦»å¼€ButtonStart");
         });
     }
 
@@ -33,10 +33,10 @@ public class testpanel : BasePanel
         switch(name)
         {
             case "ButtonStart":
-                Debug.Log("Start±»µã»÷");
+                Debug.Log("Startè¢«ç‚¹å‡»");
                 break;
             case "ButtonQuit":
-                Debug.Log("Quit±»µã»÷");
+                Debug.Log("Quitè¢«ç‚¹å‡»");
                 break;
         }
     }
@@ -64,6 +64,6 @@ public class testpanel : BasePanel
 
     public void InitInfo()
     {
-        Debug.Log("³õÊ¼»¯Ãæ°åÊı¾İ");
+        Debug.Log("åˆå§‹åŒ–é¢æ¿æ•°æ®");
     }
 }

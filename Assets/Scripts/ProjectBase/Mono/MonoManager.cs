@@ -5,8 +5,7 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// ¹«¹²Mono¹ÜÀí
-/// »¹¿ÉÒÔ·â×°Ò»¸ö¼ÆÊ±Æ÷
+/// å…¬å…±Monoç®¡ç†
 /// </summary>
 public class MonoManager : BaseManager<MonoManager>
 {
@@ -14,13 +13,13 @@ public class MonoManager : BaseManager<MonoManager>
 
     public MonoManager()
     {
-        // µ¥Àı±£Ö¤ÁËMonoControl¶ÔÏóµÄÎ¨Ò»ĞÔ
+        // å•ä¾‹ä¿è¯äº†MonoControlå¯¹è±¡çš„å”¯ä¸€æ€§
         GameObject go = new GameObject("MonoController");
         controller = go.AddComponent<MonoControl>();
     }
 
     /// <summary>
-    /// ¸øÍâ²¿Ìá¹© Ìí¼ÓÖ¡¸üĞÂÊÂ¼ş
+    /// ç»™å¤–éƒ¨æä¾› æ·»åŠ å¸§æ›´æ–°äº‹ä»¶
     /// </summary>
     /// <param name="function"></param>
     public void AddUpdateListener(UnityAction function)
@@ -29,7 +28,7 @@ public class MonoManager : BaseManager<MonoManager>
     }
 
     /// <summary>
-    /// ¸øÍâ²¿Ìá¹© ÒÆ³ıÖ¡¸üĞÂÊÂ¼ş
+    /// ç»™å¤–éƒ¨æä¾› ç§»é™¤å¸§æ›´æ–°äº‹ä»¶
     /// </summary>
     /// <param name="function"></param>
     public void RemoveUpdateListener(UnityAction function)
@@ -37,7 +36,7 @@ public class MonoManager : BaseManager<MonoManager>
         controller.RemoveUpdateListener(function);
     }
 
-    #region Ğ­³ÌÏà¹Ø
+    #region åç¨‹ç›¸å…³
     public Coroutine StartCoroutine(string methodName)
     {
         return controller.StartCoroutine(methodName);

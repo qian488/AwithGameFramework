@@ -5,18 +5,18 @@ using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 场景切换模块
+/// 鍦烘櫙鍒囨崲妯″潡
 /// </summary>
 public class MyScenesManager : BaseManager<MyScenesManager>
 {
-    // 同步加载场景
+    // 鍚屾鍔犺浇鍦烘櫙
     public void LoadScene(string sceneName,UnityAction function)
     {
         SceneManager.LoadScene(sceneName);
         function();
     }
 
-    // 异步加载场景
+    // 寮傛鍔犺浇鍦烘櫙
     public void LoadSceneAsync(string sceneName, UnityAction function)
     {
         MonoManager.GetInstance().StartCoroutine(ReallyLoadSceneAsync(sceneName, function));

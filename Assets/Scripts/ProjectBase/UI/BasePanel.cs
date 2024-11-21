@@ -5,11 +5,11 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// Ãæ°å»ùÀà
+/// é¢æ¿åŸºç±»
 /// </summary>
 public class BasePanel : MonoBehaviour
 {
-    // ÀïÊÏ×ª»»Ô­Ôò Ê¹ÓÃ»ùÀà×°¸÷ÖÖ×ÓÀà
+    // é‡Œæ°è½¬æ¢åŸåˆ™ ä½¿ç”¨åŸºç±»è£…å„ç§å­ç±»
     private Dictionary<string,List<UIBehaviour>> UIComponentDictionary = new Dictionary<string,List<UIBehaviour>>();
     // Start is called before the first frame update
     protected virtual void Awake()

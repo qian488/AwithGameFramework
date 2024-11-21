@@ -21,7 +21,7 @@ public class MonoControl : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸øÍâ²¿Ìá¹© Ìí¼ÓÖ¡¸üĞÂÊÂ¼ş
+    /// ç»™å¤–éƒ¨æä¾› æ·»åŠ å¸§æ›´æ–°äº‹ä»¶
     /// </summary>
     /// <param name="function"></param>
     public void AddUpdateListener(UnityAction function)
@@ -30,7 +30,7 @@ public class MonoControl : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸øÍâ²¿Ìá¹© ÒÆ³ıÖ¡¸üĞÂÊÂ¼ş
+    /// ç»™å¤–éƒ¨æä¾› ç§»é™¤å¸§æ›´æ–°äº‹ä»¶
     /// </summary>
     /// <param name="function"></param>
     public void RemoveUpdateListener(UnityAction function) 

@@ -1,17 +1,17 @@
 using UnityEngine;
 
-// ¼Ì³ĞÁËmonoµÄµ¥ÀıÄ£Ê½¶ÔÏó ĞèÒª×Ô¼º±£Ö¤Î¨Ò»ĞÔ ¼´²»ÄÜ¶à´Î¹ÒÔØ
+// ç»§æ‰¿äº†monoçš„å•ä¾‹æ¨¡å¼å¯¹è±¡ éœ€è¦è‡ªå·±ä¿è¯å”¯ä¸€æ€§ å³ä¸èƒ½å¤šæ¬¡æŒ‚è½½
 public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T instance;
     public static T GetInstance()
     {
-        // ¼Ì³ĞÁËMonoµÄ½Å±¾ ²»ÄÜ¹»Ö±½Ónew
-        // Ö±½ÓÍÏ×§»òÕßAddcomponent U3dÄÚ²¿»áÈ¥ÊµÏÖ
+        // ç»§æ‰¿äº†Monoçš„è„šæœ¬ ä¸èƒ½å¤Ÿç›´æ¥new
+        // ç›´æ¥æ‹–æ‹½æˆ–è€…Addcomponent U3då†…éƒ¨ä¼šå»å®ç°
         return instance; 
     }
 
-    // ×ÓÀàĞèÖØĞ´awake
+    // å­ç±»éœ€é‡å†™awake
     protected virtual void Awake()
     {
         instance = this as T;

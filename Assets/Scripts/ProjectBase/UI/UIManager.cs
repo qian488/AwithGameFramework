@@ -55,12 +55,12 @@ public class UIManager : BaseManager<UIManager>
     }
 
     /// <summary>
-    /// ÏÔÊ¾Ãæ°å
+    /// æ˜¾ç¤ºé¢æ¿
     /// </summary>
-    /// <typeparam name="T">Ãæ°å½Å±¾ÀàĞÍ</typeparam>
-    /// <param name="panelName">Ãæ°åÃû×Ö</param>
-    /// <param name="layer">Ãæ°åËùÔÚ²ã¼¶</param>
-    /// <param name="callback">Ãæ°å´´½¨ºóËù×÷µÄÊÂ</param>
+    /// <typeparam name="T">é¢æ¿è„šæœ¬ç±»å‹</typeparam>
+    /// <param name="panelName">é¢æ¿åå­—</param>
+    /// <param name="layer">é¢æ¿æ‰€åœ¨å±‚çº§</param>
+    /// <param name="callback">é¢æ¿åˆ›å»ºåæ‰€ä½œçš„äº‹</param>
     public void ShowPanel<T>(string panelName, E_UI_Layer layer = E_UI_Layer.Mid, UnityAction<T> callback = null) where T : BasePanel 
     {
         if (panelDictionary.ContainsKey(panelName))
@@ -106,7 +106,7 @@ public class UIManager : BaseManager<UIManager>
         if (panelDictionary.ContainsKey(panelName))
         {
             panelDictionary[panelName].HideMe();
-            GameObject.Destroy(panelDictionary[panelName].gameObject);
+            ResourcesManager.GetInstance().Recycle(panelName, panelDictionary[panelName].gameObject);
             panelDictionary.Remove(panelName);
         }
     }
@@ -121,11 +121,11 @@ public class UIManager : BaseManager<UIManager>
     }
 
     /// <summary>
-    /// ¸ø¿Ø¼şÔöÌí×Ô¶¨ÒåÊÂ¼ş
+    /// ç»™æ§ä»¶å¢æ·»è‡ªå®šä¹‰äº‹ä»¶
     /// </summary>
-    /// <param name="UIComponent">¿Ø¼ş¶ÔÏó</param>
-    /// <param name="type">ÊÂ¼şÀàĞÍ</param>
-    /// <param name="callback">ÊÂ¼şµÄ»Øµ÷</param>
+    /// <param name="UIComponent">æ§ä»¶å¯¹è±¡</param>
+    /// <param name="type">äº‹ä»¶ç±»å‹</param>
+    /// <param name="callback">äº‹ä»¶çš„å›è°ƒ</param>
     public static void AddCustomEventListener(UIBehaviour UIComponent, EventTriggerType type, UnityAction<BaseEventData> callback)
     {
         EventTrigger eventTrigger = UIComponent.GetComponent<EventTrigger>();

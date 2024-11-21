@@ -16,6 +16,36 @@ public class MusicManager : BaseManager<MusicManager>
     private List<AudioSource> VoiceList = new List<AudioSource>();
     private float VoiceValue = 1f;
 
+    // Ê∑ªÂä†Èü≥È¢ëÊ∫êÂØπË±°Ê±†
+    private Queue<AudioSource> audioSourcePool = new Queue<AudioSource>();
+    
+    private AudioSource GetAudioSource(GameObject parent)
+    {
+        AudioSource source;
+        if (audioSourcePool.Count > 0)
+        {
+            source = audioSourcePool.Dequeue();
+            source.gameObject.SetActive(true);
+        }
+        else
+        {
+            source = new GameObject("AudioSource").AddComponent<AudioSource>();
+        }
+        source.transform.SetParent(parent.transform);
+        return source;
+    }
+
+    private void RecycleAudioSource(AudioSource source)
+    {
+        if (source != null)
+        {
+            source.Stop();
+            source.clip = null;
+            source.gameObject.SetActive(false);
+            audioSourcePool.Enqueue(source);
+        }
+    }
+
     public MusicManager()
     {
         MonoManager.GetInstance().AddUpdateListener(Update);
@@ -42,7 +72,7 @@ public class MusicManager : BaseManager<MusicManager>
         }
     }
 
-    #region BGM -- ±≥æ∞“Ù¿÷
+    #region BGM -- ËÉåÊôØÈü≥‰πê
     public void PlayBGM(string name)
     {
         if (BGM == null)
@@ -81,7 +111,7 @@ public class MusicManager : BaseManager<MusicManager>
     }
     #endregion
 
-    #region SFX -- “Ù–ß
+    #region SFX -- Èü≥Êïà
     public void PlaySFX(string name, bool isloop, UnityAction<AudioSource> callback = null)
     {
         if(SFXGO == null)
@@ -92,7 +122,7 @@ public class MusicManager : BaseManager<MusicManager>
 
         ResourcesManager.GetInstance().LoadAsync<AudioClip>("Music/SFX/" + name, (clip) =>
         {
-            AudioSource SFX = SFXGO.AddComponent<AudioSource>();
+            AudioSource SFX = GetAudioSource(SFXGO);
             SFX.clip = clip;
             SFX.volume = SFXValue;
             SFX.loop = isloop;
@@ -126,7 +156,7 @@ public class MusicManager : BaseManager<MusicManager>
     }
     #endregion
 
-    #region Voice -- Ω«…´“Ù∆µ
+    #region Voice -- ËßíËâ≤Èü≥È¢ë
     public void PlayVoice(string name, bool isloop, UnityAction<AudioSource> callback = null)
     {
         if (VoiceGO == null)
