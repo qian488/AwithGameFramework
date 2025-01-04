@@ -20,11 +20,11 @@ public class InputManager : BaseManager<InputManager>
     {
         if (Input.GetKeyDown(key))
         {
-            EventCenter.GetInstance().EventTrigger("KeyDown",key);
+            EventCenter.GetInstance().EventTrigger("KeyDown", key);
         }
         if (Input.GetKeyUp(key))
         {
-            EventCenter.GetInstance().EventTrigger("KeyUp",key);
+            EventCenter.GetInstance().EventTrigger("KeyUp", key);
         }
     }
 
