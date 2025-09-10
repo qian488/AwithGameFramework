@@ -1,0 +1,35 @@
+---
+globs: Assets/Scripts/AwithGameFrame/**/*.cs
+description: AwithGameFrame模块开发规范
+---
+
+# AwithGameFrame 模块开发规范
+
+## 核心层 (Core)
+- **BaseManager**: 单例管理器基类，提供线程安全实现
+- **EventCenter**: 事件系统，支持泛型避免装箱拆箱
+- **MonoManager**: Mono生命周期管理，提供协程支持
+- **ResourcesManager**: 资源管理，支持同步/异步加载
+- **PoolManager**: 对象池管理，优化性能
+- **ScenesManager**: 场景管理，支持同步/异步加载
+
+## 表现层模块
+### UI模块 (AwithGameFrame.UI)
+- **UIManager**: 面板管理，支持分层显示
+- **BasePanel**: 面板基类，自动绑定UI组件
+
+### 音频模块 (AwithGameFrame.Audio)
+- **MusicManager**: 音频播放管理，支持BGM/SFX/Voice分类
+
+### 输入模块 (AwithGameFrame.InputSystem)
+- **InputManager**: 输入事件管理，避免与Unity.Input冲突
+
+## 工具层 (Utils)
+- **GameConstants**: 游戏常量定义，避免硬编码
+
+## 模块开发原则
+- 继承BaseManager<T>实现单例
+- 使用EventCenter进行模块间通信
+- 遵循单一职责原则
+- 提供清晰的公共API
+- 添加适当的错误处理

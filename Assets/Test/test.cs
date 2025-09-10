@@ -2,44 +2,50 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using AwithGameFrame.Core;
+using AwithGameFrame.UI;
+using AwithGameFrame.Utils;
 
-public class test : MonoBehaviour
+namespace AwithGameFrame.Tests
 {
-    // Start is called before the first frame update
-    void Start()
+    public class Test : MonoBehaviour
     {
-        UIManager.GetInstance().ShowPanel<testpanel>("testpanel",E_UI_Layer.Mid,ShowPanelOver);
-    }
-
-    private void ShowPanelOver(testpanel panel)
-    {
-        panel.InitInfo();
-        Invoke("DelayHideTestPanel", 3);
-    }
-
-    private void DelayHideTestPanel()
-    {
-        UIManager.GetInstance().HidePanel("testpanel");
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
+        // Start is called before the first frame update
+        void Start()
         {
-            PoolManager.GetInstance().GetGameObject("Test/Cube", (go) =>
-            {
-                go.transform.localScale = Vector3.one * 2;
-                UIManager.GetInstance().ShowPanel<testpanel>("testpanel", E_UI_Layer.Mid, ShowPanelOver);
-            });
+            UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, E_UI_Layer.Mid, ShowPanelOver);
         }
 
-        if (Input.GetMouseButtonDown(1))
+        private void ShowPanelOver(TestPanel panel)
         {
-            PoolManager.GetInstance().GetGameObject("Test/Sphere", (go) => 
-            { 
-                go.transform.localScale = Vector3.one * 2; 
-            });
+            panel.InitInfo();
+            Invoke("DelayHideTestPanel", GameConstants.DEFAULT_PANEL_DELAY);
+        }
+
+        private void DelayHideTestPanel()
+        {
+            UIManager.GetInstance().HidePanel(GameConstants.UI_PANEL_TEST);
+        }
+
+        // Update is called once per frame
+        void Update()
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                PoolManager.GetInstance().GetGameObject(GameConstants.TEST_CUBE_PATH, (go) =>
+                {
+                    go.transform.localScale = Vector3.one * GameConstants.DEFAULT_UI_SCALE;
+                    UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, E_UI_Layer.Mid, ShowPanelOver);
+                });
+            }
+
+            if (Input.GetMouseButtonDown(1))
+            {
+                PoolManager.GetInstance().GetGameObject(GameConstants.TEST_SPHERE_PATH, (go) => 
+                { 
+                    go.transform.localScale = Vector3.one * GameConstants.DEFAULT_UI_SCALE; 
+                });
+            }
         }
     }
 }

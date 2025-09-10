@@ -1,0 +1,59 @@
+---
+globs: *.cs
+description: AwithGameFrame代码结构规范
+---
+
+# AwithGameFrame 代码结构规范
+
+## 文件结构顺序
+```csharp
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using AwithGameFrame.Core;
+
+namespace AwithGameFrame.{ModuleName}
+{
+    /// <summary>
+    /// 类注释
+    /// </summary>
+    public class ClassName : BaseClass
+    {
+        #region 字段
+        // 字段定义
+        #endregion
+
+        #region 属性
+        // 属性定义
+        #endregion
+
+        #region 构造函数
+        // 构造函数
+        #endregion
+
+        #region 公共方法
+        // 公共方法
+        #endregion
+
+        #region 私有方法
+        // 私有方法
+        #endregion
+    }
+}
+```
+
+## 注释规范
+- 类注释: 使用XML文档注释 `/// <summary>`
+- 方法注释: 包含参数和返回值说明
+- 复杂逻辑: 添加行内注释说明
+
+## 代码组织
+- 使用#region组织代码块
+- 相关功能集中在一起
+- 公共方法在前，私有方法在后
+- 保持代码整洁和可读性
+
+## 单例模式实现
+- 继承BaseManager<T>基类
+- 使用线程安全的双重检查锁定
+- 提供GetInstance()静态方法

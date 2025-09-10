@@ -1,0 +1,31 @@
+---
+globs: *.cs
+description: AwithGameFrame命名规范
+---
+
+# AwithGameFrame 命名规范
+
+## 类命名
+- 管理器类: `{Module}Manager` (如: UIManager, MusicManager)
+- 基类: `Base{Type}` (如: BasePanel, BaseManager)
+- 使用PascalCase命名法
+
+## 方法命名
+- 公共方法: PascalCase (如: ShowPanel, PlayBGM)
+- 私有方法: PascalCase (如: CheckKeyCode, MyUpdate)
+- 事件方法: On{Event} (如: OnClick, OnValueChanged)
+
+## 变量命名
+- 字段: camelCase (如: isStart, BGM)
+- 常量: PascalCase (如: UI_BUTTON_START)
+- 局部变量: camelCase
+
+## 命名空间
+- 格式: `AwithGameFrame.{ModuleName}`
+- 避免与Unity内置类冲突
+- 使用InputSystem而不是Input避免冲突
+
+## 文件命名
+- 类文件: PascalCase (如: UIManager.cs)
+- 功能描述性命名
+- 避免与Unity内置类重名

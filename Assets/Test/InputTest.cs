@@ -3,6 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using AwithGameFrame.Core;
+using AwithGameFrame.InputSystem;
+using AwithGameFrame.Audio;
+
 public class InputTest : MonoBehaviour
 {
     // Start is called before the first frame update
