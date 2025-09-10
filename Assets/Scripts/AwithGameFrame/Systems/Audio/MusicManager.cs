@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using AwithGameFrame.Core;
 using AwithGameFrame.Utils;
+using AwithGameFrame.Logging;
 
 namespace AwithGameFrame.Audio
 {
@@ -52,7 +53,9 @@ namespace AwithGameFrame.Audio
 
         public MusicManager()
         {
+            FrameworkLogger.LogAudio("MusicManager初始化开始");
             MonoManager.GetInstance().AddUpdateListener(Update);
+            FrameworkLogger.LogAudio("MusicManager初始化完成");
         }
 
         private void Update()
@@ -79,11 +82,14 @@ namespace AwithGameFrame.Audio
         #region BGM -- 背景音乐
         public void PlayBGM(string name)
         {
+            FrameworkLogger.LogAudio($"播放背景音乐: {name}");
+            
             if (BGM == null)
             {
                 GameObject go = new GameObject();
                 go.name = "BGM";
                 BGM = go.AddComponent<AudioSource>();
+                FrameworkLogger.LogAudio("创建BGM AudioSource");
             }
 
             ResourcesManager.GetInstance().LoadAsync<AudioClip>(GameConstants.MUSIC_BGM_PATH + name, (clip) =>
@@ -92,6 +98,7 @@ namespace AwithGameFrame.Audio
                 BGM.volume = BGMValue;
                 BGM.loop = true;
                 BGM.Play();
+                FrameworkLogger.LogAudio($"BGM播放开始: {name}");
             });
         }
 
@@ -99,12 +106,14 @@ namespace AwithGameFrame.Audio
         {
             if (BGM == null) return;
             BGM.Pause();
+            FrameworkLogger.LogAudio("BGM暂停");
         }
 
         public void StopBGM() 
         {
             if (BGM == null) return;
             BGM.Stop();
+            FrameworkLogger.LogAudio("BGM停止");
         }
 
         public void ChangeBGMValue(float value)

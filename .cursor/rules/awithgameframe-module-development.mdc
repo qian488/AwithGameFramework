@@ -1,0 +1,75 @@
+---
+description: AwithGameFrame模块开发流程与最佳实践
+globs: Assets/Scripts/AwithGameFrame/**/*.cs
+---
+
+# AwithGameFrame 模块开发流程与最佳实践
+
+## 开发前调研
+- **技术选型**: 调研市场成熟方案，避免重复造轮子
+- **架构设计**: 确保与现有框架架构一致
+- **依赖分析**: 明确模块间的依赖关系
+- **API设计**: 设计简洁易用的公共接口
+
+## 代码结构建议
+
+### 文件组织
+```
+AwithGameFrame/
+├── {ModuleName}/
+│   ├── {ModuleName}Enums.cs      # 枚举（如需要）
+│   ├── {ModuleName}Config.cs     # 配置类（如需要）
+│   ├── {ModuleName}Manager.cs    # 核心管理器
+│   └── README.md                 # 模块文档
+```
+
+### 设计决策原则
+
+#### 何时使用配置类
+- 模块有多个相关配置项
+- 需要提供不同环境预设
+- 需要支持运行时配置变更
+
+#### 何时提取枚举
+- 枚举在多个文件中被引用
+- 避免与Unity内置类型冲突
+- 枚举可能频繁扩展
+
+#### 何时重构
+- 发现重复的配置逻辑
+- 配置分散难以管理
+- 添加新功能需要修改多处代码
+
+## 重构经验总结
+
+### 日志系统重构案例
+- **问题**: 枚举嵌套、配置分散、字段引用混乱
+- **解决方案**: 枚举独立、配置类统一、字段引用更新
+- **经验**: 分阶段重构，保持编译通过，提供向后兼容
+
+### 重构原则
+- **具体问题具体分析**: 根据模块特点选择重构方案
+- **渐进式重构**: 分步骤进行，保持编译通过
+- **向后兼容**: 尽量保持现有API的兼容性
+- **测试验证**: 重构后确保功能正常
+
+## 实用工具
+
+### 编译检查
+```bash
+# 检查编译错误
+Get-ChildItem -Recurse -Filter "*.cs" -Path "Assets" | Select-String "CS0103|CS0117|CS0426"
+```
+
+### 批量替换
+```bash
+# 批量替换文本
+Get-ChildItem -Recurse -Filter "*.cs" -Path "Assets" | 
+ForEach-Object { (Get-Content $_.FullName) -replace "OldPattern", "NewPattern" | Set-Content $_.FullName }
+```
+
+## 注意事项
+- 重构前充分分析影响范围
+- 重构过程中保持功能完整性
+- 重构后进行全面测试验证
+- 根据实际需求选择重构方案，不要教条化

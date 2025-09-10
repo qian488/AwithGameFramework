@@ -319,6 +319,7 @@ GameObject:
   - component: {fileID: 1487392153}
   - component: {fileID: 1487392152}
   - component: {fileID: 1487392154}
+  - component: {fileID: 1487392155}
   m_Layer: 0
   m_Name: Test
   m_TagString: Untagged
@@ -365,6 +366,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a08c0fa8d1edef64b8a7f2018b8b97f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1487392155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1487392151}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 033643e66172a074c90cad631934f23f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enableBasicTest: 1
+  enableFileLoggingTest: 1
+  enableFrameworkValidationTest: 1
+  enablePerformanceTest: 1
+  testInterval: 3
+  logMode: 1
+  enableValidation: 1
+  customLogPath: D:/GameLogs
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

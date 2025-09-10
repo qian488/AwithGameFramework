@@ -5,6 +5,7 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using AwithGameFrame.Core;
 using AwithGameFrame.Utils;
+using AwithGameFrame.Logging;
 
 namespace AwithGameFrame.UI
 {
@@ -29,6 +30,8 @@ namespace AwithGameFrame.UI
 
         public UIManager()
         {
+            FrameworkLogger.LogUI("UIManager初始化开始");
+            
             GameObject go = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_CANVAS_PATH);
             canvas = go.transform as RectTransform;
             GameObject.DontDestroyOnLoad(go);
@@ -40,6 +43,8 @@ namespace AwithGameFrame.UI
 
             go = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_EVENTSYSTEM_PATH);
             GameObject.DontDestroyOnLoad(go);
+            
+            FrameworkLogger.LogUI("UIManager初始化完成");
         }
 
         public Transform GetUILayerFather(E_UI_Layer layer)
@@ -67,6 +72,8 @@ namespace AwithGameFrame.UI
         /// <param name="callback">面板创建后所作的事</param>
         public void ShowPanel<T>(string panelName, E_UI_Layer layer = E_UI_Layer.Mid, UnityAction<T> callback = null) where T : BasePanel 
         {
+            FrameworkLogger.LogUI($"显示面板: {panelName}, 层级: {layer}");
+            
             if (panelDictionary.ContainsKey(panelName))
             {
                 panelDictionary[panelName].ShowMe();
@@ -74,6 +81,7 @@ namespace AwithGameFrame.UI
                 {
                     callback(panelDictionary[panelName] as T);
                 }
+                FrameworkLogger.LogUI($"面板已存在，直接显示: {panelName}");
                 return;
             }
 
@@ -102,16 +110,24 @@ namespace AwithGameFrame.UI
                 if(callback != null) callback(panel);
                 panel.ShowMe();
                 panelDictionary.Add(panelName, panel);
+                FrameworkLogger.LogUI($"面板加载完成并显示: {panelName}");
             });
         }
 
         public void HidePanel(string panelName)
         {
+            FrameworkLogger.LogUI($"隐藏面板: {panelName}");
+            
             if (panelDictionary.ContainsKey(panelName))
             {
                 panelDictionary[panelName].HideMe();
                 ResourcesManager.GetInstance().Recycle("UI/" + panelName, panelDictionary[panelName].gameObject);
                 panelDictionary.Remove(panelName);
+                FrameworkLogger.LogUI($"面板已隐藏并回收: {panelName}");
+            }
+            else
+            {
+                FrameworkLogger.Warn($"尝试隐藏不存在的面板: {panelName}");
             }
         }
 
