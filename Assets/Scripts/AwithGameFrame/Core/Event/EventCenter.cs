@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using AwithGameFrame.Core;
-using AwithGameFrame.Logging;
+using AwithGameFrame.Foundation.Logging;
 
 namespace AwithGameFrame.Core
 {

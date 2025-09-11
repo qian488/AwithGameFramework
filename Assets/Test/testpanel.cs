@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using AwithGameFrame.Systems.UI;
-using AwithGameFrame.Utils;
+using AwithGameFrame.Core;
+using AwithGameFrame.Foundation.Systems.UI;
 
 namespace AwithGameFrame.Tests
 {

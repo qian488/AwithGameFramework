@@ -28,26 +28,40 @@ description: AwithGameFrame模块开发规范
 - **按依赖划分**: 根据外部依赖情况决定是否独立成包
 - **按使用频率划分**: 常用功能优先，特殊功能可选
 
-## 核心层 (Core)
+## 三包架构模块划分
+
+### Core包 (AwithGameFrame.Core)
 - **BaseManager**: 单例管理器基类，提供线程安全实现
 - **EventCenter**: 事件系统，支持泛型避免装箱拆箱
 - **MonoManager**: Mono生命周期管理，提供协程支持
 - **PoolManager**: 对象池管理，优化性能
 - **抽象接口**: 定义各模块的接口契约
 
-## 表现层模块
-### UI模块 (AwithGameFrame.UI)
-- **UIManager**: 面板管理，支持分层显示
-- **BasePanel**: 面板基类，自动绑定UI组件
+### Foundation包 (AwithGameFrame.Foundation)
+#### 数据持久化模块
+- **DataPersistenceManager**: 数据持久化管理器
+- **多种存储方式**: PlayerPrefs、JSON、二进制、SQLite
+- **序列化支持**: JSON、MessagePack等
 
-### 音频模块 (AwithGameFrame.Audio)
-- **MusicManager**: 音频播放管理，支持BGM/SFX/Voice分类
+#### 日志系统模块
+- **LoggingManager**: 日志管理器
+- **分级日志记录**: Debug、Info、Warning、Error
+- **文件日志输出**: 支持文件日志记录
 
-### 输入模块 (AwithGameFrame.InputSystem)
-- **InputManager**: 输入事件管理，避免与Unity.Input冲突
+#### 资源管理模块
+- **ResourcesManager**: 资源加载管理，支持同步/异步加载
+- **对象池集成**: 与PoolManager集成，优化资源复用
 
-## 工具层 (Utils)
-- **GameConstants**: 游戏常量定义，避免硬编码
+#### 基础系统模块
+- **UI系统**: UIManager、BasePanel
+- **音频系统**: MusicManager，支持BGM/SFX/Voice分类
+- **输入系统**: InputManager，避免与Unity.Input冲突
+
+### Extensions包 (AwithGameFrame.Extensions)
+#### 测试工具模块
+- **FrameworkTestRunner**: 框架测试运行器
+- **PerformanceTester**: 性能测试工具
+- **ExampleUsage**: 使用示例
 
 ## 框架开发原则
 

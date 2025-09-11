@@ -5,6 +5,21 @@ description: AwithGameFrame代码结构规范
 
 # AwithGameFrame 代码结构规范
 
+## 三包架构结构
+
+### 包结构层次
+```
+AwithGameFrame/
+├── Core/           # 核心包 - 零外部依赖的基础功能
+├── Foundation/     # 基础包 - 核心包 + 基础功能实现
+└── Extensions/     # 扩展包 - 基础包 + 扩展功能
+```
+
+### 命名空间规范
+- **Core包**: `AwithGameFrame.Core`
+- **Foundation包**: `AwithGameFrame.Foundation`
+- **Extensions包**: `AwithGameFrame.Extensions`
+
 ## 文件结构顺序
 ```csharp
 using System.Collections;
@@ -12,7 +27,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using AwithGameFrame.Core;
 
-namespace AwithGameFrame.{ModuleName}
+namespace AwithGameFrame.{PackageName}.{ModuleName}
 {
     /// <summary>
     /// 类注释
@@ -40,6 +55,40 @@ namespace AwithGameFrame.{ModuleName}
         #endregion
     }
 }
+```
+
+## 包内模块组织
+
+### Core包模块
+```
+Core/
+├── Base/           # 基础类
+├── Event/          # 事件系统
+├── Interfaces/     # 接口定义
+├── Mono/           # Mono管理
+├── Pool/           # 对象池管理
+├── Scene/          # 场景管理
+└── Utils/          # 核心工具
+```
+
+### Foundation包模块
+```
+Foundation/
+├── DataPersistence/  # 数据持久化
+├── Logging/          # 日志系统
+├── Providers/        # 提供者管理
+├── Resource/         # 资源管理
+├── Systems/          # 基础系统
+│   ├── Audio/        # 音频系统
+│   ├── Input/        # 输入系统
+│   └── UI/           # UI系统
+└── Examples/         # 使用示例
+```
+
+### Extensions包模块
+```
+Extensions/
+└── Tests/           # 测试工具
 ```
 
 ## 注释规范

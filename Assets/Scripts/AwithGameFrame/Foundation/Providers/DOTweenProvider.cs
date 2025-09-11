@@ -1,7 +1,7 @@
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using AwithGameFrame.Core.Interfaces;
-using AwithGameFrame.Logging;
+using AwithGameFrame.Foundation.Logging;
 using DG.Tweening;
 
 namespace AwithGameFrame.Foundation.Providers

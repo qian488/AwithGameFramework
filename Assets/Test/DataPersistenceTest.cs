@@ -1,9 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
-using AwithGameFrame.DataPersistence;
-using AwithGameFrame.DataPersistence.Storage;
-using AwithGameFrame.DataPersistence.Database;
-using AwithGameFrame.Logging;
+using AwithGameFrame.Foundation.DataPersistence;
+using AwithGameFrame.Foundation.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;

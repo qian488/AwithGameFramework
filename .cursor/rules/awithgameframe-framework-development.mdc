@@ -55,16 +55,16 @@ description: AwithGameFrame框架开发最佳实践
 
 ## 包架构设计原则
 
-### 分层包架构
+### 三包架构设计
 - **Core Package**: 零外部依赖，纯接口定义和基础工具类
 - **Foundation Package**: 包含Core + 核心依赖，提供基础实现
-- **Feature Packages**: 包含Foundation + 可选依赖，提供具体功能
+- **Extensions Package**: 包含Foundation + 扩展功能，提供完整功能
 
 ### 设计理念
 - **核心包**: 零外部依赖，只使用Unity内置API
 - **基础包**: 包含核心依赖，提供开箱即用的基础功能
-- **功能包**: 可以依赖第三方库，但必须声明在package.json中
-- **用户项目**: 通过manifest.json按需安装功能包
+- **扩展包**: 包含基础包 + 扩展功能，提供完整功能
+- **用户项目**: 通过manifest.json按需安装包
 - **轻量原则**: 保持核心包的轻量，避免过度设计
 
 ### 模块划分原则
@@ -109,9 +109,8 @@ description: AwithGameFrame框架开发最佳实践
 ### 包结构设计思路
 - **Core Package**: 零外部依赖，纯接口定义和基础工具类
 - **Foundation Package**: 包含Core + 核心依赖，提供开箱即用的基础实现
-- **Feature Packages**: 包含Foundation + 可选依赖，提供具体功能实现
-- **Integration Packages**: 多个功能的组合，提供开箱即用体验
-- **Tool Packages**: 编辑器工具、代码生成器等
+- **Extensions Package**: 包含Foundation + 扩展功能，提供完整功能
+- **未来扩展**: 可考虑拆分为更多独立的功能包
 
 ## 第三方库集成策略
 

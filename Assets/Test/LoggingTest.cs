@@ -1,5 +1,5 @@
 using UnityEngine;
-using AwithGameFrame.Logging;
+using AwithGameFrame.Foundation.Logging;
 
 namespace Test
 {
@@ -383,7 +383,7 @@ namespace Test
         public void ShowLogConfiguration()
         {
             FrameworkLogger.Info("=== 日志配置信息 ===");
-            string configInfo = LoggingSystem.GetStatus();
+            string configInfo = LoggingAPI.GetStatus();
             FrameworkLogger.Info($"配置信息:\n{configInfo}");
         }
         

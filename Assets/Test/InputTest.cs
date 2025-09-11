@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 using AwithGameFrame.Core;
-using AwithGameFrame.Systems.InputSystem;
-using AwithGameFrame.Systems.Audio;
+using AwithGameFrame.Foundation.Systems.InputSystem;
+using AwithGameFrame.Foundation.Systems.Audio;
 
 public class InputTest : MonoBehaviour
 {

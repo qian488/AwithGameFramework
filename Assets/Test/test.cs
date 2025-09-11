@@ -3,8 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using AwithGameFrame.Core;
-using AwithGameFrame.Systems.UI;
-using AwithGameFrame.Utils;
+using AwithGameFrame.Foundation.Systems.UI;
 
 namespace AwithGameFrame.Tests
 {

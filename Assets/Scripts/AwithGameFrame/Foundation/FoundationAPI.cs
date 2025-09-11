@@ -2,7 +2,7 @@ using UnityEngine;
 using Cysharp.Threading.Tasks;
 using AwithGameFrame.Foundation;
 
-namespace AwithGameFrame
+namespace AwithGameFrame.Foundation
 {
     /// <summary>
     /// Foundation API
