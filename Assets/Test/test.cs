@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using AwithGameFrame.Core;
-using AwithGameFrame.UI;
+using AwithGameFrame.Systems.UI;
 using AwithGameFrame.Utils;
 
 namespace AwithGameFrame.Tests
@@ -13,7 +13,7 @@ namespace AwithGameFrame.Tests
         // Start is called before the first frame update
         void Start()
         {
-            UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, E_UI_Layer.Mid, ShowPanelOver);
+            UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, UILayer.Mid, ShowPanelOver);
         }
 
         private void ShowPanelOver(TestPanel panel)
@@ -35,7 +35,7 @@ namespace AwithGameFrame.Tests
                 PoolManager.GetInstance().GetGameObject(GameConstants.TEST_CUBE_PATH, (go) =>
                 {
                     go.transform.localScale = Vector3.one * GameConstants.DEFAULT_UI_SCALE;
-                    UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, E_UI_Layer.Mid, ShowPanelOver);
+                    UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, UILayer.Mid, ShowPanelOver);
                 });
             }
 

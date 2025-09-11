@@ -22,11 +22,11 @@ Assets/Scripts/AwithGameFrame/
 │       └── ScenesManager.cs
 │
 ├── Systems/                # 功能系统
-│   ├── Input/              # 输入系统 (AwithGameFrame.InputSystem)
+│   ├── Input/              # 输入系统 (AwithGameFrame.Systems.Input)
 │   │   └── InputManager.cs
-│   ├── Audio/              # 音频系统 (AwithGameFrame.Audio)
+│   ├── Audio/              # 音频系统 (AwithGameFrame.Systems.Audio)
 │   │   └── MusicManager.cs
-│   └── UI/                 # UI系统 (AwithGameFrame.UI)
+│   └── UI/                 # UI系统 (AwithGameFrame.Systems.UI)
 │       ├── UIManager.cs
 │       └── BasePanel.cs
 │

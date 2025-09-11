@@ -31,6 +31,28 @@ namespace AwithGameFrame.Core
         }
     }
     
+    // 传递三个泛型参数
+    public class EventInfo<T0,T1,T2> : IEventInfo
+    {
+        public UnityAction<T0,T1,T2> actions;
+
+        public EventInfo(UnityAction<T0,T1,T2> action)
+        {
+            actions += action;
+        }
+    }
+    
+    // 传递四个泛型参数
+    public class EventInfo<T0,T1,T2,T3> : IEventInfo
+    {
+        public UnityAction<T0,T1,T2,T3> actions;
+
+        public EventInfo(UnityAction<T0,T1,T2,T3> action)
+        {
+            actions += action;
+        }
+    }
+    
     // 不传递参数
     public class EventInfo : IEventInfo
     {
@@ -88,6 +110,34 @@ namespace AwithGameFrame.Core
             FrameworkLogger.LogUI($"添加事件监听: {eventName}");
         }
 
+        public void AddEventListener<T0,T1,T2>(string eventName, UnityAction<T0,T1,T2> action)
+        {
+            if (evenDictionary.ContainsKey(eventName))
+            {
+                (evenDictionary[eventName] as EventInfo<T0,T1,T2>).actions += action;
+            }
+            else
+            {
+                evenDictionary.Add(eventName, new EventInfo<T0,T1,T2>(action));
+            }
+            
+            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+        }
+
+        public void AddEventListener<T0,T1,T2,T3>(string eventName, UnityAction<T0,T1,T2,T3> action)
+        {
+            if (evenDictionary.ContainsKey(eventName))
+            {
+                (evenDictionary[eventName] as EventInfo<T0,T1,T2,T3>).actions += action;
+            }
+            else
+            {
+                evenDictionary.Add(eventName, new EventInfo<T0,T1,T2,T3>(action));
+            }
+            
+            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+        }
+
         public void AddEventListener(string eventName, UnityAction action)
         {
             if (evenDictionary.ContainsKey(eventName))
@@ -135,6 +185,32 @@ namespace AwithGameFrame.Core
             }
         }
         
+        public void RemoveEventListener<T0,T1,T2>(string eventName, UnityAction<T0,T1,T2> action)
+        {
+            if (evenDictionary.ContainsKey(eventName))
+            {
+                (evenDictionary[eventName] as EventInfo<T0,T1,T2>).actions -= action;
+                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+            }
+            else
+            {
+                FrameworkLogger.Warn($"尝试移除不存在的事件监听: {eventName}");
+            }
+        }
+
+        public void RemoveEventListener<T0,T1,T2,T3>(string eventName, UnityAction<T0,T1,T2,T3> action)
+        {
+            if (evenDictionary.ContainsKey(eventName))
+            {
+                (evenDictionary[eventName] as EventInfo<T0,T1,T2,T3>).actions -= action;
+                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+            }
+            else
+            {
+                FrameworkLogger.Warn($"尝试移除不存在的事件监听: {eventName}");
+            }
+        }
+        
         public void RemoveEventListener(string eventName, UnityAction action)
         {
             if (evenDictionary.ContainsKey(eventName))
@@ -173,6 +249,32 @@ namespace AwithGameFrame.Core
             if(evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1>).actions?.Invoke(info0,info1);
+                FrameworkLogger.LogUI($"触发事件: {eventName}");
+            }
+            else
+            {
+                FrameworkLogger.Warn($"尝试触发不存在的事件: {eventName}");
+            }
+        }
+        
+        public void EventTrigger<T0,T1,T2>(string eventName,T0 info0,T1 info1,T2 info2)
+        {
+            if(evenDictionary.ContainsKey(eventName))
+            {
+                (evenDictionary[eventName] as EventInfo<T0,T1,T2>).actions?.Invoke(info0,info1,info2);
+                FrameworkLogger.LogUI($"触发事件: {eventName}");
+            }
+            else
+            {
+                FrameworkLogger.Warn($"尝试触发不存在的事件: {eventName}");
+            }
+        }
+        
+        public void EventTrigger<T0,T1,T2,T3>(string eventName,T0 info0,T1 info1,T2 info2,T3 info3)
+        {
+            if(evenDictionary.ContainsKey(eventName))
+            {
+                (evenDictionary[eventName] as EventInfo<T0,T1,T2,T3>).actions?.Invoke(info0,info1,info2,info3);
                 FrameworkLogger.LogUI($"触发事件: {eventName}");
             }
             else

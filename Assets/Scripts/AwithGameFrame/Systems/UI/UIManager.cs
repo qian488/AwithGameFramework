@@ -6,20 +6,35 @@ using UnityEngine.EventSystems;
 using AwithGameFrame.Core;
 using AwithGameFrame.Utils;
 using AwithGameFrame.Logging;
+using AwithGameFrame.DataPersistence;
+using AwithGameFrame.DataPersistence.Storage;
 
-namespace AwithGameFrame.UI
+namespace AwithGameFrame.Systems.UI
 {
-    public enum E_UI_Layer
+    /// <summary>
+    /// UI层级枚举
+    /// </summary>
+    public enum UILayer
     {
+        /// <summary>底层</summary>
         Bot,
+        /// <summary>中层</summary>
         Mid,
+        /// <summary>顶层</summary>
         Top,
+        /// <summary>系统层</summary>
         System,
     }
 
+    /// <summary>
+    /// UI管理器
+    /// 负责UI面板的显示、隐藏和层级管理
+    /// </summary>
     public class UIManager : BaseManager<UIManager>
     {
-        public Dictionary<string,BasePanel> panelDictionary = new Dictionary<string,BasePanel>();
+        #region 字段
+        /// <summary>面板字典</summary>
+        private Dictionary<string,BasePanel> panelDictionary = new Dictionary<string,BasePanel>();
 
         private Transform bot;
         private Transform mid;
@@ -27,7 +42,9 @@ namespace AwithGameFrame.UI
         private Transform system;
 
         public RectTransform canvas;
+        #endregion
 
+        #region 构造函数
         public UIManager()
         {
             FrameworkLogger.LogUI("UIManager初始化开始");
@@ -46,18 +63,20 @@ namespace AwithGameFrame.UI
             
             FrameworkLogger.LogUI("UIManager初始化完成");
         }
+        #endregion
 
-        public Transform GetUILayerFather(E_UI_Layer layer)
+        #region 公共方法
+        public Transform GetUILayerFather(UILayer layer)
         {
             switch(layer)
             {
-                case E_UI_Layer.Bot:
+                case UILayer.Bot:
                     return this.bot;
-                case E_UI_Layer.Mid:
+                case UILayer.Mid:
                     return this.mid;
-                case E_UI_Layer.Top:
+                case UILayer.Top:
                     return this.top;
-                case E_UI_Layer.System:
+                case UILayer.System:
                     return this.system;
             }
             return null;
@@ -70,7 +89,7 @@ namespace AwithGameFrame.UI
         /// <param name="panelName">面板名字</param>
         /// <param name="layer">面板所在层级</param>
         /// <param name="callback">面板创建后所作的事</param>
-        public void ShowPanel<T>(string panelName, E_UI_Layer layer = E_UI_Layer.Mid, UnityAction<T> callback = null) where T : BasePanel 
+        public void ShowPanel<T>(string panelName, UILayer layer = UILayer.Mid, UnityAction<T> callback = null) where T : BasePanel 
         {
             FrameworkLogger.LogUI($"显示面板: {panelName}, 层级: {layer}");
             
@@ -90,13 +109,13 @@ namespace AwithGameFrame.UI
                 Transform father = bot;
                 switch(layer)
                 {
-                    case E_UI_Layer.Mid:
+                    case UILayer.Mid:
                         father = mid;
                         break;
-                    case E_UI_Layer.Top:
+                    case UILayer.Top:
                         father = top;
                         break;
-                    case E_UI_Layer.System:
+                    case UILayer.System:
                         father = system;
                         break;
                 }
@@ -159,5 +178,118 @@ namespace AwithGameFrame.UI
 
             eventTrigger.triggers.Add(entry);
         }
+        
+        /// <summary>
+        /// 获取设置键名
+        /// </summary>
+        protected string GetSettingsKey()
+        {
+            return "UISettings";
+        }
+        
+        /// <summary>
+        /// 获取存储类型
+        /// </summary>
+        protected StorageType GetStorageType()
+        {
+            return StorageType.PlayerPrefs;
+        }
+        
+        /// <summary>
+        /// 设置加载完成回调
+        /// </summary>
+        protected void OnSettingsLoaded()
+        {
+            // 应用设置到UI系统
+            ApplySettingsToUI();
+            FrameworkLogger.LogUI("UI设置已应用");
+        }
+        
+        /// <summary>
+        /// 设置变更回调
+        /// </summary>
+        protected void OnSettingsChangedInternal(UISettings settings)
+        {
+            // 设置变更时自动应用
+            ApplySettingsToUI();
+            FrameworkLogger.LogUI("UI设置已更新并应用");
+        }
+        
+        /// <summary>
+        /// 应用设置到UI系统
+        /// </summary>
+        private void ApplySettingsToUI()
+        {
+            // 这里可以添加从数据持久化系统加载设置的逻辑
+            // 暂时使用默认值，后续可以集成SettingsHelper
+            
+            FrameworkLogger.LogUI("UI设置已应用");
+        }
+        
+        /// <summary>
+        /// 更新UI设置
+        /// </summary>
+        /// <param name="updateAction">更新委托</param>
+        public async System.Threading.Tasks.Task<bool> UpdateUISettingsAsync(System.Action<UISettings> updateAction)
+        {
+            try
+            {
+                // 使用SettingsHelper更新设置
+                var settings = new UISettings();
+                updateAction?.Invoke(settings);
+                
+                var result = await AwithGameFrame.DataPersistence.DataPersistence.SaveAsync<UISettings>(GetSettingsKey(), settings, GetStorageType());
+                if (result == DataOperationResult.Success)
+                {
+                    OnSettingsChangedInternal(settings);
+                    return true;
+                }
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                FrameworkLogger.Error($"更新UI设置失败: {ex.Message}", LogCategory.Core);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// 重置UI设置
+        /// </summary>
+        public async System.Threading.Tasks.Task<bool> ResetUISettingsAsync()
+        {
+            try
+            {
+                // 使用SettingsHelper重置设置
+                var result = await AwithGameFrame.DataPersistence.DataPersistence.DeleteAsync(GetSettingsKey(), GetStorageType());
+                if (result == DataOperationResult.Success)
+                {
+                    var defaultSettings = new UISettings();
+                    OnSettingsChangedInternal(defaultSettings);
+                    return true;
+                }
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                FrameworkLogger.Error($"重置UI设置失败: {ex.Message}", LogCategory.Core);
+                return false;
+            }
+        }
+        #endregion
+    }
+    
+    /// <summary>
+    /// UI设置数据类
+    /// </summary>
+    [System.Serializable]
+    public class UISettings
+    {
+        public float UIScale = 1.0f;
+        public bool ShowFPS = false;
+        public bool ShowDebugInfo = false;
+        public string Language = "zh-CN";
+        public bool EnableAnimations = true;
+        public float AnimationSpeed = 1.0f;
     }
 }

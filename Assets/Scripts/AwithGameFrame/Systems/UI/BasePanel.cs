@@ -4,17 +4,24 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace AwithGameFrame.UI
+namespace AwithGameFrame.Systems.UI
 {
     /// <summary>
     /// 面板基类
+    /// 提供自动UI组件绑定和事件处理功能
     /// </summary>
     public class BasePanel : MonoBehaviour
     {
-        // 里氏转换原则 使用基类装各种子类
+        #region 字段
+        /// <summary>UI组件字典，使用里氏转换原则存储各种UI组件</summary>
         private Dictionary<string,List<UIBehaviour>> UIComponentDictionary = new Dictionary<string,List<UIBehaviour>>();
+        #endregion
         
-        // Start is called before the first frame update
+        #region 生命周期
+        /// <summary>
+        /// 初始化UI组件绑定
+        /// 子类可重写此方法添加自定义初始化逻辑
+        /// </summary>
         protected virtual void Awake()
         {
             FindChildrenUIComponent<Button>();
@@ -26,12 +33,47 @@ namespace AwithGameFrame.UI
             FindChildrenUIComponent<InputField>();
         }
 
+        #endregion
+        
+        #region 公共方法
+        /// <summary>
+        /// 显示面板
+        /// 子类可重写此方法添加自定义显示逻辑
+        /// </summary>
         public virtual void ShowMe() { }
+        
+        /// <summary>
+        /// 隐藏面板
+        /// 子类可重写此方法添加自定义隐藏逻辑
+        /// </summary>
         public virtual void HideMe() { }
-
+        #endregion
+        
+        #region 事件处理
+        /// <summary>
+        /// 按钮点击事件处理
+        /// 子类可重写此方法处理按钮点击
+        /// </summary>
+        /// <param name="name">按钮名称</param>
         protected virtual void OnClick(string name) { }
+        
+        /// <summary>
+        /// 值改变事件处理
+        /// 子类可重写此方法处理值改变事件
+        /// </summary>
+        /// <param name="name">组件名称</param>
+        /// <param name="value">新值</param>
         protected virtual void OnValueChanged(string name,bool value) { }
+        #endregion
+        
+        #region 私有方法
 
+        /// <summary>
+        /// 获取指定名称的UI组件
+        /// </summary>
+        /// <typeparam name="T">组件类型</typeparam>
+        /// <param name="name">组件名称</param>
+        /// <returns>找到的组件，未找到返回null</returns>
         protected T GetUIComponent<T>(string name) where T : UIBehaviour
         {
             if (UIComponentDictionary.ContainsKey(name))
@@ -48,6 +90,10 @@ namespace AwithGameFrame.UI
             return null;
         }
 
+        /// <summary>
+        /// 查找子对象中的UI组件并自动绑定事件
+        /// </summary>
+        /// <typeparam name="T">UI组件类型</typeparam>
         private void FindChildrenUIComponent<T>() where T : UIBehaviour
         {
             T[] Components = this.GetComponentsInChildren<T>();
@@ -79,5 +125,6 @@ namespace AwithGameFrame.UI
                 }
             }
         }
+        #endregion
     }
 }

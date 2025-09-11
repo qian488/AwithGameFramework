@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using AwithGameFrame.UI;
+using AwithGameFrame.Systems.UI;
 using AwithGameFrame.Utils;
 
 namespace AwithGameFrame.Tests

@@ -5,24 +5,49 @@ using UnityEngine;
 using AwithGameFrame.Core;
 using AwithGameFrame.Logging;
 
-namespace AwithGameFrame.InputSystem
+namespace AwithGameFrame.Systems.InputSystem
 {
+    /// <summary>
+    /// 输入管理器
+    /// 负责键盘输入检测和事件触发
+    /// </summary>
     public class InputManager : BaseManager<InputManager>
     {
+        #region 字段
+        /// <summary>是否开始检测输入</summary>
         private bool isStart = false;
+        #endregion
+        
+        #region 构造函数
+        /// <summary>
+        /// 初始化输入管理器
+        /// </summary>
         public InputManager()
         {
             FrameworkLogger.LogInput("InputManager初始化开始");
             MonoManager.GetInstance().AddUpdateListener(MyUpdate);
             FrameworkLogger.LogInput("InputManager初始化完成");
         }
-
+        #endregion
+        
+        #region 公共方法
+        /// <summary>
+        /// 开始或停止输入检测
+        /// </summary>
+        /// <param name="isOpen">是否开启检测</param>
         public void StartOREndCheck(bool isOpen)
         {
             isStart = isOpen;
             FrameworkLogger.LogInput($"输入检测状态: {(isOpen ? "开启" : "关闭")}");
         }
+        #endregion
+        
+        #region 私有方法
 
+        /// <summary>
+        /// 检查指定按键的按下和抬起状态
+        /// </summary>
+        /// <param name="key">要检查的按键</param>
         private void CheckKeyCode(KeyCode key)
         {
             if (Input.GetKeyDown(key))
@@ -37,6 +62,9 @@ namespace AwithGameFrame.InputSystem
             }
         }
 
+        /// <summary>
+        /// 更新方法，检测所有配置的按键
+        /// </summary>
         private void MyUpdate()
         {
             if (!isStart) return;
@@ -52,5 +80,6 @@ namespace AwithGameFrame.InputSystem
             CheckKeyCode(KeyCode.V);
             CheckKeyCode(KeyCode.M);
         }
+        #endregion
     }
 }

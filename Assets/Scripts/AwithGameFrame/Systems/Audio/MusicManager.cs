@@ -5,24 +5,39 @@ using UnityEngine.Events;
 using AwithGameFrame.Core;
 using AwithGameFrame.Utils;
 using AwithGameFrame.Logging;
+using AwithGameFrame.DataPersistence;
 
-namespace AwithGameFrame.Audio
+namespace AwithGameFrame.Systems.Audio
 {
+    /// <summary>
+    /// 音频管理器
+    /// 负责BGM、SFX、Voice的播放和管理
+    /// </summary>
     public class MusicManager : BaseManager<MusicManager>
     {
+        #region 字段
+        /// <summary>背景音乐音频源</summary>
         private AudioSource BGM = null;
+        /// <summary>背景音乐音量</summary>
         private float BGMValue = 1f;
 
+        /// <summary>音效父对象</summary>
         private GameObject SFXGO = null;
+        /// <summary>音效音频源列表</summary>
         private List<AudioSource> SFXList = new List<AudioSource>();
+        /// <summary>音效音量</summary>
         private float SFXValue = 1f;
 
+        /// <summary>语音父对象</summary>
         private GameObject VoiceGO = null;
+        /// <summary>语音音频源列表</summary>
         private List<AudioSource> VoiceList = new List<AudioSource>();
+        /// <summary>语音音量</summary>
         private float VoiceValue = 1f;
 
-        // 添加音频源对象池
+        /// <summary>音频源对象池</summary>
         private Queue<AudioSource> audioSourcePool = new Queue<AudioSource>();
+        #endregion
         
         private AudioSource GetAudioSource(GameObject parent)
         {
@@ -54,6 +69,7 @@ namespace AwithGameFrame.Audio
         public MusicManager()
         {
             FrameworkLogger.LogAudio("MusicManager初始化开始");
+            
             MonoManager.GetInstance().AddUpdateListener(Update);
             FrameworkLogger.LogAudio("MusicManager初始化完成");
         }
@@ -211,5 +227,118 @@ namespace AwithGameFrame.Audio
             }
         }
         #endregion
+        
+        /// <summary>
+        /// 获取设置键名
+        /// </summary>
+        protected string GetSettingsKey()
+        {
+            return "AudioSettings";
+        }
+        
+        /// <summary>
+        /// 获取存储类型
+        /// </summary>
+        protected StorageType GetStorageType()
+        {
+            return StorageType.PlayerPrefs;
+        }
+        
+        /// <summary>
+        /// 设置加载完成回调
+        /// </summary>
+        protected void OnSettingsLoaded()
+        {
+            // 应用设置到音频系统
+            ApplySettingsToAudio();
+            FrameworkLogger.LogAudio("音频设置已应用");
+        }
+        
+        /// <summary>
+        /// 设置变更回调
+        /// </summary>
+        protected void OnSettingsChangedInternal(AudioSettings settings)
+        {
+            // 设置变更时自动应用
+            ApplySettingsToAudio();
+            FrameworkLogger.LogAudio("音频设置已更新并应用");
+        }
+        
+        /// <summary>
+        /// 应用设置到音频系统
+        /// </summary>
+        private void ApplySettingsToAudio()
+        {
+            // 这里可以添加从数据持久化系统加载设置的逻辑
+            // 暂时使用默认值，后续可以集成SettingsHelper
+            
+            FrameworkLogger.LogAudio($"音频设置已应用: BGM={BGMValue}, SFX={SFXValue}, Voice={VoiceValue}");
+        }
+        
+        /// <summary>
+        /// 更新音频设置
+        /// </summary>
+        /// <param name="updateAction">更新委托</param>
+        public async System.Threading.Tasks.Task<bool> UpdateAudioSettingsAsync(System.Action<AudioSettings> updateAction)
+        {
+            try
+            {
+                // 使用SettingsHelper更新设置
+                var settings = new AudioSettings();
+                updateAction?.Invoke(settings);
+                
+                var result = await AwithGameFrame.DataPersistence.DataPersistence.SaveAsync<AudioSettings>(GetSettingsKey(), settings, GetStorageType());
+                if (result == DataOperationResult.Success)
+                {
+                    OnSettingsChangedInternal(settings);
+                    return true;
+                }
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                FrameworkLogger.Error($"更新音频设置失败: {ex.Message}", LogCategory.Core);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// 重置音频设置
+        /// </summary>
+        public async System.Threading.Tasks.Task<bool> ResetAudioSettingsAsync()
+        {
+            try
+            {
+                // 使用SettingsHelper重置设置
+                var result = await AwithGameFrame.DataPersistence.DataPersistence.DeleteAsync(GetSettingsKey(), GetStorageType());
+                if (result == DataOperationResult.Success)
+                {
+                    var defaultSettings = new AudioSettings();
+                    OnSettingsChangedInternal(defaultSettings);
+                    return true;
+                }
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                FrameworkLogger.Error($"重置音频设置失败: {ex.Message}", LogCategory.Core);
+                return false;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 音频设置数据类
+    /// </summary>
+    [System.Serializable]
+    public class AudioSettings
+    {
+        public float BGMVolume = 1.0f;
+        public float SFXVolume = 1.0f;
+        public float VoiceVolume = 1.0f;
+        public bool MuteBGM = false;
+        public bool MuteSFX = false;
+        public bool MuteVoice = false;
+        public bool MuteAll = false;
     }
 }
