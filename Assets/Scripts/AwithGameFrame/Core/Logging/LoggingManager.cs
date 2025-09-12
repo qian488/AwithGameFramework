@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using AwithGameFrame.Core;
 
-namespace AwithGameFrame.Foundation.Logging
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 日志管理器 - 统一管理框架日志系统

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using AwithGameFrame.Foundation.Pool;
 using AwithGameFrame.Core;
 
 public class DelayPush : MonoBehaviour
@@ -12,6 +13,6 @@ public class DelayPush : MonoBehaviour
 
     void Push()
     {
-        PoolManager.GetInstance().PushGameObject(this.gameObject.name,this.gameObject);
+        PoolManagerAPI.PushGameObject(this.gameObject.name,this.gameObject);
     }
 }

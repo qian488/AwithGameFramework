@@ -1,0 +1,28 @@
+{
+    "data": [
+        {
+            "id": 1,
+            "name": "骑士",
+            "health": 100.0,
+            "attack": 15.0
+        },
+        {
+            "id": 2,
+            "name": "弓箭手",
+            "health": 80.0,
+            "attack": 20.0
+        },
+        {
+            "id": 3,
+            "name": "法师",
+            "health": 60.0,
+            "attack": 25.0
+        },
+        {
+            "id": 4,
+            "name": "盗贼",
+            "health": 70.0,
+            "attack": 18.0
+        }
+    ]
+}

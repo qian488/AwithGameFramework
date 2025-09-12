@@ -1,7 +1,6 @@
-using UnityEngine;
-using AwithGameFrame.Core;
 
-namespace AwithGameFrame.Foundation.Logging
+
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 静态日志工具类 - 提供便捷的日志记录方法

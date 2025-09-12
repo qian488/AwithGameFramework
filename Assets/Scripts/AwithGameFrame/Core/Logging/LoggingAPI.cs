@@ -1,7 +1,6 @@
-using UnityEngine;
-using AwithGameFrame.Core;
 
-namespace AwithGameFrame.Foundation.Logging
+
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 日志系统统一入口 - 提供一键配置和便捷访问
@@ -154,7 +153,7 @@ namespace AwithGameFrame.Foundation.Logging
 
         #region 便捷日志方法
         /// <summary>
-        /// 记录信息日志
+        /// 记录信息日志（默认Core分类）
         /// </summary>
         /// <param name="message">日志消息</param>
         public static void Info(string message)
@@ -163,7 +162,17 @@ namespace AwithGameFrame.Foundation.Logging
         }
 
         /// <summary>
-        /// 记录警告日志
+        /// 记录信息日志（指定分类）
+        /// </summary>
+        /// <param name="category">日志分类</param>
+        /// <param name="message">日志消息</param>
+        public static void Info(LogCategory category, string message)
+        {
+            LoggingManager.GetInstance().Log(LogLevel.Info, category, message);
+        }
+
+        /// <summary>
+        /// 记录警告日志（默认Core分类）
         /// </summary>
         /// <param name="message">日志消息</param>
         public static void Warn(string message)
@@ -172,7 +181,17 @@ namespace AwithGameFrame.Foundation.Logging
         }
 
         /// <summary>
-        /// 记录错误日志
+        /// 记录警告日志（指定分类）
+        /// </summary>
+        /// <param name="category">日志分类</param>
+        /// <param name="message">日志消息</param>
+        public static void Warn(LogCategory category, string message)
+        {
+            LoggingManager.GetInstance().Log(LogLevel.Warn, category, message);
+        }
+
+        /// <summary>
+        /// 记录错误日志（默认Core分类）
         /// </summary>
         /// <param name="message">日志消息</param>
         public static void Error(string message)
@@ -181,12 +200,32 @@ namespace AwithGameFrame.Foundation.Logging
         }
 
         /// <summary>
-        /// 记录调试日志
+        /// 记录错误日志（指定分类）
+        /// </summary>
+        /// <param name="category">日志分类</param>
+        /// <param name="message">日志消息</param>
+        public static void Error(LogCategory category, string message)
+        {
+            LoggingManager.GetInstance().Log(LogLevel.Error, category, message);
+        }
+
+        /// <summary>
+        /// 记录调试日志（默认Core分类）
         /// </summary>
         /// <param name="message">日志消息</param>
         public static void Debug(string message)
         {
             FrameworkLogger.Debug(message);
+        }
+
+        /// <summary>
+        /// 记录调试日志（指定分类）
+        /// </summary>
+        /// <param name="category">日志分类</param>
+        /// <param name="message">日志消息</param>
+        public static void Debug(LogCategory category, string message)
+        {
+            LoggingManager.GetInstance().Log(LogLevel.Debug, category, message);
         }
         #endregion
     }

@@ -349,24 +349,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1487392151}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e62b04fde70d08a4f8effa5162d972fe, type: 3}
+  m_Script: {fileID: 11500000, guid: eb8083e373d80f847a99f4676c77db9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  testPlayerPrefsButton: {fileID: 0}
-  testJsonFileButton: {fileID: 0}
-  testDatabaseButton: {fileID: 0}
-  testBinaryFileButton: {fileID: 0}
-  clearAllDataButton: {fileID: 0}
-  loadAllDataButton: {fileID: 0}
-  resultText: {fileID: 0}
-  resultScrollRect: {fileID: 0}
-  createUIAutomatically: 1
-  testKeyCode: 116
-  testKey: TestData
-  testString: Hello AwithGameFrame!
-  testInt: 42
-  testFloat: 3.14
-  testBool: 1
+  autoStart: 1
+  showUI: 1
+  uiFont: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+  fontSize: 14
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

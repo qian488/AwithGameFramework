@@ -1,0 +1,28 @@
+{
+    "data": [
+        {
+            "id": 1,
+            "name": "铁剑",
+            "damage": 20,
+            "attackSpeed": 1.0
+        },
+        {
+            "id": 2,
+            "name": "长弓",
+            "damage": 25,
+            "attackSpeed": 0.8
+        },
+        {
+            "id": 3,
+            "name": "法杖",
+            "damage": 30,
+            "attackSpeed": 1.2
+        },
+        {
+            "id": 4,
+            "name": "匕首",
+            "damage": 15,
+            "attackSpeed": 1.5
+        }
+    ]
+}

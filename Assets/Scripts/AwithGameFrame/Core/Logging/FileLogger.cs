@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEngine;
-using AwithGameFrame.Core;
 
-namespace AwithGameFrame.Foundation.Logging
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 文件日志输出器 - 支持日志文件写入、轮转和清理

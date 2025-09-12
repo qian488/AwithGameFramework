@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using AwithGameFrame.Foundation.Pool;
 
 using AwithGameFrame.Core;
 using AwithGameFrame.Foundation.Systems.InputSystem;
@@ -42,7 +43,7 @@ public class InputTest : MonoBehaviour
                 break;
             case KeyCode.R:
                 Debug.Log("R Down");
-                PoolManager.GetInstance().Clear();
+                PoolManagerAPI.ClearPool();
                 break;
             case KeyCode.T:
                 Debug.Log("T Down");

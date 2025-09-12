@@ -1,9 +1,6 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using AwithGameFrame.Core;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 
 namespace AwithGameFrame.Foundation.Systems.InputSystem
 {
@@ -24,9 +21,9 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
         /// </summary>
         public InputManager()
         {
-            FrameworkLogger.LogInput("InputManager初始化开始");
+            LoggingAPI.Info(LogCategory.Input, "InputManager初始化开始");
             MonoManager.GetInstance().AddUpdateListener(MyUpdate);
-            FrameworkLogger.LogInput("InputManager初始化完成");
+            LoggingAPI.Info(LogCategory.Input, "InputManager初始化完成");
         }
         #endregion
         
@@ -38,7 +35,7 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
         public void StartOREndCheck(bool isOpen)
         {
             isStart = isOpen;
-            FrameworkLogger.LogInput($"输入检测状态: {(isOpen ? "开启" : "关闭")}");
+            LoggingAPI.Info(LogCategory.Input, $"输入检测状态: {(isOpen ? "开启" : "关闭")}");
         }
         #endregion
         
@@ -53,12 +50,12 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
             if (Input.GetKeyDown(key))
             {
                 EventCenter.GetInstance().EventTrigger("KeyDown", key);
-                FrameworkLogger.LogInput($"按键按下: {key}");
+                LoggingAPI.Info(LogCategory.Input, $"按键按下: {key}");
             }
             if (Input.GetKeyUp(key))
             {
                 EventCenter.GetInstance().EventTrigger("KeyUp", key);
-                FrameworkLogger.LogInput($"按键抬起: {key}");
+                LoggingAPI.Info(LogCategory.Input, $"按键抬起: {key}");
             }
         }
 

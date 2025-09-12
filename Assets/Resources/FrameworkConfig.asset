@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02507d6c990c2004e80d23c1fc4cbf56, type: 3}
+  m_Name: FrameworkConfig
+  m_EditorClassIdentifier: 
+  resourceRootPath: Assets/Resources
+  saveGamePath: Saves
+  configPath: Configs
+  enableAudioModule: 1
+  enableUIModule: 1
+  enableInputModule: 1
+  enablePoolModule: 1
+  enableLoggingModule: 1
+  defaultLanguage: zh-CN
+  defaultVolume: 1
+  targetFrameRate: 60
+  logLevel: 2
+  logMode: 1
+  enableTimestamp: 1
+  enableStackTrace: 0
+  enableFrameworkValidation: 0
+  enableFileLogging: 0
+  logDirectory: 
+  maxFileSizeMB: 10
+  maxFiles: 10
+  cleanupIntervalHours: 1
+  enablePerformanceMonitoring: 0
+  enablePerformanceLogging: 1
+  fpsUpdateInterval: 2
+  poolDefaultMaxSize: 100
+  poolEnableAutoCleanup: 1
+  poolAutoCleanupInterval: 30
+  maxConcurrentSFX: 10
+  enableDebugMode: 0
+  showDebugInfo: 1

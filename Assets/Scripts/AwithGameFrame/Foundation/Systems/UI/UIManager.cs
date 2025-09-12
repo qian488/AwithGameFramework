@@ -4,8 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using AwithGameFrame.Core;
-using AwithGameFrame.Foundation;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 using AwithGameFrame.Foundation.DataPersistence;
 
 namespace AwithGameFrame.Foundation.Systems.UI
@@ -46,7 +45,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
         #region 构造函数
         public UIManager()
         {
-            FrameworkLogger.LogUI("UIManager初始化开始");
+            LoggingAPI.Info(LogCategory.UI, "UIManager初始化开始");
             
             GameObject go = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_CANVAS_PATH);
             canvas = go.transform as RectTransform;
@@ -60,7 +59,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
             go = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_EVENTSYSTEM_PATH);
             GameObject.DontDestroyOnLoad(go);
             
-            FrameworkLogger.LogUI("UIManager初始化完成");
+            LoggingAPI.Info(LogCategory.UI, "UIManager初始化完成");
         }
         #endregion
 
@@ -90,7 +89,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
         /// <param name="callback">面板创建后所作的事</param>
         public void ShowPanel<T>(string panelName, UILayer layer = UILayer.Mid, UnityAction<T> callback = null) where T : BasePanel 
         {
-            FrameworkLogger.LogUI($"显示面板: {panelName}, 层级: {layer}");
+            LoggingAPI.Info(LogCategory.UI, $"显示面板: {panelName}, 层级: {layer}");
             
             if (panelDictionary.ContainsKey(panelName))
             {
@@ -99,7 +98,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
                 {
                     callback(panelDictionary[panelName] as T);
                 }
-                FrameworkLogger.LogUI($"面板已存在，直接显示: {panelName}");
+                LoggingAPI.Info(LogCategory.UI, $"面板已存在，直接显示: {panelName}");
                 return;
             }
 
@@ -128,20 +127,20 @@ namespace AwithGameFrame.Foundation.Systems.UI
                 if(callback != null) callback(panel);
                 panel.ShowMe();
                 panelDictionary.Add(panelName, panel);
-                FrameworkLogger.LogUI($"面板加载完成并显示: {panelName}");
+                LoggingAPI.Info(LogCategory.UI, $"面板加载完成并显示: {panelName}");
             });
         }
 
         public void HidePanel(string panelName)
         {
-            FrameworkLogger.LogUI($"隐藏面板: {panelName}");
+            LoggingAPI.Info(LogCategory.UI, $"隐藏面板: {panelName}");
             
             if (panelDictionary.ContainsKey(panelName))
             {
                 panelDictionary[panelName].HideMe();
                 ResourcesManager.GetInstance().Recycle("UI/" + panelName, panelDictionary[panelName].gameObject);
                 panelDictionary.Remove(panelName);
-                FrameworkLogger.LogUI($"面板已隐藏并回收: {panelName}");
+                LoggingAPI.Info(LogCategory.UI, $"面板已隐藏并回收: {panelName}");
             }
             else
             {
@@ -201,7 +200,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
         {
             // 应用设置到UI系统
             ApplySettingsToUI();
-            FrameworkLogger.LogUI("UI设置已应用");
+            LoggingAPI.Info(LogCategory.UI, "UI设置已应用");
         }
         
         /// <summary>
@@ -211,7 +210,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
         {
             // 设置变更时自动应用
             ApplySettingsToUI();
-            FrameworkLogger.LogUI("UI设置已更新并应用");
+            LoggingAPI.Info(LogCategory.UI, "UI设置已更新并应用");
         }
         
         /// <summary>
@@ -222,7 +221,7 @@ namespace AwithGameFrame.Foundation.Systems.UI
             // 这里可以添加从数据持久化系统加载设置的逻辑
             // 暂时使用默认值，后续可以集成SettingsHelper
             
-            FrameworkLogger.LogUI("UI设置已应用");
+            LoggingAPI.Info(LogCategory.UI, "UI设置已应用");
         }
         
         /// <summary>

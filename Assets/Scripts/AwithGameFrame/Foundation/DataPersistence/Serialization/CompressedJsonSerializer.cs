@@ -3,7 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using Cysharp.Threading.Tasks;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 using UnityEngine;
 
 namespace AwithGameFrame.Foundation.DataPersistence

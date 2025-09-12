@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using Mono.Data.Sqlite;
 using Cysharp.Threading.Tasks;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 
 namespace AwithGameFrame.Foundation.DataPersistence
 {

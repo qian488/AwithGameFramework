@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using AwithGameFrame.Core;
 
-namespace AwithGameFrame.Foundation.Logging
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 性能监控器 - 监控游戏性能指标
@@ -80,7 +79,7 @@ namespace AwithGameFrame.Foundation.Logging
             
             if (autoLog && _enableAutoLogging)
             {
-                FrameworkLogger.LogPerformance($"Timer '{name}': {duration:F3}s");
+                LoggingAPI.Info(LogCategory.Performance, $"Timer '{name}': {duration:F3}s");
             }
             
             return duration;
@@ -122,7 +121,7 @@ namespace AwithGameFrame.Foundation.Logging
             {
                 if (autoLog && _enableAutoLogging)
                 {
-                    FrameworkLogger.LogPerformance($"Counter '{name}': {_counters[name]}");
+                    LoggingAPI.Info(LogCategory.Performance, $"Counter '{name}': {_counters[name]}");
                 }
             }
         }
@@ -165,7 +164,7 @@ namespace AwithGameFrame.Foundation.Logging
             
             if (autoLog && _enableAutoLogging)
             {
-                FrameworkLogger.LogPerformance($"Average '{name}': {_averages[name]:F3} (samples: {_averageCounts[name]})");
+                LoggingAPI.Info(LogCategory.Performance, $"Average '{name}': {_averages[name]:F3} (samples: {_averageCounts[name]})");
             }
         }
         
@@ -195,7 +194,7 @@ namespace AwithGameFrame.Foundation.Logging
         public void LogFrameRate()
         {
             float fps = 1.0f / Time.deltaTime;
-            FrameworkLogger.LogPerformance($"FPS: {fps:F1}");
+            LoggingAPI.Info(LogCategory.Performance, $"FPS: {fps:F1}");
         }
         
         /// <summary>
@@ -204,7 +203,7 @@ namespace AwithGameFrame.Foundation.Logging
         public void LogMemoryUsage()
         {
             long memory = GC.GetTotalMemory(false);
-            FrameworkLogger.LogPerformance($"Memory: {memory / 1024 / 1024}MB");
+            LoggingAPI.Info(LogCategory.Performance, $"Memory: {memory / 1024 / 1024}MB");
         }
         
         /// <summary>
@@ -216,7 +215,7 @@ namespace AwithGameFrame.Foundation.Logging
             int gen1 = GC.CollectionCount(1);
             int gen2 = GC.CollectionCount(2);
             
-            FrameworkLogger.LogPerformance($"GC - Gen0: {gen0}, Gen1: {gen1}, Gen2: {gen2}");
+            LoggingAPI.Info(LogCategory.Performance, $"GC - Gen0: {gen0}, Gen1: {gen1}, Gen2: {gen2}");
         }
         
         /// <summary>
@@ -224,8 +223,8 @@ namespace AwithGameFrame.Foundation.Logging
         /// </summary>
         public void LogRenderStats()
         {
-            FrameworkLogger.LogPerformance($"Draw Calls: {(UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset != null ? "Unknown" : "Built-in")}");
-            FrameworkLogger.LogPerformance($"Triangles: {(UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset != null ? "Unknown" : "Built-in")}");
+            LoggingAPI.Info(LogCategory.Performance, $"Draw Calls: {(UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset != null ? "Unknown" : "Built-in")}");
+            LoggingAPI.Info(LogCategory.Performance, $"Triangles: {(UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset != null ? "Unknown" : "Built-in")}");
         }
         
         /// <summary>
@@ -242,7 +241,7 @@ namespace AwithGameFrame.Foundation.Logging
                 float fps = _frameCount / _lastFrameTime;
                 if (_enableAutoLogging)
                 {
-                    FrameworkLogger.LogPerformance($"Average FPS: {fps:F1}");
+                    LoggingAPI.Info(LogCategory.Performance, $"Average FPS: {fps:F1}");
                 }
                 
                 _frameCount = 0;

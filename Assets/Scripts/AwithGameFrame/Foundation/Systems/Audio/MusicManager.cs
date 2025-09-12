@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using AwithGameFrame.Core;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 using AwithGameFrame.Foundation.DataPersistence;
 
 namespace AwithGameFrame.Foundation.Systems.Audio
@@ -67,10 +67,10 @@ namespace AwithGameFrame.Foundation.Systems.Audio
 
         public MusicManager()
         {
-            FrameworkLogger.LogAudio("MusicManager初始化开始");
+            LoggingAPI.Info(LogCategory.Audio, "MusicManager初始化开始");
             
             MonoManager.GetInstance().AddUpdateListener(Update);
-            FrameworkLogger.LogAudio("MusicManager初始化完成");
+            LoggingAPI.Info(LogCategory.Audio, "MusicManager初始化完成");
         }
 
         private void Update()
@@ -97,14 +97,14 @@ namespace AwithGameFrame.Foundation.Systems.Audio
         #region BGM -- 背景音乐
         public void PlayBGM(string name)
         {
-            FrameworkLogger.LogAudio($"播放背景音乐: {name}");
+            LoggingAPI.Info(LogCategory.Audio, $"播放背景音乐: {name}");
             
             if (BGM == null)
             {
                 GameObject go = new GameObject();
                 go.name = "BGM";
                 BGM = go.AddComponent<AudioSource>();
-                FrameworkLogger.LogAudio("创建BGM AudioSource");
+                LoggingAPI.Info(LogCategory.Audio, "创建BGM AudioSource");
             }
 
             ResourcesManager.GetInstance().LoadAsync<AudioClip>(GameConstants.MUSIC_BGM_PATH + name, (clip) =>
@@ -113,7 +113,7 @@ namespace AwithGameFrame.Foundation.Systems.Audio
                 BGM.volume = BGMValue;
                 BGM.loop = true;
                 BGM.Play();
-                FrameworkLogger.LogAudio($"BGM播放开始: {name}");
+                LoggingAPI.Info(LogCategory.Audio, $"BGM播放开始: {name}");
             });
         }
 
@@ -121,14 +121,14 @@ namespace AwithGameFrame.Foundation.Systems.Audio
         {
             if (BGM == null) return;
             BGM.Pause();
-            FrameworkLogger.LogAudio("BGM暂停");
+            LoggingAPI.Info(LogCategory.Audio, "BGM暂停");
         }
 
         public void StopBGM() 
         {
             if (BGM == null) return;
             BGM.Stop();
-            FrameworkLogger.LogAudio("BGM停止");
+            LoggingAPI.Info(LogCategory.Audio, "BGM停止");
         }
 
         public void ChangeBGMValue(float value)
@@ -250,7 +250,7 @@ namespace AwithGameFrame.Foundation.Systems.Audio
         {
             // 应用设置到音频系统
             ApplySettingsToAudio();
-            FrameworkLogger.LogAudio("音频设置已应用");
+            LoggingAPI.Info(LogCategory.Audio, "音频设置已应用");
         }
         
         /// <summary>
@@ -260,7 +260,7 @@ namespace AwithGameFrame.Foundation.Systems.Audio
         {
             // 设置变更时自动应用
             ApplySettingsToAudio();
-            FrameworkLogger.LogAudio("音频设置已更新并应用");
+            LoggingAPI.Info(LogCategory.Audio, "音频设置已更新并应用");
         }
         
         /// <summary>
@@ -271,7 +271,7 @@ namespace AwithGameFrame.Foundation.Systems.Audio
             // 这里可以添加从数据持久化系统加载设置的逻辑
             // 暂时使用默认值，后续可以集成SettingsHelper
             
-            FrameworkLogger.LogAudio($"音频设置已应用: BGM={BGMValue}, SFX={SFXValue}, Voice={VoiceValue}");
+            LoggingAPI.Info(LogCategory.Audio, $"音频设置已应用: BGM={BGMValue}, SFX={SFXValue}, Voice={VoiceValue}");
         }
         
         /// <summary>

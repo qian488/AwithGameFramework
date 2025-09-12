@@ -34,11 +34,11 @@ LoggingSystem.Error("发生错误");
 LoggingSystem.Debug("调试信息");
 
 // 分类日志记录
-FrameworkLogger.LogUI("UI面板打开");
-FrameworkLogger.LogAudio("播放背景音乐");
-FrameworkLogger.LogInput("用户按下空格键");
-FrameworkLogger.LogResource("加载游戏资源");
-FrameworkLogger.LogPerformance("帧率: 60fps");
+LoggingAPI.Info(LogCategory.UI, "UI面板打开");
+LoggingAPI.Info(LogCategory.Audio, "播放背景音乐");
+LoggingAPI.Info(LogCategory.Input, "用户按下空格键");
+LoggingAPI.Info(LogCategory.Resource, "加载游戏资源");
+LoggingAPI.Info(LogCategory.Performance, "帧率: 60fps");
 ```
 
 ### 查看系统状态
@@ -127,11 +127,11 @@ LoggingSystem.Warn("警告信息");
 LoggingSystem.Error("错误信息");
 
 // 使用FrameworkLogger（分类日志）
-FrameworkLogger.LogUI("UI面板打开");
-FrameworkLogger.LogAudio("播放背景音乐");
-FrameworkLogger.LogInput("用户按下空格键");
-FrameworkLogger.LogResource("加载游戏资源");
-FrameworkLogger.LogPerformance("帧率: 60fps");
+LoggingAPI.Info(LogCategory.UI, "UI面板打开");
+LoggingAPI.Info(LogCategory.Audio, "播放背景音乐");
+LoggingAPI.Info(LogCategory.Input, "用户按下空格键");
+LoggingAPI.Info(LogCategory.Resource, "加载游戏资源");
+LoggingAPI.Info(LogCategory.Performance, "帧率: 60fps");
 ```
 
 ### 3. 系统管理
@@ -484,9 +484,9 @@ FrameworkLogger.Error("用户点击了按钮");  // 错误级别使用不当
 
 ```csharp
 // 好的做法
-FrameworkLogger.LogUI("打开设置面板");
-FrameworkLogger.LogNetwork("发送登录请求");
-FrameworkLogger.LogPerformance("场景加载完成，耗时: {0}s", loadTime);
+LoggingAPI.Info(LogCategory.UI, "打开设置面板");
+LoggingAPI.Info(LogCategory.Network, "发送登录请求");
+LoggingAPI.Info(LogCategory.Performance, "场景加载完成，耗时: {0}s", loadTime);
 
 // 避免的做法
 FrameworkLogger.Info("UI: 打开设置面板");  // 应该使用LogUI

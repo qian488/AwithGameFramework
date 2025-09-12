@@ -1,7 +1,7 @@
 using System;
 using Cysharp.Threading.Tasks;
 using MessagePack;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 
 namespace AwithGameFrame.Foundation.DataPersistence
 {

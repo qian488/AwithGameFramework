@@ -1,5 +1,5 @@
 using System;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
 
 namespace AwithGameFrame.Foundation.DataPersistence
 {

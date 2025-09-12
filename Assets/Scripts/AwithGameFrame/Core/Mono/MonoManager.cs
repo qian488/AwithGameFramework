@@ -64,6 +64,45 @@ namespace AwithGameFrame.Core
         {
             controller.StopCoroutine(routine);
         }
+
+        /// <summary>
+        /// 延迟执行（便捷方法）
+        /// </summary>
+        /// <param name="delay">延迟时间（秒）</param>
+        /// <param name="action">要执行的操作</param>
+        /// <returns>协程引用</returns>
+        public Coroutine StartDelay(float delay, System.Action action)
+        {
+            return StartCoroutine(DelayCoroutine(delay, action));
+        }
+
+        /// <summary>
+        /// 下一帧执行（便捷方法）
+        /// </summary>
+        /// <param name="action">要执行的操作</param>
+        /// <returns>协程引用</returns>
+        public Coroutine StartNextFrame(System.Action action)
+        {
+            return StartCoroutine(NextFrameCoroutine(action));
+        }
+
+        /// <summary>
+        /// 延迟执行协程
+        /// </summary>
+        private IEnumerator DelayCoroutine(float delay, System.Action action)
+        {
+            yield return new WaitForSeconds(delay);
+            action?.Invoke();
+        }
+
+        /// <summary>
+        /// 下一帧执行协程
+        /// </summary>
+        private IEnumerator NextFrameCoroutine(System.Action action)
+        {
+            yield return null;
+            action?.Invoke();
+        }
         #endregion
     }
 }

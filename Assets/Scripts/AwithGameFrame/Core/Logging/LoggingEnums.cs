@@ -1,6 +1,6 @@
-using System;
 
-namespace AwithGameFrame.Foundation.Logging
+
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 日志级别枚举
@@ -76,7 +76,42 @@ namespace AwithGameFrame.Foundation.Logging
         /// <summary>
         /// 资源管理
         /// </summary>
-        Resource
+        Resource,
+        
+        /// <summary>
+        /// 对象池管理
+        /// </summary>
+        Pool,
+        
+        /// <summary>
+        /// 配置管理
+        /// </summary>
+        Config,
+        
+        /// <summary>
+        /// 数据持久化
+        /// </summary>
+        DataPersistence,
+        
+        /// <summary>
+        /// 事件系统
+        /// </summary>
+        Event,
+        
+        /// <summary>
+        /// 场景管理
+        /// </summary>
+        Scene,
+        
+        /// <summary>
+        /// 工具类
+        /// </summary>
+        Utils,
+        
+        /// <summary>
+        /// 提供者管理
+        /// </summary>
+        Provider
     }
     
     /// <summary>

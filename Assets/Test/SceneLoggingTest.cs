@@ -1,5 +1,6 @@
 using UnityEngine;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
+
 
 namespace Test
 {

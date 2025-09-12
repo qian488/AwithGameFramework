@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AwithGameFrame.Foundation.Logging
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 日志系统配置类
@@ -105,7 +105,7 @@ namespace AwithGameFrame.Foundation.Logging
                     // 只启用核心分类
                     foreach (var category in config.CategoryEnabled.Keys)
                     {
-                        config.CategoryEnabled[category] = (category == LogCategory.Core || category == LogCategory.UI || category == LogCategory.Network);
+                        config.CategoryEnabled[category] = (category == LogCategory.Core || category == LogCategory.UI || category == LogCategory.Network || category == LogCategory.Pool || category == LogCategory.Config);
                     }
                     break;
                     

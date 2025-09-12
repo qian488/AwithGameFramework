@@ -1,9 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using AwithGameFrame.Foundation.DataPersistence;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
+
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace AwithGameFrame.Test

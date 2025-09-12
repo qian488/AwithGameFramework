@@ -1,9 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.Events;
-using AwithGameFrame.Core;
-using AwithGameFrame.Foundation.Logging;
+using AwithGameFrame.Core.Logging;
+
 
 namespace AwithGameFrame.Core
 {
@@ -93,7 +91,7 @@ namespace AwithGameFrame.Core
                 evenDictionary.Add(eventName, new EventInfo<T>(action));
             }
             
-            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+            LoggingAPI.Info(LogCategory.Event, $"添加事件监听: {eventName}");
         }
 
         public void AddEventListener<T0,T1>(string eventName, UnityAction<T0,T1> action)
@@ -107,7 +105,7 @@ namespace AwithGameFrame.Core
                 evenDictionary.Add(eventName, new EventInfo<T0,T1>(action));
             }
             
-            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+            LoggingAPI.Info(LogCategory.Event, $"添加事件监听: {eventName}");
         }
 
         public void AddEventListener<T0,T1,T2>(string eventName, UnityAction<T0,T1,T2> action)
@@ -121,7 +119,7 @@ namespace AwithGameFrame.Core
                 evenDictionary.Add(eventName, new EventInfo<T0,T1,T2>(action));
             }
             
-            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+            LoggingAPI.Info(LogCategory.Event, $"添加事件监听: {eventName}");
         }
 
         public void AddEventListener<T0,T1,T2,T3>(string eventName, UnityAction<T0,T1,T2,T3> action)
@@ -135,7 +133,7 @@ namespace AwithGameFrame.Core
                 evenDictionary.Add(eventName, new EventInfo<T0,T1,T2,T3>(action));
             }
             
-            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+            LoggingAPI.Info(LogCategory.Event, $"添加事件监听: {eventName}");
         }
 
         public void AddEventListener(string eventName, UnityAction action)
@@ -149,7 +147,7 @@ namespace AwithGameFrame.Core
                 evenDictionary.Add(eventName, new EventInfo(action));
             }
             
-            FrameworkLogger.LogUI($"添加事件监听: {eventName}");
+            LoggingAPI.Info(LogCategory.Event, $"添加事件监听: {eventName}");
         }
         #endregion
 
@@ -164,7 +162,7 @@ namespace AwithGameFrame.Core
             if (evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T>).actions -= action;
-                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"移除事件监听: {eventName}");
             }
             else
             {
@@ -177,7 +175,7 @@ namespace AwithGameFrame.Core
             if (evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1>).actions -= action;
-                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"移除事件监听: {eventName}");
             }
             else
             {
@@ -190,7 +188,7 @@ namespace AwithGameFrame.Core
             if (evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1,T2>).actions -= action;
-                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"移除事件监听: {eventName}");
             }
             else
             {
@@ -203,7 +201,7 @@ namespace AwithGameFrame.Core
             if (evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1,T2,T3>).actions -= action;
-                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"移除事件监听: {eventName}");
             }
             else
             {
@@ -216,7 +214,7 @@ namespace AwithGameFrame.Core
             if (evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo).actions -= action;
-                FrameworkLogger.LogUI($"移除事件监听: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"移除事件监听: {eventName}");
             }
             else
             {
@@ -236,7 +234,7 @@ namespace AwithGameFrame.Core
             if(evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T>).actions?.Invoke(info);
-                FrameworkLogger.LogUI($"触发事件: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"触发事件: {eventName}");
             }
             else
             {
@@ -249,7 +247,7 @@ namespace AwithGameFrame.Core
             if(evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1>).actions?.Invoke(info0,info1);
-                FrameworkLogger.LogUI($"触发事件: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"触发事件: {eventName}");
             }
             else
             {
@@ -262,7 +260,7 @@ namespace AwithGameFrame.Core
             if(evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1,T2>).actions?.Invoke(info0,info1,info2);
-                FrameworkLogger.LogUI($"触发事件: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"触发事件: {eventName}");
             }
             else
             {
@@ -275,7 +273,7 @@ namespace AwithGameFrame.Core
             if(evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo<T0,T1,T2,T3>).actions?.Invoke(info0,info1,info2,info3);
-                FrameworkLogger.LogUI($"触发事件: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"触发事件: {eventName}");
             }
             else
             {
@@ -288,7 +286,7 @@ namespace AwithGameFrame.Core
             if (evenDictionary.ContainsKey(eventName))
             {
                 (evenDictionary[eventName] as EventInfo).actions?.Invoke();
-                FrameworkLogger.LogUI($"触发事件: {eventName}");
+                LoggingAPI.Info(LogCategory.Event, $"触发事件: {eventName}");
             }
             else
             {
@@ -300,7 +298,7 @@ namespace AwithGameFrame.Core
         public void Clear()
         {
             evenDictionary.Clear();
-            FrameworkLogger.LogUI("清空所有事件监听");
+            LoggingAPI.Info(LogCategory.Event, "清空所有事件监听");
         }
     }
 }

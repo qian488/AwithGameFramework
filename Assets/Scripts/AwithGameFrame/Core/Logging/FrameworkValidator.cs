@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using UnityEngine;
-using AwithGameFrame.Core;
 
-namespace AwithGameFrame.Foundation.Logging
+namespace AwithGameFrame.Core.Logging
 {
     /// <summary>
     /// 框架验证器 - 检测框架使用中的不规范行为，辅助框架开发
