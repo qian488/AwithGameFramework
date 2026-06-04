@@ -1,10 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using AwithGameFrame.Core;
+using AwithGameFrame.Core.DI;
 using AwithGameFrame.Core.Logging;
-using AwithGameFrame.Foundation.DataPersistence;
 
 namespace AwithGameFrame.Foundation.Systems.Audio
 {
@@ -12,332 +11,211 @@ namespace AwithGameFrame.Foundation.Systems.Audio
     /// 音频管理器
     /// 负责BGM、SFX、Voice的播放和管理
     /// </summary>
-    public class MusicManager : BaseManager<MusicManager>
+    public class MusicManager : BaseManager<MusicManager>, IAudioManager
     {
-        #region 字段
-        /// <summary>背景音乐音频源</summary>
-        private AudioSource BGM = null;
-        /// <summary>背景音乐音量</summary>
-        private float BGMValue = 1f;
+        private AudioSource _bgmSource;
+        private float _bgmVolume = 1f;
 
-        /// <summary>音效父对象</summary>
-        private GameObject SFXGO = null;
-        /// <summary>音效音频源列表</summary>
-        private List<AudioSource> SFXList = new List<AudioSource>();
-        /// <summary>音效音量</summary>
-        private float SFXValue = 1f;
+        private GameObject _sfxRoot;
+        private readonly List<AudioSource> _sfxList = new List<AudioSource>();
+        private float _sfxVolume = 1f;
 
-        /// <summary>语音父对象</summary>
-        private GameObject VoiceGO = null;
-        /// <summary>语音音频源列表</summary>
-        private List<AudioSource> VoiceList = new List<AudioSource>();
-        /// <summary>语音音量</summary>
-        private float VoiceValue = 1f;
+        private GameObject _voiceRoot;
+        private readonly List<AudioSource> _voiceList = new List<AudioSource>();
+        private float _voiceVolume = 1f;
 
-        /// <summary>音频源对象池</summary>
-        private Queue<AudioSource> audioSourcePool = new Queue<AudioSource>();
-        #endregion
-        
-        private AudioSource GetAudioSource(GameObject parent)
-        {
-            AudioSource source;
-            if (audioSourcePool.Count > 0)
-            {
-                source = audioSourcePool.Dequeue();
-                source.gameObject.SetActive(true);
-            }
-            else
-            {
-                source = new GameObject("AudioSource").AddComponent<AudioSource>();
-            }
-            source.transform.SetParent(parent.transform);
-            return source;
-        }
+        private readonly Queue<AudioSource> _audioSourcePool = new Queue<AudioSource>();
+        private readonly Dictionary<string, AudioClip> _clipCache = new Dictionary<string, AudioClip>();
 
-        private void RecycleAudioSource(AudioSource source)
-        {
-            if (source != null)
-            {
-                source.Stop();
-                source.clip = null;
-                source.gameObject.SetActive(false);
-                audioSourcePool.Enqueue(source);
-            }
-        }
+        public override int Priority => (int)ModulePriority.Features;
 
         public MusicManager()
         {
-            LoggingAPI.Info(LogCategory.Audio, "MusicManager初始化开始");
-            
             MonoManager.GetInstance().AddUpdateListener(Update);
-            LoggingAPI.Info(LogCategory.Audio, "MusicManager初始化完成");
+        }
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            ServiceLocator.Register<IAudioManager>(this);
         }
 
         private void Update()
         {
-            for(int i = SFXList.Count - 1; i >= 0; i--)
-            {
-                if (!SFXList[i].isPlaying)
-                {
-                    RecycleAudioSource(SFXList[i]);
-                    SFXList.RemoveAt(i);
-                }
-            }
+            CleanFinishedSources(_sfxList);
+            CleanFinishedSources(_voiceList);
+        }
 
-            for (int i = VoiceList.Count - 1; i >= 0; i--)
+        private void CleanFinishedSources(List<AudioSource> list)
+        {
+            for (int i = list.Count - 1; i >= 0; i--)
             {
-                if (!VoiceList[i].isPlaying)
+                if (!list[i].isPlaying)
                 {
-                    RecycleAudioSource(VoiceList[i]);
-                    VoiceList.RemoveAt(i);
+                    RecycleAudioSource(list[i]);
+                    list.RemoveAt(i);
                 }
             }
         }
 
-        #region BGM -- 背景音乐
+        private AudioSource GetAudioSource(GameObject parent)
+        {
+            if (_audioSourcePool.Count > 0)
+            {
+                var source = _audioSourcePool.Dequeue();
+                source.gameObject.SetActive(true);
+                source.transform.SetParent(parent.transform);
+                return source;
+            }
+            var newSource = new GameObject("AudioSource").AddComponent<AudioSource>();
+            newSource.transform.SetParent(parent.transform);
+            return newSource;
+        }
+
+        private void RecycleAudioSource(AudioSource source)
+        {
+            if (source == null) return;
+            source.Stop();
+            source.clip = null;
+            source.gameObject.SetActive(false);
+            _audioSourcePool.Enqueue(source);
+        }
+
+        #region BGM
+
         public void PlayBGM(string name)
         {
-            LoggingAPI.Info(LogCategory.Audio, $"播放背景音乐: {name}");
-            
-            if (BGM == null)
+            if (_bgmSource == null)
             {
-                GameObject go = new GameObject();
-                go.name = "BGM";
-                BGM = go.AddComponent<AudioSource>();
-                LoggingAPI.Info(LogCategory.Audio, "创建BGM AudioSource");
+                var go = new GameObject("BGM");
+                Object.DontDestroyOnLoad(go);
+                _bgmSource = go.AddComponent<AudioSource>();
             }
 
-            ResourcesManager.GetInstance().LoadAsync<AudioClip>(GameConstants.MUSIC_BGM_PATH + name, (clip) =>
+            var path = GameConstants.MUSIC_BGM_PATH + name;
+            if (_clipCache.TryGetValue(path, out var cachedClip))
             {
-                BGM.clip = clip;
-                BGM.volume = BGMValue;
-                BGM.loop = true;
-                BGM.Play();
-                LoggingAPI.Info(LogCategory.Audio, $"BGM播放开始: {name}");
+                _bgmSource.clip = cachedClip;
+                _bgmSource.volume = _bgmVolume;
+                _bgmSource.loop = true;
+                _bgmSource.Play();
+                return;
+            }
+
+            ResourcesManager.GetInstance().LoadAsync<AudioClip>(path, (clip) =>
+            {
+                _clipCache[path] = clip;
+                _bgmSource.clip = clip;
+                _bgmSource.volume = _bgmVolume;
+                _bgmSource.loop = true;
+                _bgmSource.Play();
             });
         }
 
         public void PauseBGM()
         {
-            if (BGM == null) return;
-            BGM.Pause();
-            LoggingAPI.Info(LogCategory.Audio, "BGM暂停");
+            _bgmSource?.Pause();
         }
 
-        public void StopBGM() 
+        public void StopBGM()
         {
-            if (BGM == null) return;
-            BGM.Stop();
-            LoggingAPI.Info(LogCategory.Audio, "BGM停止");
+            _bgmSource?.Stop();
         }
 
-        public void ChangeBGMValue(float value)
+        public void ChangeBGMVolume(float value)
         {
-            BGMValue = value;
-            if (BGM == null) return;
-            BGM.volume = BGMValue;
+            _bgmVolume = value;
+            if (_bgmSource != null) _bgmSource.volume = value;
         }
+
         #endregion
 
-        #region SFX -- 音效
-        public void PlaySFX(string name, bool isloop, UnityAction<AudioSource> callback = null)
+        #region SFX
+
+        public void PlaySFX(string name, bool loop = false, UnityAction<AudioSource> callback = null)
         {
-            if(SFXGO == null)
+            EnsureAudioRoot(ref _sfxRoot, "SFX");
+
+            var path = GameConstants.MUSIC_SFX_PATH + name;
+            LoadClipAndPlay(path, _sfxRoot, _sfxVolume, loop, _sfxList, callback);
+        }
+
+        public void StopSFX(AudioSource source)
+        {
+            if (source != null && _sfxList.Remove(source))
+                RecycleAudioSource(source);
+        }
+
+        public void ChangeSFXVolume(float value)
+        {
+            _sfxVolume = value;
+            foreach (var sfx in _sfxList) sfx.volume = value;
+        }
+
+        #endregion
+
+        #region Voice
+
+        public void PlayVoice(string name, bool loop = false, UnityAction<AudioSource> callback = null)
+        {
+            EnsureAudioRoot(ref _voiceRoot, "Voice");
+
+            var path = GameConstants.MUSIC_VOICE_PATH + name;
+            LoadClipAndPlay(path, _voiceRoot, _voiceVolume, loop, _voiceList, callback);
+        }
+
+        public void StopVoice(AudioSource source)
+        {
+            if (source != null && _voiceList.Remove(source))
+                RecycleAudioSource(source);
+        }
+
+        public void ChangeVoiceVolume(float value)
+        {
+            _voiceVolume = value;
+            foreach (var voice in _voiceList) voice.volume = value;
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private void EnsureAudioRoot(ref GameObject root, string name)
+        {
+            if (root == null)
             {
-                SFXGO = new GameObject();
-                SFXGO.name = "SFX";
+                root = new GameObject(name);
+                Object.DontDestroyOnLoad(root);
+            }
+        }
+
+        private void LoadClipAndPlay(string path, GameObject parent, float volume, bool loop, List<AudioSource> list, UnityAction<AudioSource> callback)
+        {
+            if (_clipCache.TryGetValue(path, out var cachedClip))
+            {
+                var src = GetAudioSource(parent);
+                src.clip = cachedClip;
+                src.volume = volume;
+                src.loop = loop;
+                src.Play();
+                list.Add(src);
+                callback?.Invoke(src);
+                return;
             }
 
-            ResourcesManager.GetInstance().LoadAsync<AudioClip>(GameConstants.MUSIC_SFX_PATH + name, (clip) =>
+            ResourcesManager.GetInstance().LoadAsync<AudioClip>(path, (clip) =>
             {
-                AudioSource SFX = GetAudioSource(SFXGO);
-                SFX.clip = clip;
-                SFX.volume = SFXValue;
-                SFX.loop = isloop;
-                SFX.Play();
-                SFXList.Add(SFX);
-
-                if (callback != null)
-                {
-                    callback(SFX);
-                }
+                _clipCache[path] = clip;
+                var src = GetAudioSource(parent);
+                src.clip = clip;
+                src.volume = volume;
+                src.loop = loop;
+                src.Play();
+                list.Add(src);
+                callback?.Invoke(src);
             });
         }
 
-        public void StopSFX(AudioSource SFX)
-        {
-            if (SFXList.Contains(SFX))
-            {
-                SFXList.Remove(SFX);
-                RecycleAudioSource(SFX);
-            }
-        }
-
-        public void ChangeSFXValue(float value)
-        {
-            SFXValue = value;
-            for (int i = 0; i < SFXList.Count; i++)
-            {
-                SFXList[i].volume = SFXValue;
-            }
-        }
         #endregion
-
-        #region Voice -- 角色音频
-        public void PlayVoice(string name, bool isloop, UnityAction<AudioSource> callback = null)
-        {
-            if (VoiceGO == null)
-            {
-                VoiceGO = new GameObject();
-                VoiceGO.name = "Voice";
-            }
-
-            ResourcesManager.GetInstance().LoadAsync<AudioClip>(GameConstants.MUSIC_VOICE_PATH + name, (clip) =>
-            {
-                AudioSource voice = GetAudioSource(VoiceGO);
-                voice.clip = clip;
-                voice.volume = VoiceValue;
-                voice.loop = isloop;
-                voice.Play();
-                VoiceList.Add(voice);
-
-                if (callback != null)
-                {
-                    callback(voice);
-                }
-            });
-        }
-
-        public void StopVoice(AudioSource voice)
-        {
-            if (VoiceList.Contains(voice))
-            {
-                VoiceList.Remove(voice);
-                RecycleAudioSource(voice);
-            }
-        }
-
-        public void ChangeVoiceValue(float value)
-        {
-            VoiceValue = value;
-            for (int i = 0; i < VoiceList.Count; i++)
-            {
-                VoiceList[i].volume = VoiceValue;
-            }
-        }
-        #endregion
-        
-        /// <summary>
-        /// 获取设置键名
-        /// </summary>
-        protected string GetSettingsKey()
-        {
-            return "AudioSettings";
-        }
-        
-        /// <summary>
-        /// 获取存储类型
-        /// </summary>
-        protected StorageType GetStorageType()
-        {
-            return StorageType.PlayerPrefs;
-        }
-        
-        /// <summary>
-        /// 设置加载完成回调
-        /// </summary>
-        protected void OnSettingsLoaded()
-        {
-            // 应用设置到音频系统
-            ApplySettingsToAudio();
-            LoggingAPI.Info(LogCategory.Audio, "音频设置已应用");
-        }
-        
-        /// <summary>
-        /// 设置变更回调
-        /// </summary>
-        protected void OnSettingsChangedInternal(AudioSettings settings)
-        {
-            // 设置变更时自动应用
-            ApplySettingsToAudio();
-            LoggingAPI.Info(LogCategory.Audio, "音频设置已更新并应用");
-        }
-        
-        /// <summary>
-        /// 应用设置到音频系统
-        /// </summary>
-        private void ApplySettingsToAudio()
-        {
-            // 这里可以添加从数据持久化系统加载设置的逻辑
-            // 暂时使用默认值，后续可以集成SettingsHelper
-            
-            LoggingAPI.Info(LogCategory.Audio, $"音频设置已应用: BGM={BGMValue}, SFX={SFXValue}, Voice={VoiceValue}");
-        }
-        
-        /// <summary>
-        /// 更新音频设置
-        /// </summary>
-        /// <param name="updateAction">更新委托</param>
-        public async System.Threading.Tasks.Task<bool> UpdateAudioSettingsAsync(System.Action<AudioSettings> updateAction)
-        {
-            try
-            {
-                // 使用SettingsHelper更新设置
-                var settings = new AudioSettings();
-                updateAction?.Invoke(settings);
-                
-                var result = await DataPersistenceAPI.SaveAsync<AudioSettings>(GetSettingsKey(), settings, GetStorageType());
-                if (result == DataOperationResult.Success)
-                {
-                    OnSettingsChangedInternal(settings);
-                    return true;
-                }
-                return false;
-            }
-            catch (System.Exception ex)
-            {
-                FrameworkLogger.Error($"更新音频设置失败: {ex.Message}", LogCategory.Core);
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// 重置音频设置
-        /// </summary>
-        public async System.Threading.Tasks.Task<bool> ResetAudioSettingsAsync()
-        {
-            try
-            {
-                // 使用SettingsHelper重置设置
-                var result = await DataPersistenceAPI.DeleteAsync(GetSettingsKey(), GetStorageType());
-                if (result == DataOperationResult.Success)
-                {
-                    var defaultSettings = new AudioSettings();
-                    OnSettingsChangedInternal(defaultSettings);
-                    return true;
-                }
-                return false;
-            }
-            catch (System.Exception ex)
-            {
-                FrameworkLogger.Error($"重置音频设置失败: {ex.Message}", LogCategory.Core);
-                return false;
-            }
-        }
-    }
-    
-    /// <summary>
-    /// 音频设置数据类
-    /// </summary>
-    [System.Serializable]
-    public class AudioSettings
-    {
-        public float BGMVolume = 1.0f;
-        public float SFXVolume = 1.0f;
-        public float VoiceVolume = 1.0f;
-        public bool MuteBGM = false;
-        public bool MuteSFX = false;
-        public bool MuteVoice = false;
-        public bool MuteAll = false;
     }
 }

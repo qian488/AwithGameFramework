@@ -19,7 +19,7 @@ MonoBehaviour:
   enableUIModule: 1
   enableInputModule: 1
   enablePoolModule: 1
-  enableLoggingModule: 1
+  enableLoggingModule: 0
   defaultLanguage: zh-CN
   defaultVolume: 1
   targetFrameRate: 60
@@ -27,7 +27,7 @@ MonoBehaviour:
   logMode: 1
   enableTimestamp: 1
   enableStackTrace: 0
-  enableFrameworkValidation: 0
+  enableFrameworkValidation: 1
   enableFileLogging: 0
   logDirectory: 
   maxFileSizeMB: 10

@@ -1,39 +1,44 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
-using AwithGameFrame.Core;
+using AwithGameFrame.Core.DI;
 
 namespace AwithGameFrame.Core
 {
     /// <summary>
-    /// 场景切换模块
+    /// 场景切换管理器
     /// </summary>
-    public class ScenesManager : BaseManager<ScenesManager>
+    public class ScenesManager : BaseManager<ScenesManager>, ISceneManager
     {
-        // 同步加载场景
-        public void LoadScene(string sceneName,UnityAction function)
+        public override int Priority => (int)ModulePriority.Infrastructure;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            ServiceLocator.Register<ISceneManager>(this);
+        }
+
+        public void LoadScene(string sceneName, UnityAction callback = null)
         {
             SceneManager.LoadScene(sceneName);
-            function();
+            callback?.Invoke();
         }
 
-        // 异步加载场景
-        public void LoadSceneAsync(string sceneName, UnityAction function)
+        public void LoadSceneAsync(string sceneName, UnityAction callback = null)
         {
-            MonoManager.GetInstance().StartCoroutine(ReallyLoadSceneAsync(sceneName, function));
+            MonoManager.GetInstance().StartCoroutine(ReallyLoadSceneAsync(sceneName, callback));
         }
 
-        private IEnumerator ReallyLoadSceneAsync(string sceneName,UnityAction function)
+        private IEnumerator ReallyLoadSceneAsync(string sceneName, UnityAction callback)
         {
             AsyncOperation ao = SceneManager.LoadSceneAsync(sceneName);
-            while(!ao.isDone)
+            while (!ao.isDone)
             {
-                EventCenter.GetInstance().EventTrigger("Loading",ao.progress);
+                EventCenter.GetInstance().EventTrigger("Loading", ao.progress);
                 yield return null;
             }
-            function();
+            callback?.Invoke();
         }
     }
 }

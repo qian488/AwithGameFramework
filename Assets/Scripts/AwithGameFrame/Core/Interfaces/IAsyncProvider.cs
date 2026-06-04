@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace AwithGameFrame.Core.Interfaces
 {
@@ -14,21 +14,21 @@ namespace AwithGameFrame.Core.Interfaces
         /// <typeparam name="T">结果类型</typeparam>
         /// <param name="result">结果值</param>
         /// <returns>已完成的任务</returns>
-        UniTask<T> FromResult<T>(T result);
+        Task<T> FromResult<T>(T result);
 
         /// <summary>
         /// 延迟指定时间
         /// </summary>
         /// <param name="milliseconds">延迟毫秒数</param>
         /// <returns>延迟任务</returns>
-        UniTask Delay(int milliseconds);
+        Task Delay(int milliseconds);
 
         /// <summary>
         /// 等待所有任务完成
         /// </summary>
         /// <param name="tasks">任务数组</param>
         /// <returns>等待任务</returns>
-        UniTask WhenAll(params UniTask[] tasks);
+        Task WhenAll(params Task[] tasks);
 
         /// <summary>
         /// 等待所有任务完成并返回结果
@@ -36,6 +36,6 @@ namespace AwithGameFrame.Core.Interfaces
         /// <typeparam name="T">结果类型</typeparam>
         /// <param name="tasks">任务数组</param>
         /// <returns>结果数组</returns>
-        UniTask<T[]> WhenAll<T>(params UniTask<T>[] tasks);
+        Task<T[]> WhenAll<T>(params Task<T>[] tasks);
     }
 }

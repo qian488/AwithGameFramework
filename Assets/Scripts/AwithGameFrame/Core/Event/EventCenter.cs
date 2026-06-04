@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine.Events;
+using AwithGameFrame.Core.Event;
 using AwithGameFrame.Core.Logging;
 
 
@@ -300,5 +301,19 @@ namespace AwithGameFrame.Core
             evenDictionary.Clear();
             LoggingAPI.Info(LogCategory.Event, "清空所有事件监听");
         }
+
+        #region EventId 类型安全重载
+
+        public void AddEventListener<T>(EventId eventId, UnityAction<T> action) => AddEventListener<T>((string)eventId, action);
+        public void AddEventListener<T0, T1>(EventId eventId, UnityAction<T0, T1> action) => AddEventListener<T0, T1>((string)eventId, action);
+        public void AddEventListener(EventId eventId, UnityAction action) => AddEventListener((string)eventId, action);
+
+        public void RemoveEventListener<T>(EventId eventId, UnityAction<T> action) => RemoveEventListener<T>((string)eventId, action);
+        public void RemoveEventListener(EventId eventId, UnityAction action) => RemoveEventListener((string)eventId, action);
+
+        public void EventTrigger<T>(EventId eventId, T info) => EventTrigger<T>((string)eventId, info);
+        public void EventTrigger(EventId eventId) => EventTrigger((string)eventId);
+
+        #endregion
     }
 }

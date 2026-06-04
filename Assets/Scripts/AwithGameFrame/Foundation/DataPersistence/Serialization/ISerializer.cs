@@ -157,9 +157,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
         {
             try
             {
-                // 尝试反射查找MessagePack类型
-                var assembly = System.Reflection.Assembly.GetAssembly(typeof(object));
-                var messagePackType = assembly.GetType("MessagePack.MessagePackSerializer");
+                var messagePackType = System.Type.GetType("MessagePack.MessagePackSerializer");
                 return messagePackType != null;
             }
             catch
@@ -175,9 +173,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
         {
             try
             {
-                // 尝试反射查找Google.Protobuf类型
-                var assembly = System.Reflection.Assembly.GetAssembly(typeof(object));
-                var protobufType = assembly.GetType("Google.Protobuf.IMessage");
+                var protobufType = System.Type.GetType("Google.Protobuf.IMessage");
                 return protobufType != null;
             }
             catch

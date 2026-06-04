@@ -1,5 +1,5 @@
 using System;
-using Cysharp.Threading.Tasks;
+using System.Threading.Tasks;
 using AwithGameFrame.Core.Interfaces;
 using Newtonsoft.Json;
 
@@ -23,12 +23,12 @@ namespace AwithGameFrame.Foundation.Providers
             };
         }
 
-        public UniTask<string> SerializeAsync<T>(T obj)
+        public Task<string> SerializeAsync<T>(T obj)
         {
             try
             {
                 var json = JsonConvert.SerializeObject(obj, _settings);
-                return UniTask.FromResult(json);
+                return Task.FromResult(json);
             }
             catch (Exception ex)
             {
@@ -36,12 +36,12 @@ namespace AwithGameFrame.Foundation.Providers
             }
         }
 
-        public UniTask<T> DeserializeAsync<T>(string json)
+        public Task<T> DeserializeAsync<T>(string json)
         {
             try
             {
                 var obj = JsonConvert.DeserializeObject<T>(json, _settings);
-                return UniTask.FromResult(obj);
+                return Task.FromResult(obj);
             }
             catch (Exception ex)
             {
@@ -49,15 +49,16 @@ namespace AwithGameFrame.Foundation.Providers
             }
         }
 
-        public UniTask<byte[]> SerializeToBytesAsync<T>(T obj)
+        public async Task<byte[]> SerializeToBytesAsync<T>(T obj)
         {
-            return SerializeAsync(obj).ContinueWith(json => System.Text.Encoding.UTF8.GetBytes(json));
+            var json = await SerializeAsync(obj);
+            return System.Text.Encoding.UTF8.GetBytes(json);
         }
 
-        public UniTask<T> DeserializeFromBytesAsync<T>(byte[] bytes)
+        public async Task<T> DeserializeFromBytesAsync<T>(byte[] bytes)
         {
             var json = System.Text.Encoding.UTF8.GetString(bytes);
-            return DeserializeAsync<T>(json);
+            return await DeserializeAsync<T>(json);
         }
 
         public bool IsValidJson(string json)

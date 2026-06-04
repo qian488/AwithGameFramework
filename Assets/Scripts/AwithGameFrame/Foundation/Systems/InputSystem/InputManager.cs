@@ -1,82 +1,98 @@
+using System.Collections.Generic;
 using UnityEngine;
 using AwithGameFrame.Core;
+using AwithGameFrame.Core.DI;
 using AwithGameFrame.Core.Logging;
 
 namespace AwithGameFrame.Foundation.Systems.InputSystem
 {
     /// <summary>
     /// 输入管理器
-    /// 负责键盘输入检测和事件触发
+    /// 支持可配置按键绑定，实现IInputManager接口
     /// </summary>
-    public class InputManager : BaseManager<InputManager>
+    public class InputManager : BaseManager<InputManager>, IInputManager
     {
-        #region 字段
-        /// <summary>是否开始检测输入</summary>
-        private bool isStart = false;
-        #endregion
-        
-        #region 构造函数
-        /// <summary>
-        /// 初始化输入管理器
-        /// </summary>
+        private readonly HashSet<KeyCode> _registeredKeys = new HashSet<KeyCode>();
+        private bool _isEnabled;
+
+        public bool IsEnabled => _isEnabled;
+
+        public override int Priority => (int)ModulePriority.Features;
+
         public InputManager()
         {
-            LoggingAPI.Info(LogCategory.Input, "InputManager初始化开始");
+            LoggingAPI.Info(LogCategory.Input, "InputManager初始化");
             MonoManager.GetInstance().AddUpdateListener(MyUpdate);
-            LoggingAPI.Info(LogCategory.Input, "InputManager初始化完成");
+
+            // 默认注册常用按键
+            RegisterKey(KeyCode.W);
+            RegisterKey(KeyCode.A);
+            RegisterKey(KeyCode.S);
+            RegisterKey(KeyCode.D);
+            RegisterKey(KeyCode.Q);
+            RegisterKey(KeyCode.E);
+            RegisterKey(KeyCode.R);
+            RegisterKey(KeyCode.T);
+            RegisterKey(KeyCode.V);
+            RegisterKey(KeyCode.M);
         }
-        #endregion
-        
-        #region 公共方法
-        /// <summary>
-        /// 开始或停止输入检测
-        /// </summary>
-        /// <param name="isOpen">是否开启检测</param>
-        public void StartOREndCheck(bool isOpen)
+
+        public override void Initialize()
         {
-            isStart = isOpen;
-            LoggingAPI.Info(LogCategory.Input, $"输入检测状态: {(isOpen ? "开启" : "关闭")}");
+            base.Initialize();
+            ServiceLocator.Register<IInputManager>(this);
         }
-        #endregion
-        
-        #region 私有方法
+
+        public void SetEnabled(bool enabled)
+        {
+            _isEnabled = enabled;
+            LoggingAPI.Info(LogCategory.Input, $"输入检测: {(enabled ? "开启" : "关闭")}");
+        }
+
+        public void RegisterKey(KeyCode key)
+        {
+            if (_registeredKeys.Add(key))
+                LoggingAPI.Info(LogCategory.Input, $"注册按键: {key}");
+        }
+
+        public void UnregisterKey(KeyCode key)
+        {
+            if (_registeredKeys.Remove(key))
+                LoggingAPI.Info(LogCategory.Input, $"取消注册按键: {key}");
+        }
+
+        public KeyCode[] GetRegisteredKeys()
+        {
+            var arr = new KeyCode[_registeredKeys.Count];
+            _registeredKeys.CopyTo(arr);
+            return arr;
+        }
 
         /// <summary>
-        /// 检查指定按键的按下和抬起状态
+        /// 开始或停止输入检测（兼容旧API）
         /// </summary>
-        /// <param name="key">要检查的按键</param>
+        public void StartOREndCheck(bool isOpen)
+        {
+            SetEnabled(isOpen);
+        }
+
         private void CheckKeyCode(KeyCode key)
         {
             if (Input.GetKeyDown(key))
-            {
                 EventCenter.GetInstance().EventTrigger("KeyDown", key);
-                LoggingAPI.Info(LogCategory.Input, $"按键按下: {key}");
-            }
+
             if (Input.GetKeyUp(key))
-            {
                 EventCenter.GetInstance().EventTrigger("KeyUp", key);
-                LoggingAPI.Info(LogCategory.Input, $"按键抬起: {key}");
-            }
         }
 
-        /// <summary>
-        /// 更新方法，检测所有配置的按键
-        /// </summary>
         private void MyUpdate()
         {
-            if (!isStart) return;
+            if (!_isEnabled) return;
 
-            CheckKeyCode(KeyCode.W);
-            CheckKeyCode(KeyCode.A);
-            CheckKeyCode(KeyCode.S);
-            CheckKeyCode(KeyCode.D);
-            CheckKeyCode(KeyCode.Q);
-            CheckKeyCode(KeyCode.E);
-            CheckKeyCode(KeyCode.R);
-            CheckKeyCode(KeyCode.T);
-            CheckKeyCode(KeyCode.V);
-            CheckKeyCode(KeyCode.M);
+            foreach (var key in _registeredKeys)
+            {
+                CheckKeyCode(key);
+            }
         }
-        #endregion
     }
 }

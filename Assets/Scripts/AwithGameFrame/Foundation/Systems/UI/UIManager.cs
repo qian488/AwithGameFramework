@@ -1,11 +1,10 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using AwithGameFrame.Core;
+using AwithGameFrame.Core.DI;
 using AwithGameFrame.Core.Logging;
-using AwithGameFrame.Foundation.DataPersistence;
 
 namespace AwithGameFrame.Foundation.Systems.UI
 {
@@ -14,13 +13,9 @@ namespace AwithGameFrame.Foundation.Systems.UI
     /// </summary>
     public enum UILayer
     {
-        /// <summary>底层</summary>
         Bot,
-        /// <summary>中层</summary>
         Mid,
-        /// <summary>顶层</summary>
         Top,
-        /// <summary>系统层</summary>
         System,
     }
 
@@ -28,266 +23,114 @@ namespace AwithGameFrame.Foundation.Systems.UI
     /// UI管理器
     /// 负责UI面板的显示、隐藏和层级管理
     /// </summary>
-    public class UIManager : BaseManager<UIManager>
+    public class UIManager : BaseManager<UIManager>, IUIManager
     {
-        #region 字段
-        /// <summary>面板字典</summary>
-        private Dictionary<string,BasePanel> panelDictionary = new Dictionary<string,BasePanel>();
+        private readonly Dictionary<string, BasePanel> _panelDict = new Dictionary<string, BasePanel>();
+        private Transform _bot, _mid, _top, _system;
+        private bool _canvasReady;
 
-        private Transform bot;
-        private Transform mid;
-        private Transform top;
-        private Transform system;
+        public RectTransform Canvas { get; private set; }
 
-        public RectTransform canvas;
-        #endregion
+        public override int Priority => (int)ModulePriority.Features;
 
-        #region 构造函数
-        public UIManager()
+        public override void Initialize()
         {
-            LoggingAPI.Info(LogCategory.UI, "UIManager初始化开始");
-            
-            GameObject go = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_CANVAS_PATH);
-            canvas = go.transform as RectTransform;
-            GameObject.DontDestroyOnLoad(go);
-
-            bot = canvas.Find("Bot");
-            mid = canvas.Find("Mid");
-            top = canvas.Find("Top");
-            system = canvas.Find("System");
-
-            go = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_EVENTSYSTEM_PATH);
-            GameObject.DontDestroyOnLoad(go);
-            
-            LoggingAPI.Info(LogCategory.UI, "UIManager初始化完成");
-        }
-        #endregion
-
-        #region 公共方法
-        public Transform GetUILayerFather(UILayer layer)
-        {
-            switch(layer)
-            {
-                case UILayer.Bot:
-                    return this.bot;
-                case UILayer.Mid:
-                    return this.mid;
-                case UILayer.Top:
-                    return this.top;
-                case UILayer.System:
-                    return this.system;
-            }
-            return null;
+            base.Initialize();
+            ServiceLocator.Register<IUIManager>(this);
+            SetupCanvas();
         }
 
-        /// <summary>
-        /// 显示面板
-        /// </summary>
-        /// <typeparam name="T">面板脚本类型</typeparam>
-        /// <param name="panelName">面板名字</param>
-        /// <param name="layer">面板所在层级</param>
-        /// <param name="callback">面板创建后所作的事</param>
-        public void ShowPanel<T>(string panelName, UILayer layer = UILayer.Mid, UnityAction<T> callback = null) where T : BasePanel 
+        public override void PostInitialize()
         {
-            LoggingAPI.Info(LogCategory.UI, $"显示面板: {panelName}, 层级: {layer}");
-            
-            if (panelDictionary.ContainsKey(panelName))
+            base.PostInitialize();
+            // 确保Canvas在PostInit阶段一定可用
+            if (!_canvasReady) SetupCanvas();
+        }
+
+        private void SetupCanvas()
+        {
+            if (_canvasReady) return;
+
+            var canvasGo = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_CANVAS_PATH);
+            Canvas = canvasGo.transform as RectTransform;
+            Object.DontDestroyOnLoad(canvasGo);
+
+            _bot = Canvas.Find("Bot");
+            _mid = Canvas.Find("Mid");
+            _top = Canvas.Find("Top");
+            _system = Canvas.Find("System");
+
+            var eventGo = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_EVENTSYSTEM_PATH);
+            Object.DontDestroyOnLoad(eventGo);
+
+            _canvasReady = true;
+            LoggingAPI.Info(LogCategory.UI, "UIManager Canvas初始化完成");
+        }
+
+        public Transform GetLayerRoot(UILayer layer)
+        {
+            if (!_canvasReady) SetupCanvas();
+
+            return layer switch
             {
-                panelDictionary[panelName].ShowMe();
-                if (callback != null)
-                {
-                    callback(panelDictionary[panelName] as T);
-                }
-                LoggingAPI.Info(LogCategory.UI, $"面板已存在，直接显示: {panelName}");
+                UILayer.Bot => _bot,
+                UILayer.Mid => _mid,
+                UILayer.Top => _top,
+                UILayer.System => _system,
+                _ => null
+            };
+        }
+
+        public void ShowPanel<T>(string panelName, UILayer layer = UILayer.Mid, UnityAction<T> callback = null) where T : BasePanel
+        {
+            if (!_canvasReady) SetupCanvas();
+
+            if (_panelDict.TryGetValue(panelName, out var existing))
+            {
+                existing.ShowMe();
+                callback?.Invoke(existing as T);
                 return;
             }
 
             ResourcesManager.GetInstance().LoadAsync<GameObject>("UI/" + panelName, (go) =>
             {
-                Transform father = bot;
-                switch(layer)
-                {
-                    case UILayer.Mid:
-                        father = mid;
-                        break;
-                    case UILayer.Top:
-                        father = top;
-                        break;
-                    case UILayer.System:
-                        father = system;
-                        break;
-                }
+                var father = GetLayerRoot(layer);
                 go.transform.SetParent(father);
                 go.transform.localPosition = Vector3.zero;
                 go.transform.localScale = Vector3.one;
-                (go.transform as RectTransform).offsetMax = Vector2.one;
-                (go.transform as RectTransform).offsetMin = Vector2.one;
 
-                T panel = go.GetComponent<T>();
-                if(callback != null) callback(panel);
+                var rt = go.transform as RectTransform;
+                rt.offsetMax = Vector2.zero;
+                rt.offsetMin = Vector2.zero;
+
+                var panel = go.GetComponent<T>();
+                callback?.Invoke(panel);
                 panel.ShowMe();
-                panelDictionary.Add(panelName, panel);
-                LoggingAPI.Info(LogCategory.UI, $"面板加载完成并显示: {panelName}");
+                _panelDict[panelName] = panel;
             });
         }
 
         public void HidePanel(string panelName)
         {
-            LoggingAPI.Info(LogCategory.UI, $"隐藏面板: {panelName}");
-            
-            if (panelDictionary.ContainsKey(panelName))
+            if (_panelDict.TryGetValue(panelName, out var panel))
             {
-                panelDictionary[panelName].HideMe();
-                ResourcesManager.GetInstance().Recycle("UI/" + panelName, panelDictionary[panelName].gameObject);
-                panelDictionary.Remove(panelName);
-                LoggingAPI.Info(LogCategory.UI, $"面板已隐藏并回收: {panelName}");
-            }
-            else
-            {
-                FrameworkLogger.Warn($"尝试隐藏不存在的面板: {panelName}");
+                panel.HideMe();
+                ResourcesManager.GetInstance().Recycle("UI/" + panelName, panel.gameObject);
+                _panelDict.Remove(panelName);
             }
         }
 
         public T GetPanel<T>(string panelName) where T : BasePanel
         {
-            if (panelDictionary.ContainsKey(panelName))
-            {
-                return panelDictionary[panelName] as T;
-            }
-            return null;
+            return _panelDict.TryGetValue(panelName, out var panel) ? panel as T : null;
         }
 
-        /// <summary>
-        /// 给控件增添自定义事件
-        /// </summary>
-        /// <param name="UIComponent">控件对象</param>
-        /// <param name="type">事件类型</param>
-        /// <param name="callback">事件的回调</param>
-        public static void AddCustomEventListener(UIBehaviour UIComponent, EventTriggerType type, UnityAction<BaseEventData> callback)
+        public static void AddCustomEventListener(UIBehaviour comp, EventTriggerType type, UnityAction<BaseEventData> callback)
         {
-            EventTrigger eventTrigger = UIComponent.GetComponent<EventTrigger>();
-            if (eventTrigger == null)
-            {
-                eventTrigger = UIComponent.gameObject.AddComponent<EventTrigger>();
-            }
-            EventTrigger.Entry entry = new EventTrigger.Entry();
-            entry.eventID = type;
+            var trigger = comp.GetComponent<EventTrigger>() ?? comp.gameObject.AddComponent<EventTrigger>();
+            var entry = new EventTrigger.Entry { eventID = type };
             entry.callback.AddListener(callback);
-
-            eventTrigger.triggers.Add(entry);
+            trigger.triggers.Add(entry);
         }
-        
-        /// <summary>
-        /// 获取设置键名
-        /// </summary>
-        protected string GetSettingsKey()
-        {
-            return "UISettings";
-        }
-        
-        /// <summary>
-        /// 获取存储类型
-        /// </summary>
-        protected StorageType GetStorageType()
-        {
-            return StorageType.PlayerPrefs;
-        }
-        
-        /// <summary>
-        /// 设置加载完成回调
-        /// </summary>
-        protected void OnSettingsLoaded()
-        {
-            // 应用设置到UI系统
-            ApplySettingsToUI();
-            LoggingAPI.Info(LogCategory.UI, "UI设置已应用");
-        }
-        
-        /// <summary>
-        /// 设置变更回调
-        /// </summary>
-        protected void OnSettingsChangedInternal(UISettings settings)
-        {
-            // 设置变更时自动应用
-            ApplySettingsToUI();
-            LoggingAPI.Info(LogCategory.UI, "UI设置已更新并应用");
-        }
-        
-        /// <summary>
-        /// 应用设置到UI系统
-        /// </summary>
-        private void ApplySettingsToUI()
-        {
-            // 这里可以添加从数据持久化系统加载设置的逻辑
-            // 暂时使用默认值，后续可以集成SettingsHelper
-            
-            LoggingAPI.Info(LogCategory.UI, "UI设置已应用");
-        }
-        
-        /// <summary>
-        /// 更新UI设置
-        /// </summary>
-        /// <param name="updateAction">更新委托</param>
-        public async System.Threading.Tasks.Task<bool> UpdateUISettingsAsync(System.Action<UISettings> updateAction)
-        {
-            try
-            {
-                // 使用SettingsHelper更新设置
-                var settings = new UISettings();
-                updateAction?.Invoke(settings);
-                
-                var result = await DataPersistenceAPI.SaveAsync<UISettings>(GetSettingsKey(), settings, GetStorageType());
-                if (result == DataOperationResult.Success)
-                {
-                    OnSettingsChangedInternal(settings);
-                    return true;
-                }
-                return false;
-            }
-            catch (System.Exception ex)
-            {
-                FrameworkLogger.Error($"更新UI设置失败: {ex.Message}", LogCategory.Core);
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// 重置UI设置
-        /// </summary>
-        public async System.Threading.Tasks.Task<bool> ResetUISettingsAsync()
-        {
-            try
-            {
-                // 使用SettingsHelper重置设置
-                var result = await DataPersistenceAPI.DeleteAsync(GetSettingsKey(), GetStorageType());
-                if (result == DataOperationResult.Success)
-                {
-                    var defaultSettings = new UISettings();
-                    OnSettingsChangedInternal(defaultSettings);
-                    return true;
-                }
-                return false;
-            }
-            catch (System.Exception ex)
-            {
-                FrameworkLogger.Error($"重置UI设置失败: {ex.Message}", LogCategory.Core);
-                return false;
-            }
-        }
-        #endregion
-    }
-    
-    /// <summary>
-    /// UI设置数据类
-    /// </summary>
-    [System.Serializable]
-    public class UISettings
-    {
-        public float UIScale = 1.0f;
-        public bool ShowFPS = false;
-        public bool ShowDebugInfo = false;
-        public string Language = "zh-CN";
-        public bool EnableAnimations = true;
-        public float AnimationSpeed = 1.0f;
     }
 }

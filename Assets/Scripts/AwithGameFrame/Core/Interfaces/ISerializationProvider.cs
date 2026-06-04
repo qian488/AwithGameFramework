@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace AwithGameFrame.Core.Interfaces
 {
@@ -14,7 +14,7 @@ namespace AwithGameFrame.Core.Interfaces
         /// <typeparam name="T">对象类型</typeparam>
         /// <param name="obj">要序列化的对象</param>
         /// <returns>序列化后的字符串</returns>
-        UniTask<string> SerializeAsync<T>(T obj);
+        Task<string> SerializeAsync<T>(T obj);
 
         /// <summary>
         /// 反序列化字符串为对象
@@ -22,7 +22,7 @@ namespace AwithGameFrame.Core.Interfaces
         /// <typeparam name="T">对象类型</typeparam>
         /// <param name="json">序列化的字符串</param>
         /// <returns>反序列化后的对象</returns>
-        UniTask<T> DeserializeAsync<T>(string json);
+        Task<T> DeserializeAsync<T>(string json);
 
         /// <summary>
         /// 序列化对象为字节数组
@@ -30,7 +30,7 @@ namespace AwithGameFrame.Core.Interfaces
         /// <typeparam name="T">对象类型</typeparam>
         /// <param name="obj">要序列化的对象</param>
         /// <returns>序列化后的字节数组</returns>
-        UniTask<byte[]> SerializeToBytesAsync<T>(T obj);
+        Task<byte[]> SerializeToBytesAsync<T>(T obj);
 
         /// <summary>
         /// 反序列化字节数组为对象
@@ -38,7 +38,7 @@ namespace AwithGameFrame.Core.Interfaces
         /// <typeparam name="T">对象类型</typeparam>
         /// <param name="bytes">序列化的字节数组</param>
         /// <returns>反序列化后的对象</returns>
-        UniTask<T> DeserializeFromBytesAsync<T>(byte[] bytes);
+        Task<T> DeserializeFromBytesAsync<T>(byte[] bytes);
 
         /// <summary>
         /// 检查字符串是否为有效的序列化数据

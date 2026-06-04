@@ -1,0 +1,16 @@
+{
+    "name": "AwithGameFrame.Extensions",
+    "rootNamespace": "AwithGameFrame.Extensions",
+    "references": [
+        "AwithGameFrame.Core",
+        "AwithGameFrame.Foundation",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": []
+}

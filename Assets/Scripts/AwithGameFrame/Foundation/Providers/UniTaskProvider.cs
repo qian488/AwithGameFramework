@@ -1,32 +1,32 @@
-using Cysharp.Threading.Tasks;
+using System.Threading.Tasks;
 using AwithGameFrame.Core.Interfaces;
 
 namespace AwithGameFrame.Foundation.Providers
 {
     /// <summary>
-    /// UniTask异步操作提供者
-    /// 基于UniTask的高性能异步实现
+    /// 异步操作提供者
+    /// 基于 System.Threading.Tasks.Task
     /// </summary>
     public class UniTaskProvider : IAsyncProvider
     {
-        public UniTask<T> FromResult<T>(T result)
+        public Task<T> FromResult<T>(T result)
         {
-            return UniTask.FromResult(result);
+            return Task.FromResult(result);
         }
 
-        public UniTask Delay(int milliseconds)
+        public Task Delay(int milliseconds)
         {
-            return UniTask.Delay(milliseconds);
+            return Task.Delay(milliseconds);
         }
 
-        public UniTask WhenAll(params UniTask[] tasks)
+        public Task WhenAll(params Task[] tasks)
         {
-            return UniTask.WhenAll(tasks);
+            return Task.WhenAll(tasks);
         }
 
-        public UniTask<T[]> WhenAll<T>(params UniTask<T>[] tasks)
+        public Task<T[]> WhenAll<T>(params Task<T>[] tasks)
         {
-            return UniTask.WhenAll(tasks);
+            return Task.WhenAll(tasks);
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using AwithGameFrame.Core;
+using AwithGameFrame.Core.DI;
 using AwithGameFrame.Core.Logging;
 using UnityEngine.Events;
 
@@ -152,16 +153,20 @@ namespace AwithGameFrame.Foundation.Pool
         /// <summary>
         /// 初始化对象池管理器
         /// </summary>
-        public void Initialize()
+        public override void Initialize()
         {
+            base.Initialize();
+
+            ServiceLocator.Register<IPoolManager>(this);
+
             // 初始化MonoManager
             monoManager = MonoManager.GetInstance();
-            
+
             // 创建对象池根节点
             if (poolGO == null)
             {
                 poolGO = new GameObject(GetPoolRootName());
-                UnityEngine.Object.DontDestroyOnLoad(poolGO);
+                Object.DontDestroyOnLoad(poolGO);
             }
         }
         #endregion

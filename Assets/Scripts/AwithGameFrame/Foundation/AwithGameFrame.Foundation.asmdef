@@ -1,0 +1,15 @@
+{
+    "name": "AwithGameFrame.Foundation",
+    "rootNamespace": "AwithGameFrame.Foundation",
+    "references": [
+        "AwithGameFrame.Core",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": []
+}
