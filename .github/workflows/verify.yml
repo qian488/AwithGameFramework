@@ -1,0 +1,19 @@
+name: Verify portable framework
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Check architecture, build, test, and run headless sample
+        shell: pwsh
+        run: ./tools/verify.ps1

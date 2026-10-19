@@ -1,0 +1,30 @@
+﻿# 仓库协作约定
+
+## 先定位，再读取
+
+- 先读根 README.md 与 GUIDE.md 的目录/依赖图，再读目标包 README。
+- 通用运行时：src/AwithGameFrame.Core、Data、Gameplay，各包 Runtime/ 是唯一源码。
+- Unity 实现：adapters/unity；演示场景/插件/资源：samples/Unity。
+- 自动测试：tests；无图形入口：samples/Headless；验证：tools。
+- docs/legacy 和各包 Documentation~/legacy 是历史资料，不是当前需求或开发规则。
+- 不默认扫描 samples/Unity/Assets/Plugins、samples/Unity/Assets/Packages 或 artifacts；先限制 rg 搜索范围。
+
+## 依赖规则
+
+- 只允许 Gameplay -> Data/Core、Data -> Core；Core 只使用标准库。
+- src 不引用 UnityEngine、UnityEditor、UniTask 或任何引擎程序集，不引用 adapters/samples 中的代码或 DLL。
+- 引擎接口暴露引擎类型时，接口也属于该引擎适配层。通用接口使用 BCL/普通 C# 数据与 Task。
+- 每个 portable 包同时提供 .csproj、package.json 和 noEngineReferences=true 的 Runtime asmdef；两种构建共用 Runtime 源码。
+- 引擎适配和业务运行时分开验证；不要用假引擎类型证明适配已经可用。
+- 移动 Unity 源码、资源时保留 .meta/GUID；新 package 资源补充 .meta。不要提交 Unity 缓存或 .NET 输出。
+- 不为了统一命名批量改旧公共命名空间，API 变化更新 docs/migration.md。
+
+## 验证与交付
+
+- 标准检查：powershell -File tools/verify.ps1（PowerShell 7 使用 pwsh）。脚本从任意工作目录运行。
+- 脚本检查源码/项目/asmdef/UPM 依赖，然后构建 AwithGameFrame.sln、运行 NUnit 和 Headless 示例。
+- 单项命令：dotnet test tests/AwithGameFrame.Core.Tests/AwithGameFrame.Core.Tests.csproj。
+- Unity 工程路径 samples/Unity；记录版本 2022.3.40f1c1。影响 Unity 时使用可用编辑器验证，明确记录实际版本与无法执行的检查。
+- 构建输出集中在 artifacts，避免被 UPM 导入。
+- 为行为变化编写有意义的测试；文档与简单移动使用相应静态检查。
+- 完成后说明实际变化、验证结果与剩余限制，不把架构可扩展描述成已支持所有引擎。

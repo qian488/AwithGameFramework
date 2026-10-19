@@ -1,0 +1,14 @@
+{
+  "name": "AwithGameFrame.Samples",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Unity",
+    "AwithGameFrame.Data",
+    "AwithGameFrame.Gameplay",
+    "AwithGameFrame.Foundation",
+    "AwithGameFrame.Extensions",
+    "UniTask",
+    "UnityEngine.UI"
+  ],
+  "autoReferenced": false
+}

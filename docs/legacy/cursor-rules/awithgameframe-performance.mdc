@@ -1,0 +1,36 @@
+---
+globs: *.cs
+description: AwithGameFrame性能优化规范
+---
+
+# AwithGameFrame 性能优化规范
+
+## 对象池使用
+- 使用PoolManager管理GameObject复用
+- 避免频繁创建和销毁对象
+- 减少GC压力
+- 调用GetGameObject()获取，PushGameObject()回收
+
+## 事件系统优化
+- 使用泛型避免装箱拆箱
+- 及时移除不需要的事件监听
+- 避免在Update中频繁触发事件
+- 使用EventCenter进行模块间通信
+
+## 资源管理
+- 使用ResourcesManager进行统一资源管理
+- 优先使用异步加载避免阻塞
+- 及时回收不再使用的资源
+- 使用对象池复用资源
+
+## 内存优化
+- 避免在Update中创建临时对象
+- 使用StringBuilder处理字符串拼接
+- 合理使用缓存减少重复计算
+- 定期清理不需要的引用
+
+## 性能监控
+- 使用Unity Profiler分析性能
+- 关注GC分配和内存使用
+- 监控帧率和渲染性能
+- 定期进行性能测试

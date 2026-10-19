@@ -1,0 +1,33 @@
+---
+alwaysApply: true
+description: AwithGameFrame架构与设计理念指导
+---
+
+# AwithGameFrame 架构与设计理念
+
+## 设计理念
+- **简单实用**: 避免过度设计，专注核心功能，代码结构清晰，命名直观
+- **便于开发**: 无命名冲突，提供简洁易用的接口，遵循Unity和C#开发习惯
+- **模块化设计**: 职责分离，低耦合高内聚，相关功能集中在一起
+- **易于扩展**: 开放封闭原则，支持插件化，保持API稳定性
+
+## 架构层次
+```
+AwithGameFrame
+├── Core          # 核心层 - 框架基础功能
+├── UI            # 表现层 - 用户界面管理
+├── Audio         # 表现层 - 音频系统
+├── InputSystem   # 表现层 - 输入系统
+├── Utils         # 工具层 - 通用工具
+└── Tests         # 测试层 - 框架测试工具
+```
+
+## 命名空间规范
+- 使用 `AwithGameFrame.{ModuleName}` 格式
+- 避免与Unity内置命名空间冲突
+- 模块化划分，简洁明了
+
+## 核心设计模式
+- **单例模式**: 使用BaseManager<T>基类
+- **观察者模式**: 通过EventCenter实现事件系统
+- **对象池模式**: 通过PoolManager管理对象复用

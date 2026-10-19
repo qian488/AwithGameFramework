@@ -1,0 +1,7 @@
+{
+  "name": "AwithGameFrame.Gameplay",
+  "rootNamespace": "AwithGameFrame.Extensions",
+  "references": ["AwithGameFrame.Core", "AwithGameFrame.Data"],
+  "noEngineReferences": true,
+  "autoReferenced": false
+}

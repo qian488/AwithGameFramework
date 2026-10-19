@@ -1,373 +1,58 @@
-# AwithGameFrame 开发指引
+# 开发指引
 
-## 框架现状分析
+## 开发顺序
 
-### 当前已实现模块
-- ✅ **基础架构**: 单例模式基类、Mono管理
-- ✅ **事件系统**: 观察者模式事件中心
-- ✅ **资源管理**: 同步/异步资源加载、对象池优化
-- ✅ **UI系统**: 面板管理、多层级UI、自动事件绑定
-- ✅ **音频系统**: BGM/SFX/Voice分类管理
-- ✅ **输入系统**: 事件驱动输入处理
-- ✅ **场景管理**: 同步/异步场景切换
-- ✅ **数据持久化**: 完整的存储系统（PlayerPrefs、JSON、二进制、SQLite）
-- ✅ **日志系统**: 分级日志、文件输出、性能监控
-- ✅ **Provider系统**: UniTask、DOTween、Newtonsoft.Json集成
+1. 先读根 `AGENTS.md`，按任务找到对应模块 README；历史资料按需读取。
+2. 通用逻辑放 `src`。只有实际调用引擎 API、需要引擎类型或引擎生命周期的内容放适配层。
+3. 外部依赖通过显式配置、接口或宿主注册接入。通用 API 使用 BCL 类型和 `Task`，不返回 Unity 对象或 UniTask。
+4. 先在 .NET 测试或无图形宿主验证行为，再验证相应引擎的适配。
+5. 修改边界或公共接口时，同步更新模块 README、迁移指南和受影响的验证。
 
-### 框架优势
-- 模块化设计清晰
-- 事件系统解耦良好
-- 资源管理有对象池优化
-- UI系统功能完善
-- 数据持久化系统完整
-- 日志系统功能强大
-- 代码结构相对清晰
+## 依赖方向
 
-## 缺失功能清单
-
-### 🔴 高优先级 (核心功能)
-
-#### 1. 网络通信模块
-**当前状态**: 完全缺失
-**影响**: 无法支持多人游戏、网络功能
-
-**需要实现**:
-- [ ] 网络管理器 (NetworkManager)
-- [ ] TCP客户端实现
-- [ ] UDP客户端实现  
-- [ ] WebSocket客户端实现
-- [ ] 消息序列化/反序列化
-- [ ] 网络状态管理
-- [ ] 断线重连机制
-- [ ] 网络事件系统
-
-**建议实现**:
-```csharp
-// 网络管理器基类
-public class NetworkManager : BaseManager<NetworkManager>
-{
-    // 连接管理
-    public void Connect(string host, int port, NetworkType type);
-    public void Disconnect();
-    
-    // 消息发送
-    public void SendMessage<T>(T message) where T : INetworkMessage;
-    
-    // 消息接收
-    public void RegisterMessageHandler<T>(Action<T> handler) where T : INetworkMessage;
-}
+```mermaid
+graph TD
+    UnitySample[samples/Unity] --> Unity[adapters/unity]
+    Unity --> Gameplay[src/Gameplay]
+    Unity --> Data[src/Data]
+    Unity --> Core[src/Core]
+    Headless[samples/Headless] --> Gameplay
+    Headless --> Data
+    Headless --> Core
+    Gameplay --> Data
+    Gameplay --> Core
+    Data --> Core
 ```
 
-#### 2. 配置管理系统
-**当前状态**: 部分实现（有数据持久化，但缺少专门的配置管理）
-**影响**: 游戏设置、用户偏好管理不够便捷
+- Core 只依赖标准库，不包含任何引擎分支。
+- Data 使用 Newtonsoft.Json；数据库驱动和额外二进制编解码器由宿主注册。
+- Gameplay 接收普通 C# 数据。Unity 的 Resources、ScriptableObject 与 PlayerPrefs 位于适配包。
+- 适配包可以引用通用模块；通用模块不能反向引用适配包、示例或其中的第三方 DLL。
+- `Runtime` 是 .NET 与 UPM 共同使用的唯一源码位置；构建输出统一进入根 `artifacts`，避免 Unity 导入编译产物。
 
-**需要实现**:
-- [ ] 配置管理器 (ConfigManager)
-- [ ] 游戏设置管理
-- [ ] 用户偏好管理
-- [ ] 配置热更新
-- [ ] 配置验证系统
+## 模块与扩展
 
-**建议实现**:
-```csharp
-// 配置管理器
-public class ConfigManager : BaseManager<ConfigManager>
-{
-    public T LoadConfig<T>(string configName) where T : IConfig;
-    public void SaveConfig<T>(T config, string configName) where T : IConfig;
-    public void ResetToDefault(string configName);
-}
-```
+| 任务 | 修改入口 | 验证方式 |
+| --- | --- | --- |
+| 生命周期、事件、服务注册 | `src/AwithGameFrame.Core/Runtime` | NUnit 测试 + 无图形示例 |
+| 文件存取、序列化、数据库契约 | `src/AwithGameFrame.Data/Runtime` | 临时目录存取与重开测试 |
+| 语言切换、存档槽位 | `src/AwithGameFrame.Gameplay/Runtime` | 普通数据集与存档恢复测试 |
+| Unity UI/资源/音频/输入/场景 | `adapters/unity/Runtime` | .NET 边界检查 + Unity 编译/演示场景 |
+| 接入新 C# 引擎 | 新建 `adapters/<engine>` | 引用通用项目，实现时间、日志、数据源与宿主入口 |
+| 修改文档/目录 | 对应 README、`docs`、`AGENTS.md` | 检查链接及 `tools/verify.ps1` |
 
-### 🟡 中优先级 (架构优化)
+新模块有真实需求再创建独立项目；不为未接入的引擎建立空壳，不预设所有引擎都具备相同的 UI、音频或资源对象模型。
 
-#### 3. ECS架构系统
-**当前状态**: 使用传统MonoBehaviour模式
-**影响**: 代码耦合度高、难以扩展
+## 宿主接入
 
-**需要实现**:
-- [ ] Entity实体系统
-- [ ] Component组件系统
-- [ ] System系统管理器
-- [ ] ECS世界管理器
-- [ ] 组件查询系统
-- [ ] 实体生命周期管理
+宿主设置 `LoggingHost.Output`、`LoggingHost.DataPath` 和 `TimeHelper.TimeSource`，驱动 `PerformanceMonitor.Tick(delta)`。引擎专用的加载逻辑通过适配器转换成普通数据；例如 `ILocalizationSource` 返回 `LocalizationDataset`。
 
-**建议实现**:
-```csharp
-// 实体
-public class Entity
-{
-    public int Id { get; }
-    public bool IsActive { get; set; }
-}
+存储路径由 `DataPersistenceConfig` 明确指定。Unity 使用 `UnityDataPersistence.CreateConfig()` 或 `UseUnityPaths(config)`，再调用 `UnityDataPersistence.InitializeAsync(...)`。普通 .NET 宿主直接初始化 `DataPersistenceAPI`。需要重新配置或结束会话时，等待在途操作结束后调用 `ShutdownAsync()`。
 
-// 组件基类
-public interface IComponent { }
+当前保留旧命名空间与多数静态入口，便于迁移。新增业务优先使用可构造实例和显式依赖，不扩大全局单例。模块编排现有顺序保持不变，初始化高优先级在前，关闭逆序。
 
-// 系统基类
-public abstract class System
-{
-    public abstract void Update(float deltaTime);
-}
+## 当前范围与后续工作
 
-// ECS世界
-public class ECSWorld
-{
-    public Entity CreateEntity();
-    public void AddComponent<T>(Entity entity, T component) where T : IComponent;
-    public T GetComponent<T>(Entity entity) where T : IComponent;
-    public void RemoveComponent<T>(Entity entity) where T : IComponent;
-}
-```
+本次完成源码、构建和引擎边界的拆分，以及 Unity 与无图形宿主的接入。网络、热更新、完整 ORM、云存储等仍需按实际项目需求独立推进；历史调研不代表这些能力已经实现。下一种引擎应通过一个可运行示例验证接口，再决定是否扩大抽象。
 
-#### 4. 依赖注入系统
-**当前状态**: 硬编码单例模式
-**影响**: 难以测试、耦合度高
-
-**需要实现**:
-- [ ] 依赖注入容器
-- [ ] 服务注册机制
-- [ ] 生命周期管理
-- [ ] 接口绑定
-- [ ] 构造函数注入
-- [ ] 属性注入
-
-**建议实现**:
-```csharp
-public class DIContainer
-{
-    public void RegisterSingleton<TInterface, TImplementation>();
-    public void RegisterTransient<TInterface, TImplementation>();
-    public T Resolve<T>();
-}
-```
-
-#### 5. 模块解耦优化
-**当前状态**: 模块间直接依赖
-**影响**: 难以独立测试、维护困难
-
-**需要实现**:
-- [ ] 接口抽象层
-- [ ] 模块间通信协议
-- [ ] 服务定位器
-- [ ] 事件总线优化
-- [ ] 模块生命周期管理
-
-### 🟢 低优先级 (增强功能)
-
-#### 6. 热更新支持
-**当前状态**: 完全缺失
-**影响**: 开发效率低、无法热修复
-
-**需要实现**:
-- [ ] ILRuntime集成
-- [ ] 热更新代码加载
-- [ ] 热更新资源管理
-- [ ] 版本检查机制
-- [ ] 热更新回滚机制
-
-#### 7. 性能监控系统增强
-**当前状态**: 基础实现（已有PerformanceMonitor）
-**影响**: 性能监控功能可以更完善
-
-**需要实现**:
-- [ ] 内存使用监控增强
-- [ ] 帧率监控增强
-- [ ] CPU使用率监控
-- [ ] 渲染性能分析
-- [ ] 性能报告生成
-- [ ] 性能告警系统
-
-#### 8. 开发工具
-**当前状态**: 基础实现（已有测试工具）
-**影响**: 开发效率可以进一步提升
-
-**需要实现**:
-- [ ] 代码生成器
-- [ ] 可视化调试工具
-- [ ] 性能分析器增强
-- [ ] 资源检查工具
-- [ ] 自动化测试框架增强
-
-## 开发计划
-
-### 第一阶段 (1-2个月)
-**目标**: 添加核心缺失功能
-
-**任务清单**:
-1. 实现网络通信模块
-   - [ ] 基础TCP客户端
-   - [ ] 消息序列化系统
-   - [ ] 网络事件处理
-   - [ ] WebSocket客户端
-
-2. 实现配置管理系统
-   - [ ] 配置管理器
-   - [ ] 游戏设置管理
-   - [ ] 用户偏好管理
-   - [ ] 配置热更新
-
-**验收标准**:
-- 能够建立网络连接并收发消息
-- 能够管理游戏配置和用户设置
-- 现有功能保持稳定运行
-
-### 第二阶段 (2-3个月)
-**目标**: 架构优化和模块解耦
-
-**任务清单**:
-1. 引入ECS架构
-   - [ ] 实现基础ECS系统
-   - [ ] 重构现有模块为ECS
-   - [ ] 优化性能
-
-2. 实现依赖注入
-   - [ ] 替换硬编码单例
-   - [ ] 提高可测试性
-   - [ ] 降低耦合度
-
-3. 模块解耦优化
-   - [ ] 定义模块接口
-   - [ ] 优化模块间通信
-   - [ ] 提高代码复用性
-
-**验收标准**:
-- 现有功能在ECS架构下正常运行
-- 模块间依赖关系清晰
-- 单元测试覆盖率达到80%
-
-### 第三阶段 (3-4个月)
-**目标**: 功能增强和工具完善
-
-**任务清单**:
-1. 热更新支持
-   - [ ] 集成ILRuntime
-   - [ ] 实现热更新机制
-   - [ ] 版本管理
-
-2. 性能监控
-   - [ ] 内存监控
-   - [ ] 性能分析
-   - [ ] 优化建议
-
-3. 开发工具
-   - [ ] 代码生成器
-   - [ ] 调试工具
-   - [ ] 测试框架
-
-**验收标准**:
-- 支持代码热更新
-- 性能监控工具可用
-- 开发效率显著提升
-
-## 技术选型建议
-
-### 网络通信
-- **推荐**: Mirror Networking (Unity官方推荐)
-- **备选**: Photon PUN2, Mirror Networking
-
-### 数据序列化
-- **推荐**: Newtonsoft.Json (JSON), MessagePack (二进制)
-- **备选**: System.Text.Json, Protobuf
-
-### ECS框架
-- **推荐**: Unity DOTS (ECS + Job System + Burst)
-- **备选**: LeoECS, Entitas
-
-### 依赖注入
-- **推荐**: VContainer
-- **备选**: Zenject, Microsoft.Extensions.DependencyInjection
-
-### 热更新
-- **推荐**: ILRuntime
-- **备选**: HybridCLR, xLua
-
-## 代码规范
-
-### 命名规范
-- 类名: PascalCase (如: `NetworkManager`)
-- 方法名: PascalCase (如: `ConnectToServer`)
-- 字段名: camelCase (如: `isConnected`)
-- 常量: UPPER_CASE (如: `MAX_CONNECTIONS`)
-
-### 文件组织
-```
-Assets/Scripts/ProjectBase/
-├── Core/           # 核心系统
-├── Network/        # 网络模块
-├── Data/          # 数据管理
-├── ECS/           # ECS系统
-├── Utils/         # 工具类
-├── Tests/         # 测试代码
-└── Examples/      # 示例代码
-```
-
-### 注释规范
-- 所有公共API必须有XML文档注释
-- 复杂逻辑必须有行内注释
-- 每个模块必须有README说明
-
-## 测试策略
-
-### 单元测试
-- 每个管理器类必须有对应的测试类
-- 测试覆盖率目标: 80%
-- 使用Unity Test Framework
-
-### 集成测试
-- 模块间交互测试
-- 端到端功能测试
-- 性能回归测试
-
-### 压力测试
-- 网络连接压力测试
-- 内存使用压力测试
-- 长时间运行稳定性测试
-
-## 文档要求
-
-### API文档
-- 使用XML文档注释生成API文档
-- 提供完整的API参考
-- 包含使用示例
-
-### 用户指南
-- 快速开始指南
-- 详细使用教程
-- 常见问题解答
-
-### 开发者文档
-- 架构设计文档
-- 扩展开发指南
-- 贡献指南
-
-## 版本管理
-
-### 版本号规则
-- 格式: Major.Minor.Patch (如: 1.0.0)
-- Major: 重大架构变更
-- Minor: 新功能添加
-- Patch: Bug修复
-
-### 发布计划
-- 每2周发布一个Patch版本
-- 每2个月发布一个Minor版本
-- 每6个月发布一个Major版本
-
-## 总结
-
-当前AwithGameFrame框架已经具备了单机游戏开发的基础能力，通过按照本指引逐步完善功能，可以发展成为一个功能完整、架构先进的游戏开发框架。
-
-**关键成功因素**:
-1. 严格按照优先级实施开发计划
-2. 保持代码质量和测试覆盖率
-3. 持续优化架构和性能
-4. 完善文档和工具支持
-
-**预期成果**:
-- 支持多人网络游戏开发
-- 提供完整的开发工具链
-- 具备热更新和性能监控能力
-- 成为Unity游戏开发的优秀框架选择
+架构取舍见 [架构决策](docs/architecture.md)，旧 API 与目录变化见 [迁移说明](docs/migration.md)。

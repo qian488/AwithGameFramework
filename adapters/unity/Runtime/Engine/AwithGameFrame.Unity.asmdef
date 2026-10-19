@@ -1,0 +1,6 @@
+{
+  "name": "AwithGameFrame.Unity",
+  "rootNamespace": "AwithGameFrame.Unity",
+  "references": ["AwithGameFrame.Core"],
+  "autoReferenced": false
+}

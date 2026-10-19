@@ -1,0 +1,11 @@
+{
+  "name": "com.awithgameframe.data",
+  "version": "0.2.0",
+  "displayName": "AwithGameFrame Data",
+  "description": "Engine-independent persistence contracts, JSON and binary storage.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.awithgameframe.core": "0.2.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}
