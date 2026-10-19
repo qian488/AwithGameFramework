@@ -18,6 +18,7 @@ namespace AwithGameFrame.Core.Config
         private Dictionary<string, object> _runtimeConfigs = new Dictionary<string, object>();
         private bool _isInitialized = false;
         private FrameworkConfig _lastFrameworkConfig; // 用于检测配置变更
+        private float _nextConfigCheck;
         #endregion
 
         #region 属性
@@ -49,6 +50,9 @@ namespace AwithGameFrame.Core.Config
             {
                 LoadFrameworkConfig();
                 InitializeLoggingSystem();
+                Application.targetFrameRate = _frameworkConfig.targetFrameRate;
+                _lastFrameworkConfig = _frameworkConfig;
+                _frameworkConfig.CaptureChanges();
                 base.Initialize();
                 _isInitialized = true;
                 LoggingAPI.Info(LogCategory.Config, "配置管理器初始化完成");
@@ -71,22 +75,14 @@ namespace AwithGameFrame.Core.Config
         /// 更新方法，检测FrameworkConfig变更
         /// 注意：Inspector修改主要通过FrameworkConfig的OnValidate方法检测
         /// </summary>
-        void Update()
+        public void Tick()
         {
             if (!_isInitialized || _frameworkConfig == null) return;
-            
-            // 检测FrameworkConfig对象引用是否发生变化（资源重新加载等）
-            if (_lastFrameworkConfig != null && _lastFrameworkConfig != _frameworkConfig)
-            {
-                // 配置对象发生了变化，重新加载
-                LoadFrameworkConfig();
-                NotifyFrameworkConfigChanged();
-            }
-            else if (_lastFrameworkConfig == null)
-            {
-                // 首次设置
-                _lastFrameworkConfig = _frameworkConfig;
-            }
+            if (_lastFrameworkConfig == _frameworkConfig && Time.unscaledTime < _nextConfigCheck) return;
+            _nextConfigCheck = Time.unscaledTime + 0.25f;
+            var referenceChanged = _lastFrameworkConfig != _frameworkConfig;
+            _lastFrameworkConfig = _frameworkConfig;
+            if (_frameworkConfig.CaptureChanges() || referenceChanged) NotifyFrameworkConfigChanged();
         }
 
         /// <summary>
@@ -96,14 +92,14 @@ namespace AwithGameFrame.Core.Config
         {
             try
             {
-                if (!_frameworkConfig.enableLoggingModule)
-                {
-                    LoggingAPI.Info(LogCategory.Config, "日志模块已禁用，跳过日志系统初始化");
-                    return;
-                }
-
                 var loggingManager = LoggingManager.GetInstance();
                 var loggingConfig = _frameworkConfig.GetLoggingConfig();
+                if (!_frameworkConfig.enableLoggingModule)
+                {
+                    loggingConfig.Mode = LogMode.None;
+                    loggingConfig.FileConfig.EnableFileLogging = false;
+                    loggingConfig.PerformanceConfig.EnableAutoLogging = false;
+                }
                 
                 // 使用框架配置初始化日志系统
                 loggingManager.Initialize(loggingConfig);
@@ -123,7 +119,7 @@ namespace AwithGameFrame.Core.Config
         {
             try
             {
-                _frameworkConfig = Resources.Load<FrameworkConfig>("FrameworkConfig");
+                _frameworkConfig = UnityEngine.Resources.Load<FrameworkConfig>("FrameworkConfig");
                 if (_frameworkConfig == null)
                 {
                     LoggingAPI.Warn(LogCategory.Config, "未找到FrameworkConfig，创建默认配置文件");
@@ -197,7 +193,9 @@ namespace AwithGameFrame.Core.Config
         public void ReloadFrameworkConfig()
         {
             LoadFrameworkConfig();
-            InitializeLoggingSystem();
+            _lastFrameworkConfig = _frameworkConfig;
+            _frameworkConfig.CaptureChanges();
+            NotifyFrameworkConfigChanged();
             EventCenter.GetInstance().EventTrigger("ConfigReloaded");
         }
 
@@ -249,7 +247,7 @@ namespace AwithGameFrame.Core.Config
         {
             try
             {
-                var textAsset = Resources.Load<TextAsset>(filePath);
+                var textAsset = UnityEngine.Resources.Load<TextAsset>(filePath);
                 if (textAsset == null)
                 {
                     LoggingAPI.Error(LogCategory.Config, $"未找到配置文件: {filePath}");
@@ -395,12 +393,13 @@ namespace AwithGameFrame.Core.Config
         /// <summary>
         /// 框架配置变更事件
         /// </summary>
-        private void NotifyFrameworkConfigChanged()
+        internal void NotifyFrameworkConfigChanged()
         {
             LoggingAPI.Info(LogCategory.Config, "检测到FrameworkConfig在Inspector中被修改");
             
             // 重新初始化日志系统
             InitializeLoggingSystem();
+            Application.targetFrameRate = _frameworkConfig.targetFrameRate;
             
             // 触发框架配置变更事件
             var eventData = new ConfigAPI.ConfigChangedEventData

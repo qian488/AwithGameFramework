@@ -4,8 +4,12 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Shared/AwithGameFrame.Samples.Shared.csproj" />
     <ProjectReference Include="../../src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
     <ProjectReference Include="../../src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
     <ProjectReference Include="../../src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../Shared/Runtime/Generated/LevelConfig.json" Link="Configuration/LevelConfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

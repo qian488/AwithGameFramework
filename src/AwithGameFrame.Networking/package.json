@@ -1,0 +1,11 @@
+{
+  "name": "com.awithgameframe.networking",
+  "version": "0.2.0",
+  "displayName": "AwithGameFrame Networking",
+  "description": "Optional engine-independent HTTP transport, protocol contracts and session-aware client.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.awithgameframe.core": "0.2.0"
+  },
+  "author": { "name": "AwithGameFrame" }
+}

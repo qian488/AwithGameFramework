@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -5,6 +6,7 @@ using UnityEngine.EventSystems;
 using AwithGameFrame.Core;
 using AwithGameFrame.Core.DI;
 using AwithGameFrame.Core.Logging;
+using Object = UnityEngine.Object;
 
 namespace AwithGameFrame.Foundation.Systems.UI
 {
@@ -28,6 +30,14 @@ namespace AwithGameFrame.Foundation.Systems.UI
         private readonly Dictionary<string, BasePanel> _panelDict = new Dictionary<string, BasePanel>();
         private Transform _bot, _mid, _top, _system;
         private bool _canvasReady;
+        private GameObject _eventSystem;
+        private readonly Dictionary<string, PendingPanel> _pendingPanels = new Dictionary<string, PendingPanel>();
+
+        private sealed class PendingPanel
+        {
+            public Type PanelType;
+            public readonly List<Action<BasePanel>> Callbacks = new List<Action<BasePanel>>();
+        }
 
         public RectTransform Canvas { get; private set; }
 
@@ -47,12 +57,32 @@ namespace AwithGameFrame.Foundation.Systems.UI
             if (!_canvasReady) SetupCanvas();
         }
 
+        public override void Shutdown()
+        {
+            base.Shutdown();
+            var pendingPanels = new List<PendingPanel>(_pendingPanels.Values);
+            _pendingPanels.Clear();
+            foreach (var pending in pendingPanels) CompleteCallbacks(pending, null);
+            foreach (var panel in _panelDict.Values)
+                if (panel != null) Object.Destroy(panel.gameObject);
+            _panelDict.Clear();
+            if (Canvas != null) Object.Destroy(Canvas.gameObject);
+            if (_eventSystem != null) Object.Destroy(_eventSystem);
+            Canvas = null;
+            _eventSystem = null;
+            _bot = _mid = _top = _system = null;
+            _canvasReady = false;
+            ServiceLocator.Unregister<IUIManager>();
+        }
+
         private void SetupCanvas()
         {
             if (_canvasReady) return;
 
             var canvasGo = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_CANVAS_PATH);
+            if (canvasGo == null) throw new InvalidOperationException("The UI Canvas prefab is missing from Resources.");
             Canvas = canvasGo.transform as RectTransform;
+            if (Canvas == null) throw new InvalidOperationException("The UI Canvas requires a RectTransform.");
             Object.DontDestroyOnLoad(canvasGo);
 
             _bot = Canvas.Find("Bot");
@@ -60,8 +90,8 @@ namespace AwithGameFrame.Foundation.Systems.UI
             _top = Canvas.Find("Top");
             _system = Canvas.Find("System");
 
-            var eventGo = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_EVENTSYSTEM_PATH);
-            Object.DontDestroyOnLoad(eventGo);
+            _eventSystem = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_EVENTSYSTEM_PATH);
+            if (_eventSystem != null) Object.DontDestroyOnLoad(_eventSystem);
 
             _canvasReady = true;
             LoggingAPI.Info(LogCategory.UI, "UIManager Canvas初始化完成");
@@ -83,40 +113,87 @@ namespace AwithGameFrame.Foundation.Systems.UI
 
         public void ShowPanel<T>(string panelName, UILayer layer = UILayer.Mid, UnityAction<T> callback = null) where T : BasePanel
         {
+            if (State == ModuleState.Shutdown) { callback?.Invoke(null); return; }
+            if (string.IsNullOrWhiteSpace(panelName)) throw new ArgumentException("Panel name is required.", nameof(panelName));
             if (!_canvasReady) SetupCanvas();
 
             if (_panelDict.TryGetValue(panelName, out var existing))
             {
-                existing.ShowMe();
-                callback?.Invoke(existing as T);
+                if (existing != null)
+                {
+                    existing.ShowMe();
+                    callback?.Invoke(existing as T);
+                    return;
+                }
+                _panelDict.Remove(panelName);
+            }
+
+            if (_pendingPanels.TryGetValue(panelName, out var pending))
+            {
+                if (pending.PanelType != typeof(T)) throw new InvalidOperationException("A panel name must use one component type while loading.");
+                if (callback != null) pending.Callbacks.Add(panel => callback(panel as T));
                 return;
             }
+            pending = new PendingPanel { PanelType = typeof(T) };
+            if (callback != null) pending.Callbacks.Add(panel => callback(panel as T));
+            _pendingPanels.Add(panelName, pending);
 
             ResourcesManager.GetInstance().LoadAsync<GameObject>("UI/" + panelName, (go) =>
             {
+                if (!_pendingPanels.TryGetValue(panelName, out var current) || !ReferenceEquals(current, pending))
+                {
+                    if (go != null) ResourcesManager.GetInstance().Recycle("UI/" + panelName, go);
+                    return;
+                }
+                _pendingPanels.Remove(panelName);
+                if (go == null) { CompleteCallbacks(pending, null); return; }
+                var panel = go.GetComponent<T>();
+                var rt = go.transform as RectTransform;
+                if (panel == null || rt == null)
+                {
+                    ResourcesManager.GetInstance().Recycle("UI/" + panelName, go);
+                    CompleteCallbacks(pending, null);
+                    LoggingAPI.Error(LogCategory.UI, $"Panel '{panelName}' requires {typeof(T).Name} and RectTransform.");
+                    return;
+                }
                 var father = GetLayerRoot(layer);
-                go.transform.SetParent(father);
+                go.transform.SetParent(father, false);
                 go.transform.localPosition = Vector3.zero;
                 go.transform.localScale = Vector3.one;
 
-                var rt = go.transform as RectTransform;
                 rt.offsetMax = Vector2.zero;
                 rt.offsetMin = Vector2.zero;
 
-                var panel = go.GetComponent<T>();
-                callback?.Invoke(panel);
-                panel.ShowMe();
                 _panelDict[panelName] = panel;
+                panel.ShowMe();
+                CompleteCallbacks(pending, panel);
             });
+        }
+
+        private static void CompleteCallbacks(PendingPanel pending, BasePanel panel)
+        {
+            var callbacks = pending.Callbacks.ToArray();
+            pending.Callbacks.Clear();
+            foreach (var callback in callbacks)
+            {
+                try { callback(panel); }
+                catch (Exception error) { Debug.LogException(error); }
+            }
         }
 
         public void HidePanel(string panelName)
         {
+            if (_pendingPanels.TryGetValue(panelName, out var pending))
+            {
+                _pendingPanels.Remove(panelName);
+                CompleteCallbacks(pending, null);
+            }
             if (_panelDict.TryGetValue(panelName, out var panel))
             {
+                _panelDict.Remove(panelName);
+                if (panel == null) return;
                 panel.HideMe();
                 ResourcesManager.GetInstance().Recycle("UI/" + panelName, panel.gameObject);
-                _panelDict.Remove(panelName);
             }
         }
 

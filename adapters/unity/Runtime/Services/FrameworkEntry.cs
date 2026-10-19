@@ -16,6 +16,9 @@ namespace AwithGameFrame.Foundation
     public class FrameworkEntry : MonoBehaviour
     {
         [SerializeField] private bool _autoBootstrap = true;
+        private bool _ownsBootstrap;
+        private bool _applicationPaused;
+        private bool _inputWasEnabled;
 
         private void Awake()
         {
@@ -25,8 +28,11 @@ namespace AwithGameFrame.Foundation
             }
         }
 
-        private void Bootstrap()
+        public void Bootstrap()
         {
+            if (_ownsBootstrap) return;
+            foreach (var module in FrameworkBootstrap.RegisteredModules)
+                if (module.State == ModuleState.Running) return;
             // 按优先级注册模块
             // Critical - 配置系统必须先初始化
             FrameworkBootstrap.Register<ConfigManager>();
@@ -35,32 +41,49 @@ namespace AwithGameFrame.Foundation
             FrameworkBootstrap.Register<MonoManager>();
 
             // CoreSystems - 对象池和资源
-            FrameworkBootstrap.Register<PoolManager>();
+            var config = ConfigManager.GetInstance().FrameworkConfig;
+            if (config.enablePoolModule) FrameworkBootstrap.Register<PoolManager>();
             FrameworkBootstrap.Register<ResourcesManager>();
 
             // Features - 游戏系统
-            FrameworkBootstrap.Register<MusicManager>();
-            FrameworkBootstrap.Register<InputManager>();
-            FrameworkBootstrap.Register<UIManager>();
+            if (config.enableAudioModule) FrameworkBootstrap.Register<MusicManager>();
+            if (config.enableInputModule) FrameworkBootstrap.Register<InputManager>();
+            if (config.enableUIModule) FrameworkBootstrap.Register<UIManager>();
 
             // 启动
             FrameworkBootstrap.Bootstrap();
+            _ownsBootstrap = true;
             DontDestroyOnLoad(gameObject);
         }
 
         private void OnDestroy()
         {
-            FrameworkBootstrap.Shutdown();
+            if (_ownsBootstrap)
+            {
+                _ownsBootstrap = false;
+                FrameworkBootstrap.Shutdown();
+            }
         }
 
         private void OnApplicationPause(bool pause)
         {
+            SetApplicationPaused(pause);
+        }
+
+        /// <summary>前后台切换保留运行中的模块；最终释放由 OnDestroy 负责。</summary>
+        public void SetApplicationPaused(bool pause)
+        {
+            if (!_ownsBootstrap || _applicationPaused == pause) return;
+            _applicationPaused = pause;
             foreach (var module in FrameworkBootstrap.RegisteredModules)
             {
-                if (pause && module.State == ModuleState.Running)
+                if (module.State != ModuleState.Running) continue;
+                if (module is InputManager input)
                 {
-                    module.Shutdown();
+                    if (pause) { _inputWasEnabled = input.IsEnabled; input.SetEnabled(false); }
+                    else input.SetEnabled(_inputWasEnabled);
                 }
+                if (module is MusicManager music) music.SetApplicationPaused(pause);
             }
         }
     }

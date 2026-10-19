@@ -1,0 +1,13 @@
+{
+  "namespace": "AwithGameFrame.Samples.Shared",
+  "tables": [
+    {
+      "name": "LevelConfig",
+      "fields": [
+        { "name": "Id", "type": "int" },
+        { "name": "Title", "type": "string" },
+        { "name": "Reward", "type": "int" }
+      ]
+    }
+  ]
+}

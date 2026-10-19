@@ -1,0 +1,6 @@
+{
+  "name": "AwithGameFrame.SharedDemo.Editor",
+  "references": ["AwithGameFrame.Samples"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

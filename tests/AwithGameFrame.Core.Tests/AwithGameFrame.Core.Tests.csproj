@@ -6,6 +6,9 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../samples/Protocol/Generated/GameProtocol.cs" Link="Generated/GameProtocol.cs" />
+    <ProjectReference Include="../../tools/ConfigGen/AwithGameFrame.ConfigGen.csproj" />
+    <ProjectReference Include="../../samples/Shared/AwithGameFrame.Samples.Shared.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
@@ -15,5 +18,9 @@
     <ProjectReference Include="../../src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
     <ProjectReference Include="../../src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
     <ProjectReference Include="../../src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
+    <ProjectReference Include="../../src/AwithGameFrame.Networking/AwithGameFrame.Networking.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../samples/Shared/Runtime/Generated/LevelConfig.json" Link="Configuration/LevelConfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

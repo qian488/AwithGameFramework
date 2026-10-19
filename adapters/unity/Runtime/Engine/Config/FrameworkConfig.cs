@@ -209,12 +209,7 @@ namespace AwithGameFrame.Core.Config
                 if (changedProperties.Count > 0)
                 {
                     // 通过事件中心通知配置变更
-                    var eventData = new ConfigAPI.ConfigChangedEventData
-                    {
-                        key = "FrameworkConfig",
-                        value = $"Inspector修改: {string.Join(", ", changedProperties)}"
-                    };
-                    EventCenter.GetInstance()?.EventTrigger<ConfigAPI.ConfigChangedEventData>("ConfigChanged", eventData);
+                    ConfigManager.GetInstance().NotifyFrameworkConfigChanged();
                     
                     Debug.Log($"[FrameworkConfig] 检测到Inspector修改，变更的属性: {string.Join(", ", changedProperties)}");
                 }
@@ -285,6 +280,8 @@ namespace AwithGameFrame.Core.Config
             
             return changedProperties;
         }
+
+        internal bool CaptureChanges() => DetectChangedProperties().Count > 0;
 
         /// <summary>
         /// 检查单个属性是否发生变化

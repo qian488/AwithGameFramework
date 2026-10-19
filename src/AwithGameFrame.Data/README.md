@@ -1,6 +1,12 @@
 # AwithGameFrame.Data
 
+`AwithGameFrame.Data.Diagnostics.HostEventJournal(path, hosts)` 是可选的 JSONL 生命周期出口：记录实例 ID、模块、阶段、耗时、错误与回滚；`Attach(host)` 可追加订阅，`Dispose()` 解绑并关闭文件。初始化路径错误直接抛错；运行中的诊断写入错误通过 `LastError` 暴露，不改变宿主执行。调用方负责日志轮转和敏感字段策略。
+
 跨引擎持久化库，目标框架为 .NET Standard 2.1。命名空间继续使用 `AwithGameFrame.Foundation.DataPersistence`，异步接口统一为 BCL `Task`。依赖 Core 和 Newtonsoft.Json；不引用 Unity、UniTask、Mono.Data.Sqlite 或示例项目 DLL。
+
+普通 C# 配置表运行时位于 `AwithGameFrame.Data.Configuration`。`ConfigTable<T>.LoadAsync(bytes, serializer, expectedSchemaHash, row => row.Id, token)` 读取 `{ "schemaHash": "SHA-256结构指纹", "rows": [...] }`，先验证结构指纹，再拒绝空行和重复整数 ID。通过 `table[id]`、`TryGet`、`ContainsId` 和只读 `Rows` 访问数据；加载完成前不会发布半张表。生成工具和具体 DTO 属于宿主/工具，运行时不依赖 Excel、引擎资源或代码生成器。
+
+加载关联表后调用 `items.ValidateReferences(categories, row => row.CategoryId, "CategoryId")`，缺少目标会抛出带源 ID、引用字段和目标 ID 的 `ConfigurationValidationException`。只有显式设置 `allowZero: true` 才将零视为可选引用。默认不限制 ID 正负值。结构哈希是宿主提供的 DTO 契约指纹，不能代替内容校验、签名或验证所有业务规则；DTO 载入后应视为不可变，避免修改 ID 导致索引与行不一致。配置载入检查取消令牌，但现有 `ISerializer` 不支持中途中断。
 
 ```csharp
 var config = new DataPersistenceConfig

@@ -29,9 +29,9 @@ namespace AwithGameFrame.Extensions.GameSave
     }
 
     /// <summary>
-    /// 游戏存档管理器
-    /// 提供存档槽位管理、自动存档、存档版本迁移功能
-    /// 放在Extensions包中，依赖Foundation的DataPersistenceAPI
+    /// 兼容的存档槽位管理器，依赖静态 DataPersistenceAPI；支持手动和快速存取。
+    /// 数据和元信息分别保存，不提供原子提交、自动存档或版本迁移。
+    /// 新项目可使用显式注入路径与序列化器的 VersionedSaveService&lt;T&gt;。
     /// </summary>
     public class SaveGameManager : BaseManager<SaveGameManager>
     {

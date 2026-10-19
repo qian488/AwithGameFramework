@@ -1,0 +1,4 @@
+samples/Shared/Runtime/Generated/* text eol=lf
+samples/Protocol/Generated/* text eol=lf
+samples/Unity/Assets/Resources/AwithDemo/*.json text eol=lf
+samples/Godot/Configuration/*.json text eol=lf

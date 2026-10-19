@@ -1,0 +1,13 @@
+<Project Sdk="Godot.NET.Sdk/4.5.2">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <OutputPath>$(MSBuildProjectDirectory)/.godot/mono/temp/bin/$(Configuration)/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../adapters/godot/AwithGameFrame.Godot.csproj" />
+    <ProjectReference Include="../Shared/AwithGameFrame.Samples.Shared.csproj" />
+    <None Include="../Shared/Runtime/Generated/LevelConfig.json" Link="Configuration/LevelConfig.json" />
+  </ItemGroup>
+</Project>

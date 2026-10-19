@@ -47,7 +47,7 @@ if ($projectFiles.Count -eq 0) { throw 'No portable projects found under src/.' 
 
 # Strip comments and literals so documentation mentioning an engine is allowed.
 $nonCodePattern = '(?s)/\*.*?\*/|//[^\r\n]*|@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*'''
-$enginePattern = '\b(UnityEngine|UnityEditor|UniTask|Cysharp\.Threading\.Tasks)\b'
+$enginePattern = '\b(UnityEngine|UnityEditor|UniTask|Cysharp\.Threading\.Tasks|Godot)\b'
 foreach ($file in @($sourceFiles | Where-Object { $_.Extension -eq '.cs' })) {
     $code = [regex]::Replace([System.IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
     if ($code -match $enginePattern) { throw "Engine dependency in portable source: $($file.FullName)" }
@@ -62,7 +62,7 @@ foreach ($file in $projectFiles) {
         if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw "Missing project reference: $target" }
     }
     foreach ($reference in $project.SelectNodes("//*[local-name()='Reference' or local-name()='PackageReference']")) {
-        if ($reference.GetAttribute('Include') -match '(?i)Unity|UniTask|Cysharp') {
+        if ($reference.GetAttribute('Include') -match '(?i)Unity|UniTask|Cysharp|Godot') {
             throw "Engine assembly or package reference in portable project: $($file.FullName)"
         }
     }
@@ -78,7 +78,7 @@ foreach ($file in $projectFiles) {
 
 Write-Host 'Checking Unity import metadata, assembly definitions, and package paths...'
 $packageRoots = @($sourceFiles | Where-Object { $_.Name -eq 'package.json' } | ForEach-Object { $_.DirectoryName }) +
-    @(Join-Path $repositoryRoot 'adapters/unity')
+    @(Join-Path $repositoryRoot 'adapters/unity') + @(Join-Path $repositoryRoot 'samples/Shared')
 function Assert-UnityImportMetadata {
     param([string[]]$PackageRoots, [string]$SampleAssetsRoot)
     $importRoots = $PackageRoots + @($SampleAssetsRoot)
@@ -114,7 +114,7 @@ function Assert-UnityImportMetadata {
 Assert-UnityImportMetadata -PackageRoots $packageRoots -SampleAssetsRoot (Join-Path $repositoryRoot 'samples/Unity/Assets')
 $assemblyDefinitions = @{}
 $assemblyGuids = @{}
-$scanRoots = @('src', 'adapters/unity', 'samples/Unity/Assets')
+$scanRoots = @('src', 'adapters/unity', 'samples/Unity/Assets', 'samples/Shared')
 foreach ($relativeRoot in $scanRoots) {
     foreach ($file in Get-ChildItem -LiteralPath (Join-Path $repositoryRoot $relativeRoot) -Recurse -Filter '*.asmdef' -File) {
         $definition = Read-Json $file.FullName
@@ -196,6 +196,8 @@ foreach ($packagePath in (@($sourceFiles | Where-Object { $_.Name -eq 'package.j
 if (-not (Test-Path -LiteralPath $solutionPath -PathType Leaf)) { throw "Missing solution: $solutionPath" }
 Push-Location $repositoryRoot
 try {
+    & (Join-Path $PSScriptRoot 'generate-config.ps1') -Check
+    & (Join-Path $PSScriptRoot 'generate-protocol.ps1') -Check
     Invoke-DotNet -Arguments @('build', $solutionPath, '--configuration', $Configuration, '--nologo')
     Assert-UnityImportMetadata -PackageRoots $packageRoots -SampleAssetsRoot (Join-Path $repositoryRoot 'samples/Unity/Assets')
     Invoke-DotNet -Arguments @('test', $solutionPath, '--configuration', $Configuration, '--no-build', '--no-restore', '--nologo')

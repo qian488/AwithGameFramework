@@ -1,0 +1,26 @@
+{
+  "namespace": "AwithGameFrame.Samples.Protocol",
+  "version": 1,
+  "endpoints": [
+    {
+      "name": "ReadProfile",
+      "method": "GET",
+      "path": "profile",
+      "request": [],
+      "response": [
+        { "name": "Coins", "wireName": "coins", "type": "int" }
+      ]
+    },
+    {
+      "name": "RenameProfile",
+      "method": "POST",
+      "path": "profile/name",
+      "request": [
+        { "name": "DisplayName", "wireName": "displayName", "type": "string" }
+      ],
+      "response": [
+        { "name": "DisplayName", "wireName": "displayName", "type": "string" }
+      ]
+    }
+  ]
+}

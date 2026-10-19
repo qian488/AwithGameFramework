@@ -14,6 +14,7 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
     {
         private readonly HashSet<KeyCode> _registeredKeys = new HashSet<KeyCode>();
         private bool _isEnabled;
+        private bool _subscribed;
 
         public bool IsEnabled => _isEnabled;
 
@@ -22,7 +23,6 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
         public InputManager()
         {
             LoggingAPI.Info(LogCategory.Input, "InputManager初始化");
-            MonoManager.GetInstance().AddUpdateListener(MyUpdate);
 
             // 默认注册常用按键
             RegisterKey(KeyCode.W);
@@ -40,7 +40,22 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
         public override void Initialize()
         {
             base.Initialize();
+            if (!_subscribed)
+            {
+                MonoManager.GetInstance().AddUpdateListener(MyUpdate);
+                _subscribed = true;
+            }
+            _isEnabled = true;
             ServiceLocator.Register<IInputManager>(this);
+        }
+
+        public override void Shutdown()
+        {
+            _isEnabled = false;
+            if (_subscribed) MonoManager.GetInstance().RemoveUpdateListener(MyUpdate);
+            _subscribed = false;
+            ServiceLocator.Unregister<IInputManager>();
+            base.Shutdown();
         }
 
         public void SetEnabled(bool enabled)

@@ -1,4 +1,5 @@
 using AwithGameFrame.Core.Logging;
+using AwithGameFrame.Core.Config;
 using UnityEngine;
 
 namespace AwithGameFrame.Unity
@@ -8,6 +9,7 @@ namespace AwithGameFrame.Unity
     {
         private void Update()
         {
+            ConfigManager.GetInstance().Tick();
             PerformanceMonitor.GetInstance().Tick(Time.unscaledDeltaTime);
             LoggingManager.GetInstance().Update();
         }

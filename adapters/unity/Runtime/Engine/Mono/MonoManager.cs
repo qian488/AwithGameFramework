@@ -13,12 +13,36 @@ namespace AwithGameFrame.Core
     public class MonoManager : BaseManager<MonoManager>
     {
         private MonoControl controller;
+        public override int Priority => (int)ModulePriority.Infrastructure;
 
         public MonoManager()
         {
+            EnsureController();
+        }
+
+        private void EnsureController()
+        {
+            if (controller != null) return;
             // 单例保证了MonoControl对象的唯一性
             GameObject go = new GameObject("MonoController");
             controller = go.AddComponent<MonoControl>();
+        }
+
+        public override void Initialize()
+        {
+            EnsureController();
+            base.Initialize();
+        }
+
+        public override void Shutdown()
+        {
+            if (controller != null)
+            {
+                controller.StopAllCoroutines();
+                Object.Destroy(controller.gameObject);
+                controller = null;
+            }
+            base.Shutdown();
         }
 
         /// <summary>
@@ -27,6 +51,7 @@ namespace AwithGameFrame.Core
         /// <param name="function"></param>
         public void AddUpdateListener(UnityAction function)
         {
+            EnsureController();
             controller.AddUpdateListener(function);
         }
 
@@ -36,7 +61,7 @@ namespace AwithGameFrame.Core
         /// <param name="function"></param>
         public void RemoveUpdateListener(UnityAction function)
         {
-            controller.RemoveUpdateListener(function);
+            if (controller != null) controller.RemoveUpdateListener(function);
         }
 
         #region 协程相关

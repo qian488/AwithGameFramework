@@ -3,15 +3,15 @@
 ## 先定位，再读取
 
 - 先读根 README.md 与 GUIDE.md 的目录/依赖图，再读目标包 README。
-- 通用运行时：src/AwithGameFrame.Core、Data、Gameplay，各包 Runtime/ 是唯一源码。
-- Unity 实现：adapters/unity；演示场景/插件/资源：samples/Unity。
+- 通用运行时：src/AwithGameFrame.Core、Data、Gameplay、Networking，各包 Runtime/ 是唯一源码。
+- 引擎实现：adapters/unity、adapters/godot；演示分别位于 samples/Unity、samples/Godot；共享应用样例在 samples/Shared。
 - 自动测试：tests；无图形入口：samples/Headless；验证：tools。
 - docs/legacy 和各包 Documentation~/legacy 是历史资料，不是当前需求或开发规则。
 - 不默认扫描 samples/Unity/Assets/Plugins、samples/Unity/Assets/Packages 或 artifacts；先限制 rg 搜索范围。
 
 ## 依赖规则
 
-- 只允许 Gameplay -> Data/Core、Data -> Core；Core 只使用标准库。
+- 只允许 Gameplay -> Data/Core、Data -> Core、Networking -> Core；Core 只使用标准库。Networking 是可选包，不进入 Data/Gameplay 的依赖。
 - src 不引用 UnityEngine、UnityEditor、UniTask 或任何引擎程序集，不引用 adapters/samples 中的代码或 DLL。
 - 引擎接口暴露引擎类型时，接口也属于该引擎适配层。通用接口使用 BCL/普通 C# 数据与 Task。
 - 每个 portable 包同时提供 .csproj、package.json 和 noEngineReferences=true 的 Runtime asmdef；两种构建共用 Runtime 源码。
@@ -27,4 +27,6 @@
 - Unity 工程路径 samples/Unity；记录版本 2022.3.40f1c1。影响 Unity 时使用可用编辑器验证，明确记录实际版本与无法执行的检查。
 - 构建输出集中在 artifacts，避免被 UPM 导入。
 - 为行为变化编写有意义的测试；文档与简单移动使用相应静态检查。
+- 配置/协议源在 samples/Shared/Configuration 与 samples/Protocol；生成命令 tools/generate-config.ps1、tools/generate-protocol.ps1。不要手改 Generated；verify 自动检查产物和兼容性基线。
+- 引擎验证：tools/verify-unity.ps1 -RunSmoke -BuildPlayer；tools/verify-godot.ps1（-Export 可测试 Windows .NET 导出）。编辑器/模板路径由本机显式提供，说明见 docs/validation.md。
 - 完成后说明实际变化、验证结果与剩余限制，不把架构可扩展描述成已支持所有引擎。

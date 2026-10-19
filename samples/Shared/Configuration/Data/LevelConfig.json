@@ -1,0 +1,4 @@
+[
+  { "Id": 1, "Title": "First journey", "Reward": 10 },
+  { "Id": 2, "Title": "Second journey", "Reward": 25 }
+]

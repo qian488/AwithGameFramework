@@ -54,3 +54,6 @@ samples/Unity/sysinfo.txt
 *.app
 crashlytics-build.properties
 artifacts/
+# Godot host cache and generated IDE files
+**/.godot/
+samples/Godot/*.sln

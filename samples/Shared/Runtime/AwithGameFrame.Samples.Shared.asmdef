@@ -1,0 +1,6 @@
+{
+  "name": "AwithGameFrame.Samples.Shared",
+  "references": ["AwithGameFrame.Core", "AwithGameFrame.Data", "AwithGameFrame.Gameplay"],
+  "noEngineReferences": true,
+  "autoReferenced": true
+}

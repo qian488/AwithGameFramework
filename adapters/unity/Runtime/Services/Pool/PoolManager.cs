@@ -4,6 +4,7 @@ using UnityEngine;
 using AwithGameFrame.Core;
 using AwithGameFrame.Core.DI;
 using AwithGameFrame.Core.Logging;
+using AwithGameFrame.Core.Config;
 using UnityEngine.Events;
 
 namespace AwithGameFrame.Foundation.Pool
@@ -14,6 +15,7 @@ namespace AwithGameFrame.Foundation.Pool
     /// </summary>
     public class PoolManager : BaseManager<PoolManager>, IPoolManager
     {
+        public override int Priority => (int)ModulePriority.CoreSystems;
         #region 字段
         /// <summary>
         /// 对象池字典，使用字符串作为键，支持动态创建
@@ -39,6 +41,8 @@ namespace AwithGameFrame.Foundation.Pool
         /// Mono管理器引用
         /// </summary>
         private MonoManager monoManager;
+        private int loadGeneration;
+        private bool initialized;
         #endregion
 
         #region 配置管理
@@ -155,9 +159,13 @@ namespace AwithGameFrame.Foundation.Pool
         /// </summary>
         public override void Initialize()
         {
+            if (initialized) return;
             base.Initialize();
+            initialized = true;
+            loadGeneration++;
 
             ServiceLocator.Register<IPoolManager>(this);
+            PoolManagerAPI.SetInstance(this);
 
             // 初始化MonoManager
             monoManager = MonoManager.GetInstance();
@@ -168,6 +176,51 @@ namespace AwithGameFrame.Foundation.Pool
                 poolGO = new GameObject(GetPoolRootName());
                 Object.DontDestroyOnLoad(poolGO);
             }
+            ApplyConfiguration();
+            EventCenter.GetInstance().AddEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+        }
+
+        public override void Shutdown()
+        {
+            if (!initialized) { base.Shutdown(); return; }
+            initialized = false;
+            loadGeneration++;
+            EventCenter.GetInstance().RemoveEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+            StopAutoCleanup();
+            ClearPool();
+            PoolManagerAPI.SetInstance(null);
+            ServiceLocator.Unregister<IPoolManager>();
+            base.Shutdown();
+        }
+
+        private void OnConfigChanged(ConfigAPI.ConfigChangedEventData change)
+        {
+            if (change.key == "FrameworkConfig") ApplyConfiguration();
+        }
+
+        private void ApplyConfiguration()
+        {
+            var config = ConfigManager.GetInstance().FrameworkConfig;
+            defaultMaxSize = Mathf.Max(1, config.poolDefaultMaxSize);
+            autoCleanupInterval = Mathf.Max(0.01f, config.poolAutoCleanupInterval);
+            showDebugInfo = config.showDebugInfo;
+            foreach (var pool in poolDictionary.Values) pool.maxSize = defaultMaxSize;
+            SetAutoCleanup(config.poolEnableAutoCleanup);
+        }
+
+        private PoolData GetOrCreatePool(string name)
+        {
+            if (poolGO == null)
+            {
+                poolGO = new GameObject(GetPoolRootName());
+                Object.DontDestroyOnLoad(poolGO);
+            }
+            if (!poolDictionary.TryGetValue(name, out var pool))
+            {
+                pool = new PoolData(null, poolGO, GetDefaultMaxSize());
+                poolDictionary.Add(name, pool);
+            }
+            return pool;
         }
         #endregion
         
@@ -238,6 +291,7 @@ namespace AwithGameFrame.Foundation.Pool
             {
                 var go = GameObject.Instantiate(prefab);
                 go.name = name;
+                GetOrCreatePool(name).RegisterRented(go);
                 go.SetActive(true);
                 return go;
             }
@@ -319,7 +373,7 @@ namespace AwithGameFrame.Foundation.Pool
             // 确保池存在
             if (!poolDictionary.ContainsKey(name))
             {
-                var poolData = new PoolData(prefab, poolGO, GetDefaultMaxSize());
+                var poolData = new PoolData(null, poolGO, GetDefaultMaxSize());
                 poolDictionary.Add(name, poolData);
             }
 
@@ -395,6 +449,7 @@ namespace AwithGameFrame.Foundation.Pool
         /// <param name="name">对象池名称</param>
         public void ClearPool(string name)
         {
+            loadGeneration++;
             if (string.IsNullOrEmpty(name))
             {
                 LoggingAPI.Warn(LogCategory.Pool, "PoolManager: 对象池名称不能为空");
@@ -418,6 +473,7 @@ namespace AwithGameFrame.Foundation.Pool
         /// </summary>
         public void ClearPool()
         {
+            loadGeneration++;
             foreach (var kvp in poolDictionary)
             {
                 kvp.Value.ClearPool();
@@ -426,7 +482,7 @@ namespace AwithGameFrame.Foundation.Pool
             
             if (poolGO != null)
             {
-                UnityEngine.Object.DestroyImmediate(poolGO);
+                UnityEngine.Object.Destroy(poolGO);
                 poolGO = null;
             }
             
@@ -439,6 +495,7 @@ namespace AwithGameFrame.Foundation.Pool
         /// <param name="destroyPoolGO">是否同时销毁对象池根节点</param>
         public void Clear(bool destroyPoolGO = true)
         {
+            loadGeneration++;
             foreach (var kvp in poolDictionary)
             {
                 kvp.Value.ClearPool();
@@ -447,7 +504,7 @@ namespace AwithGameFrame.Foundation.Pool
             
             if (destroyPoolGO && poolGO != null)
             {
-                UnityEngine.Object.DestroyImmediate(poolGO);
+                UnityEngine.Object.Destroy(poolGO);
                 poolGO = null;
             }
             
@@ -692,18 +749,7 @@ namespace AwithGameFrame.Foundation.Pool
                 try
                 {
                     // 使用UniTask异步预热
-                    WarmupPoolAsyncInternal(poolName, count).ContinueWith(task => {
-                        if (task.IsFaulted)
-                        {
-                            LoggingAPI.Warn($"PoolManager: UniTask预热失败，降级到协程 - {task.Exception?.GetBaseException()?.Message}");
-                            // 降级到协程
-                            WarmupPoolCoroutine(poolName, count, callback);
-                        }
-                        else
-                        {
-                            callback?.Invoke();
-                        }
-                    });
+                    CompleteWarmupAsync(poolName, count, callback);
                     return;
                 }
                 catch (System.Exception ex)
@@ -727,9 +773,12 @@ namespace AwithGameFrame.Foundation.Pool
         /// </summary>
         public IEnumerator WarmupPoolCoroutine(string poolName, int count, UnityAction callback)
         {
+            var generation = loadGeneration;
             int createdCount = 0;
             var request = Resources.LoadAsync<GameObject>(poolName);
             yield return request;
+
+            if (generation != loadGeneration) { callback?.Invoke(); yield break; }
 
             if (request.asset != null)
             {
@@ -739,6 +788,7 @@ namespace AwithGameFrame.Foundation.Pool
                     // 分批创建对象，每10个对象等待一帧
                     for (int i = 0; i < count; i++)
                     {
+                        if (generation != loadGeneration) break;
                         var go = GameObject.Instantiate(prefab);
                         go.name = prefab.name;
                         go.SetActive(false);
@@ -806,6 +856,7 @@ namespace AwithGameFrame.Foundation.Pool
         /// </summary>
         private async System.Threading.Tasks.Task WarmupPoolAsyncInternal(string poolName, int count)
         {
+            var generation = loadGeneration;
             int createdCount = 0;
             
             // 异步加载资源
@@ -815,6 +866,8 @@ namespace AwithGameFrame.Foundation.Pool
                 await System.Threading.Tasks.Task.Yield();
             }
 
+            if (generation != loadGeneration) return;
+
             if (request.asset != null)
             {
                 var prefab = request.asset as GameObject;
@@ -822,6 +875,7 @@ namespace AwithGameFrame.Foundation.Pool
                 {
                     for (int i = 0; i < count; i++)
                     {
+                        if (generation != loadGeneration) return;
                         var go = GameObject.Instantiate(prefab);
                         go.name = prefab.name;
                         go.SetActive(false);
@@ -849,6 +903,13 @@ namespace AwithGameFrame.Foundation.Pool
             {
                 LoggingAPI.Error($"PoolManager: 无法加载资源 {poolName}");
             }
+        }
+
+        private async void CompleteWarmupAsync(string poolName, int count, UnityAction callback)
+        {
+            try { await WarmupPoolAsyncInternal(poolName, count); }
+            catch (System.Exception error) { LoggingAPI.Error($"PoolManager: 预热失败 - {error.Message}"); }
+            callback?.Invoke();
         }
         #endregion
 
@@ -938,17 +999,7 @@ namespace AwithGameFrame.Foundation.Pool
                 {
                     // 清理一半的对象
                     int objectsToRemove = poolData.GetPoolCount() / CLEANUP_DIVISOR;
-                    for (int i = 0; i < objectsToRemove; i++)
-                    {
-                        if (poolData.HasAvailableObject())
-                        {
-                            var go = poolData.GetGameObject();
-                            if (go != null)
-                            {
-                                UnityEngine.Object.DestroyImmediate(go);
-                            }
-                        }
-                    }
+                    poolData.TrimAvailable(objectsToRemove);
 
                     if (ShouldShowDebugInfo())
                     {
@@ -957,7 +1008,7 @@ namespace AwithGameFrame.Foundation.Pool
                 }
 
                 // 如果对象池完全为空且长时间未使用，则移除整个池
-                if (poolData.GetPoolCount() == 0 && timeSinceLastUsed > GetAutoCleanupInterval() * CLEANUP_MULTIPLIER)
+                if (poolData.GetPoolCount() == 0 && poolData.currentActive == 0 && timeSinceLastUsed > GetAutoCleanupInterval() * CLEANUP_MULTIPLIER)
                 {
                     poolsToRemove.Add(kvp.Key);
                 }
@@ -1132,17 +1183,7 @@ namespace AwithGameFrame.Foundation.Pool
                 {
                     // 清理一半的对象
                     int objectsToRemove = poolData.GetPoolCount() / CLEANUP_DIVISOR;
-                    for (int i = 0; i < objectsToRemove; i++)
-                    {
-                        if (poolData.HasAvailableObject())
-                        {
-                            var go = poolData.GetGameObject();
-                            if (go != null)
-                            {
-                                UnityEngine.Object.DestroyImmediate(go);
-                            }
-                        }
-                    }
+                    poolData.TrimAvailable(objectsToRemove);
 
                     if (ShouldShowDebugInfo())
                     {
@@ -1151,7 +1192,7 @@ namespace AwithGameFrame.Foundation.Pool
                 }
 
                 // 如果对象池完全为空，标记为移除
-                if (poolData.GetPoolCount() == 0)
+                if (poolData.GetPoolCount() == 0 && poolData.currentActive == 0)
                 {
                     poolsToRemove.Add(kvp.Key);
                 }
@@ -1222,7 +1263,8 @@ namespace AwithGameFrame.Foundation.Pool
             var request = Resources.LoadAsync<GameObject>(poolName);
             if (request != null)
             {
-                monoManager.StartCoroutine(LoadGameObjectCoroutine(request, poolName, callback));
+                if (monoManager == null) monoManager = MonoManager.GetInstance();
+                monoManager.StartCoroutine(LoadGameObjectCoroutine(request, poolName, callback, loadGeneration));
             }
             else
             {
@@ -1237,9 +1279,10 @@ namespace AwithGameFrame.Foundation.Pool
         /// <param name="request">资源加载请求</param>
         /// <param name="poolName">对象池名称</param>
         /// <param name="callback">加载完成回调</param>
-        private IEnumerator LoadGameObjectCoroutine(ResourceRequest request, string poolName, UnityAction<GameObject> callback)
+        private IEnumerator LoadGameObjectCoroutine(ResourceRequest request, string poolName, UnityAction<GameObject> callback, int generation)
         {
             yield return request;
+            if (generation != loadGeneration) { callback?.Invoke(null); yield break; }
             
             if (request.asset != null)
             {
@@ -1248,12 +1291,7 @@ namespace AwithGameFrame.Foundation.Pool
                 {
                     var go = GameObject.Instantiate(prefab);
                     go.name = prefab.name;
-                    go.SetActive(false);
-                    
-                    // 将新对象添加到池中
-                    PushGameObject(poolName, go);
-                    
-                    // 获取对象并激活
+                    GetOrCreatePool(poolName).RegisterRented(go);
                     go.SetActive(true);
                     callback?.Invoke(go);
                 }

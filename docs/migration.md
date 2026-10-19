@@ -1,5 +1,29 @@
 ﻿# 从旧 Unity 工程迁移
 
+## 实例宿主与 Godot
+
+新应用使用 `AwithGameFrame.Core.Hosting.GameHost`，通过 `IGameModule.Id/Dependencies` 声明异步启动依赖；普通服务注册在 `host.Services`，模块通过 `GameContext` 访问。旧 `FrameworkBootstrap/ServiceLocator` 保留兼容，旧静态管理器没有自动获得实例隔离。每个会话创建新宿主，同一宿主停止后不重启。
+
+Unity 可继承 `AwithGameFrame.Unity.Hosting.GameHostBehaviour`；Godot .NET 使用 `GameHostNode`。启动/暂停/停止期间也需在创建线程持续 Tick（秒），处理原生资源释放和主线程投递。删除宿主对象、切走所属场景或主动退出前先等待 `ShutdownAsync`；引擎销毁回调无法保证等待所有异步操作。
+
+共享示例为 Unity `Assets/SharedDemo.unity`、Godot `samples/Godot/Main.tscn` 和 Headless。导航使用 `NavigationStack`，flow 的 Enter/Exit 管理页面与资源；返回或回滚会重新 Enter。
+
+## Unity 可靠性修正
+
+旧 `FrameworkEntry` 暂停时保留模块，暂停/恢复输入和音频。模块开关在启动时消费，修改需重启会话；运行参数由帧驱动每 0.25 秒检查。
+
+池的异步创建直接登记借出，重复归还忽略；预热只实例化，不改变 Prefab。Clear 销毁池拥有的空闲及借出对象，旧引用随后失效。UI 同名在途打开共用加载；Hide、失败或过期请求回调 null，迟到对象回收。音效并发上限包含在途加载，超额请求回调 null；音频与输入 Shutdown 解除订阅。
+
+新增资源租约与旧 Pool/ResourcesManager 分开。UnityResourceLoader 跨 store 计数；直接 Resources.Load 的外部持有者不在所有权记录内，应统一加载入口。Resources 无法原生取消请求或逐个卸载 Prefab：最后租约归还后非 Prefab 资产实际 Unload，Prefab 等待宿主选择 UnloadUnusedAssets。Godot 后端同步加载，使用独立缓存模式并释放原生包装。
+
+## 版本化存档与生成契约
+
+`VersionedSaveService<T>(root, serializer, currentVersion, migrations)` 使用 `slot-N.save` 单文件封装数据、元信息和 SHA-256，原子替换并保留上一版 `.bak`。损坏/缺失主档可恢复备份；未来版本、缺迁移或迁移失败明确抛错。迁移逐版本执行并提交升级数据。
+
+新服务不会自动读取旧 `SaveSlot_N` 与 `_Meta` 分离格式。项目需显式用旧提供者读取 DTO、转换并写入新服务，验证完成后决定旧文件处理。旧 SaveGameManager 保留基础槽位 API，未新增自动存档调度。
+
+配置定义/数据见 `samples/Shared/Configuration`，协议及兼容性基线见 `samples/Protocol`。修改源后运行生成脚本，禁止手改 Generated；删除/重命名配置需显式移除旧产物和 meta。Networking 是可选包，HTTP/业务状态、超时/调用取消分别处理；不隐式重试，切换会话后旧响应不交付。已有协议可提供自有 codec。
+
 ## 打开工程与找源码
 
 Unity Hub 打开 samples/Unity，原 ProjectSettings、场景、资源和插件都在该目录。仓库根 AwithGameFrame.sln 用于通用库、NUnit 和无图形宿主；Unity 自己生成的解决方案仍位于 Unity 工程目录。
@@ -79,7 +103,8 @@ SaveSettingsAsync/LoadSettingsAsync 现在使用配置的默认存储。旧版�
 运行 tools/verify.ps1，检查通用依赖、asmdef 图、UPM 路径、编译、自动测试和无图形示例。Unity 编译需要编辑器，可运行：
 
 ```powershell
-powershell -File tools/verify-unity.ps1 -EditorPath '你的 Unity.exe 路径'
+powershell -File tools/verify-unity.ps1 -EditorPath '你的 Unity.exe 路径' -RunSmoke -BuildPlayer
+powershell -File tools/verify-godot.ps1 -EditorPath 'Godot .NET console executable' -Export
 ```
 
-该脚本使用 artifacts 中的隔离工程副本和指定编辑器，不改写示例工程记录的版本；导入日志保留在 artifacts/UnityValidation。编辑器许可证与包服务由本机 Unity 提供。
+Unity 脚本使用 artifacts 中的隔离工程副本和指定编辑器，不改写示例工程记录的版本；编译、PlayMode 和 Player 日志保留在 artifacts/UnityValidation。编辑器许可证与包服务由本机 Unity 提供。Godot 导出需要匹配版本的 Windows 模板，可通过 -TemplatePath 指定。实际版本、验收记录与支持边界见 [验证说明](validation.md)。

@@ -1,0 +1,7 @@
+{
+  "name": "AwithGameFrame.Networking",
+  "rootNamespace": "AwithGameFrame.Networking",
+  "references": ["AwithGameFrame.Core"],
+  "noEngineReferences": true,
+  "autoReferenced": false
+}

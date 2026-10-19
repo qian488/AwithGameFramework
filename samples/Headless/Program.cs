@@ -7,6 +7,7 @@ using AwithGameFrame.Core.Event;
 using AwithGameFrame.Core.Logging;
 using AwithGameFrame.Extensions.Localization;
 using AwithGameFrame.Foundation.DataPersistence;
+using AwithGameFrame.Samples.Shared;
 
 namespace AwithGameFrame.Samples.Headless
 {
@@ -54,6 +55,7 @@ namespace AwithGameFrame.Samples.Headless
 
                 Console.WriteLine($"{locale.GetText("ready")}: level={progress.level}, frames=60, Unity dependencies=0");
                 locale.Shutdown();
+                DemoScenario.RunBlocking(Path.Combine(dataPath, "Session"), File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Configuration/LevelConfig.json")), Console.WriteLine);
                 return 0;
             }
             catch (Exception exception)

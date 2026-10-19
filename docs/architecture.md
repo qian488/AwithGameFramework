@@ -11,6 +11,8 @@
 - Gameplay：存档槽位和本地化，依赖 Core、Data。
 - Unity：保留引擎类型的接口与实现、Inspector 配置、帧循环、Resources 和 PlayerPrefs。
 - Headless：实际运行共享源码，提供无需图形界面的验证入口。
+- Godot：独立 .NET Node 宿主和 Resource 后端，不复用 Unity 类型接口。
+- Networking：可选的 BCL HTTP/协议模块，只依赖 Core，不引入业务 UI/凭证和重试策略。
 
 兼容基线为 .NET Standard 2.1、C# 9。这里的跨引擎首先覆盖兼容 C# 运行时的宿主；未来接入其他语言需要单独设计桥接层。
 
@@ -29,6 +31,12 @@ Unity 适配包保留三个程序集以减少原项目的引用改动，物理�
 Data 的 AdoDatabaseProvider 接收宿主提供的 ADO.NET 连接工厂，承载现有数据库操作；Unity SQLiteDatabaseProvider 只绑定 Mono.Data.Sqlite 连接，SQL 查询规则仍沿用 SQLite 约定。
 
 原单例和静态 API 暂时保留，方便现有使用者迁移。新增模块应从显式依赖开始；此轮没有另造 DI 容器、ECS 或所有引擎统一的资源模型。
+
+新增 `GameHost` 提供实例服务表、显式模块依赖、可取消异步启动与清理、暂停恢复、秒数 Tick 和主线程调度。`FlowMachine` 管理流程，Gameplay 的 NavigationStack 管理可恢复的导航历史。旧静态门面仍然全局共享，迁移必须显式选择实例 API，不将两者混用视为自动隔离。
+
+资源共享契约只包含逻辑 key、请求类型、租约、作用域和真实释放回调。Unity 与 Godot 后端各自承认原生限制；并未统一节点/Prefab/场景对象。Store 本身在最后租约归还后释放，不宣称已有 LRU 预算缓存或远程更新系统。
+
+配置/协议使用可审查 schema、确定性生成、强类型 DTO、运行时结构校验和兼容性基线。工具不依赖引擎。版本化存档将数据和元信息放同一校验封装，原子提交并保留上一版；与旧分离格式通过显式迁移衔接。
 
 ## Agent 协作
 

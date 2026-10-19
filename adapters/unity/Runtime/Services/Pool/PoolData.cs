@@ -45,6 +45,9 @@ namespace AwithGameFrame.Foundation.Pool
         /// 对象池根节点
         /// </summary>
         private GameObject poolRoot;
+        private readonly HashSet<GameObject> available = new HashSet<GameObject>();
+        private readonly HashSet<GameObject> rented = new HashSet<GameObject>();
+        private readonly HashSet<GameObject> known = new HashSet<GameObject>();
         #endregion
 
         #region 构造函数
@@ -63,10 +66,7 @@ namespace AwithGameFrame.Foundation.Pool
             // 将预制体添加到池中
             if (prefab != null)
             {
-                prefab.SetActive(false);
-                prefab.transform.SetParent(root.transform);
-                poolStack.Push(prefab);
-                totalCreated++;
+                PushGameObject(prefab);
             }
         }
         #endregion
@@ -78,12 +78,16 @@ namespace AwithGameFrame.Foundation.Pool
         /// <returns>对象</returns>
         public GameObject GetGameObject()
         {
-            if (poolStack.Count > 0)
+            while (poolStack.Count > 0)
             {
                 var go = poolStack.Pop();
-                currentActive++;
+                available.Remove(go);
+                if (go == null) { known.Remove(go); continue; }
+                rented.Add(go);
+                currentActive = rented.Count;
                 totalReused++;
                 lastUsedTime = Time.time;
+                go.transform.SetParent(null, false);
                 return go;
             }
             return null;
@@ -96,26 +100,24 @@ namespace AwithGameFrame.Foundation.Pool
         /// <returns>是否成功压入</returns>
         public bool PushGameObject(GameObject go)
         {
-            if (go == null) return false;
+            if (go == null || available.Contains(go)) return false;
+
+            if (known.Add(go)) totalCreated++;
+            rented.Remove(go);
+            currentActive = rented.Count;
 
             // 检查是否超过最大容量
             if (maxSize > 0 && poolStack.Count >= maxSize)
             {
-                // 如果超过最大容量，销毁最老的对象
-                if (poolStack.Count > 0)
-                {
-                    var oldGo = poolStack.Pop();
-                    if (oldGo != null)
-                    {
-                        Object.DestroyImmediate(oldGo);
-                    }
-                }
+                known.Remove(go);
+                Object.Destroy(go);
+                return true;
             }
 
             go.SetActive(false);
             go.transform.SetParent(poolRoot.transform);
             poolStack.Push(go);
-            currentActive--;
+            available.Add(go);
             lastUsedTime = Time.time;
             return true;
         }
@@ -126,6 +128,7 @@ namespace AwithGameFrame.Foundation.Pool
         /// <returns>是否有可用对象</returns>
         public bool HasAvailableObject()
         {
+            RemoveDestroyedAvailableObjects();
             return poolStack.Count > 0;
         }
 
@@ -135,7 +138,43 @@ namespace AwithGameFrame.Foundation.Pool
         /// <returns>对象数量</returns>
         public int GetPoolCount()
         {
+            RemoveDestroyedAvailableObjects();
             return poolStack.Count;
+        }
+
+        /// <summary>登记新建并直接交给调用方的对象，不将其放入空闲栈。</summary>
+        public void RegisterRented(GameObject go)
+        {
+            if (go == null) return;
+            if (available.Contains(go)) throw new System.InvalidOperationException("An available object cannot also be rented.");
+            if (known.Add(go)) totalCreated++;
+            rented.Add(go);
+            currentActive = rented.Count;
+            lastUsedTime = Time.time;
+        }
+
+        /// <summary>清理空闲对象，不增加借出或复用计数。</summary>
+        public void TrimAvailable(int count)
+        {
+            for (int i = 0; i < count && poolStack.Count > 0; i++)
+            {
+                var go = poolStack.Pop();
+                available.Remove(go);
+                known.Remove(go);
+                if (go != null) Object.Destroy(go);
+            }
+        }
+
+        private void RemoveDestroyedAvailableObjects()
+        {
+            while (poolStack.Count > 0 && poolStack.Peek() == null)
+            {
+                var go = poolStack.Pop();
+                available.Remove(go);
+                known.Remove(go);
+            }
+            rented.RemoveWhere(go => go == null);
+            currentActive = rented.Count;
         }
 
         /// <summary>
@@ -156,14 +195,7 @@ namespace AwithGameFrame.Foundation.Pool
         {
             if (go == null) return false;
             
-            foreach (var pooledGo in poolStack)
-            {
-                if (pooledGo == go)
-                {
-                    return true;
-                }
-            }
-            return false;
+            return available.Contains(go);
         }
 
         /// <summary>
@@ -176,10 +208,15 @@ namespace AwithGameFrame.Foundation.Pool
                 var go = poolStack.Pop();
                 if (go != null)
                 {
-                    Object.DestroyImmediate(go);
+                    Object.Destroy(go);
                 }
             }
             poolStack.Clear();
+            available.Clear();
+            foreach (var go in rented)
+                if (go != null) Object.Destroy(go);
+            rented.Clear();
+            known.Clear();
             totalCreated = 0;
             totalReused = 0;
             currentActive = 0;
@@ -192,7 +229,7 @@ namespace AwithGameFrame.Foundation.Pool
         {
             totalCreated = 0;
             totalReused = 0;
-            currentActive = 0;
+            currentActive = rented.Count;
             lastUsedTime = Time.time;
         }
         #endregion
