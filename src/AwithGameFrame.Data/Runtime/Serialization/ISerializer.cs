@@ -76,16 +76,27 @@ namespace AwithGameFrame.Foundation.DataPersistence
     {
         /// <summary>是否启用压缩</summary>
         public bool EnableCompression = false;
-        /// <summary>压缩级别（1-9）</summary>
+        /// <summary>内置 GZip 仅接受 6，使用运行时的 Optimal 策略。</summary>
         public int CompressionLevel = 6;
         /// <summary>是否格式化输出</summary>
         public bool PrettyPrint = false;
-        /// <summary>是否包含类型信息</summary>
-        public bool IncludeTypeInfo = true;
+        /// <summary>内置 JSON 编码器不支持 CLR 类型信息；true 会抛出 NotSupportedException。</summary>
+        public bool IncludeTypeInfo = false;
         /// <summary>是否忽略空值</summary>
         public bool IgnoreNullValues = false;
-        /// <summary>日期格式</summary>
-        public string DateFormat = "yyyy-MM-dd HH:mm:ss";
+        /// <summary>日期格式；null 使用保留精度和时区的默认 ISO 8601 格式。</summary>
+        public string DateFormat;
+
+        internal SerializationConfig CreateSnapshot(bool supportsCompression)
+        {
+            if (IncludeTypeInfo)
+                throw new NotSupportedException("Built-in JSON codecs do not persist or resolve CLR type metadata.");
+            if (EnableCompression && !supportsCompression)
+                throw new NotSupportedException("This JSON payload does not support compression; use the binary codec or the file provider's EnableCompression option.");
+            if (EnableCompression && CompressionLevel != 6)
+                throw new NotSupportedException("Built-in GZip accepts CompressionLevel=6 (runtime Optimal) only.");
+            return (SerializationConfig)MemberwiseClone();
+        }
     }
 
     /// <summary>

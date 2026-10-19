@@ -14,10 +14,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         public JsonSerializer(SerializationConfig config = null)
         {
-            config = config ?? new SerializationConfig();
-            settings = PortableJson.CreateSettings(config.PrettyPrint);
-            settings.NullValueHandling = config.IgnoreNullValues ? NullValueHandling.Ignore : NullValueHandling.Include;
-            settings.DateFormatString = config.DateFormat;
+            config = (config ?? new SerializationConfig()).CreateSnapshot(false);
+            settings = PortableJson.CreateSettings(config);
         }
 
         public Task<byte[]> SerializeAsync<T>(T obj) => Task.FromResult(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj, settings)));

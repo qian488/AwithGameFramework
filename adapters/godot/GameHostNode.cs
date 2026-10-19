@@ -12,6 +12,7 @@ namespace AwithGameFrame.Godot
         public bool IsReady { get; private set; }
         public Exception Failure { get; private set; }
         private bool closing;
+        private ulong lastProcessMicroseconds;
 
         protected virtual void ConfigureHost(GameHost host) { }
         protected virtual Task OnStartedAsync() => Task.CompletedTask;
@@ -19,6 +20,7 @@ namespace AwithGameFrame.Godot
         public override async void _Ready()
         {
             ProcessMode = ProcessModeEnum.Always;
+            lastProcessMicroseconds = global::Godot.Time.GetTicksUsec();
             Host = new GameHost();
             try
             {
@@ -43,9 +45,13 @@ namespace AwithGameFrame.Godot
 
         public override void _Process(double delta)
         {
+            // Godot's delta already includes Engine.TimeScale. The host owns its own time scale.
+            var now = global::Godot.Time.GetTicksUsec();
+            var unscaledSeconds = (now - lastProcessMicroseconds) / 1_000_000.0;
+            lastProcessMicroseconds = now;
             if (Host != null)
             {
-                try { Host.Tick(delta); }
+                try { Host.Tick(unscaledSeconds); }
                 catch (Exception exception) { Failure = exception; GD.PushError(exception.ToString()); }
             }
         }
@@ -56,7 +62,11 @@ namespace AwithGameFrame.Godot
             try
             {
                 if (what == NotificationApplicationPaused) await Host.PauseAsync();
-                else if (what == NotificationApplicationResumed) await Host.ResumeAsync();
+                else if (what == NotificationApplicationResumed)
+                {
+                    lastProcessMicroseconds = global::Godot.Time.GetTicksUsec();
+                    await Host.ResumeAsync();
+                }
             }
             catch (Exception exception) { Failure = exception; GD.PushError(exception.ToString()); }
         }

@@ -1,0 +1,37 @@
+{
+  "namespace": "Example.Configuration",
+  "enums": [
+    { "name": "Rarity", "values": { "Common": 0, "Rare": 1, "Legendary": 2 } }
+  ],
+  "types": [
+    {
+      "name": "Reward",
+      "fields": [
+        { "name": "ItemId", "type": "int", "references": "Item" },
+        { "name": "Count", "type": "int" }
+      ]
+    },
+    {
+      "name": "Details",
+      "fields": [
+        { "name": "Bonus", "type": "Reward" },
+        { "name": "Enabled", "type": "bool" }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "name": "Item",
+      "fields": [
+        { "name": "Id", "type": "int" },
+        { "name": "Title", "type": "string" },
+        { "name": "Rarity", "type": "Rarity" },
+        { "name": "Tags", "type": "string[]" },
+        { "name": "Modes", "type": "Rarity[]" },
+        { "name": "Rewards", "type": "Reward[]" },
+        { "name": "Details", "type": "Details" },
+        { "name": "RelatedIds", "type": "int[]", "references": "Item", "allowZero": true }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,8 @@ Unity 需要的代码集中在本包，通用能力来自 src 下的 Core、Data
 | --- | --- |
 | Runtime/Engine | Mono、场景、Unity 类型契约、Inspector 配置、时间/日志接入；AwithGameFrame.Unity |
 | Runtime/Services | 资源、UI、音频、输入、对象池、PlayerPrefs、SQLite 接入与旧 Foundation 门面；AwithGameFrame.Foundation |
-| Runtime/Features | 本地化 ScriptableObject/Resources 数据源与 Unity 调试面板；AwithGameFrame.Extensions |
+| Runtime/Features | 实例 UI/场景/输入/音频后端、本地化 ScriptableObject/Resources 数据源与 Unity 调试面板；AwithGameFrame.Extensions |
+| Editor | AssetBundle 构建与地址/依赖目录；AwithGameFrame.Unity.Editor，仅编辑器 |
 
 UnityPlatform 自动安装日志、目录和时间源，UnityFrameDriver 提供帧驱动。UnityDataPersistence.CreateConfig() 设置旧存档目录；InitializeAsync(config, enableDatabase: true) 可显式启用数据库存储。详细行为见根 docs/migration.md。
 
@@ -22,7 +23,15 @@ UnityPlatform 自动安装日志、目录和时间源，UnityFrameDriver 提供�
 
 `UnityResourceLoader` 可接到通用 `ResourceStore`，使用宿主 Dispatcher 执行原生加载与释放。请求按 key/type 合并，作用域归还全部租约后释放；Unity 的原生 Resources 请求不能取消。非 Prefab 资产释放调用 `UnloadAsset`，Prefab 由宿主选择 `UnloadUnusedAssets` 时回收。直接 `Resources.Load` 的外部引用不在所有权记录中，应统一加载入口。
 
+传入 `ResourceCacheOptions` 可启用通用有限空闲 LRU/预加载；本后端以 Unity Profiler 的 runtime size 估算缓存开销。活跃资源不因空闲预算被淘汰，估算预算不代表实际内存硬上限。缓存条目在淘汰、主动 Trim 或 store 关闭时归还后端所有权。
+
+`UnityAssetBundleLoader` 读取构建生成的 `UnityBundleCatalog`，递归固定 bundle 依赖，跨 store 合并原生 bundle 所有权。普通资源用逻辑 key，场景用 `UnityBundleSceneBackend`，scope 维持到场景卸载。最后所有者释放时 `Unload(true)`，必须先销毁实例再归还租约。`tools/build-unity-content.ps1` 执行原生构建，输出可经通用内容更新安装；命令和版本约束见 [资源流水线](../../docs/content-pipeline.md)。Addressables 另行集成。
+
+新增实例后端位于 `Runtime/Features`。`UnityViewFactory` / `UnityViewBehaviour` 用 uGUI root、CanvasGroup、模态遮罩和 EventSystem 接入 `ViewService`；`UnitySceneBackend` 使用原生异步 additive 加载，Single 只替换 SceneService 自己拥有的场景，不卸载 bootstrap/其他宿主场景。`UnityInputBackend` 显式映射原生键鼠/轴到控件名，由 `InputService` 管理动作、上下文、重绑定和失焦释放。`UnityAudioBackend` 用 AudioClip/AudioSource 实现 `AudioService` 的分组音量、静音、并发与暂停策略。这些服务通过各自 module 纳入宿主生命周期，API 详见 Gameplay README；旧静态门面继续保留原有接口。
+
 共享应用入口为 `samples/Unity/Assets/SharedDemo.unity`。运行根 `tools/verify-unity.ps1 -EditorPath <Unity.exe> -RunSmoke -BuildPlayer` 验证适配器、共享 PlayMode 与 Windows Mono Player，详细命令及实测版本见 `docs/validation.md`。
+
+`UnityViewFactory(parent, initialize)` 的可选初始化回调在 prefab 实例化后、Show 之前接收 `ViewRequest` 与原生 `GameObject`，供宿主注入共享应用/视图模型；回调失败仍销毁部分实例。共享样例通过此入口配置 `DemoUnityView`，引擎类型不进入通用视图契约。
 
 ## 生命周期与配置
 

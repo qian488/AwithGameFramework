@@ -38,7 +38,7 @@ namespace AwithGameFrame.Unity.Hosting
                             if (asset != null && !(asset is GameObject) && !(asset is Component)) Resources.UnloadAsset(asset);
                         }
                         return Task.CompletedTask;
-                    }));
+                    }, UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(asset)));
                 }
                 catch (Exception exception) { completion.TrySetException(exception); }
             };

@@ -50,7 +50,32 @@ Unity 侧的 `SQLiteDatabaseProvider` 只负责把项目安装的 Mono.Data.Sqli
 
 MessagePack 和 Protobuf 不随包安装，也不会静默回退到 JSON。使用真实编码实现，通过 `SerializerFactory.RegisterSerializer(format, config => yourCodec)` 注册；未注册时创建编码器抛出 `NotSupportedException`。保留的 `MessagePackSerializer` / `ProtobufSerializer` 是已注册实现的兼容代理，不能把代理本身注册为编码器。
 
-配置保留了旧版的备份、云存储和算法字段，以降低源码迁移成本；这些字段不代表功能已实现。现有文件存储只实现 GZip 与旧 XOR 混淆，未实现 AES、LZ4、自动备份或云同步。`IncludeTypeInfo` 不会启用 CLR 类型元数据读取。
+内置文件存储的初始化会校验并复制配置。不支持的主动请求返回 `NotImplemented`，保持 `IsInitialized=false`，不会创建目录或写文件；静态 `DataPersistenceAPI.InitializeAsync` 将提供者初始化失败汇总为 `Failed`。初始化后的外部配置修改不影响已打开的提供者，切换选项需要重新初始化。重新初始化失败会关闭提供者的读写入口。
+
+| 配置 | 内置实际行为 |
+| --- | --- |
+| `EnableEncryption=true` | 只接受 `EncryptionAlgorithm.XOR` 与非空密钥；用于读取旧文件的混淆，不提供密码学保密性。AES256 明确拒绝。 |
+| `EnableCompression=true` | 只接受 `CompressionAlgorithm.GZip`、`CompressionLevel=6`，其中 6 表示运行时的 `Optimal` 策略。LZ4、Deflate 和其他级别明确拒绝。 |
+| 加密或压缩开关关闭 | 对应算法、级别和密钥派生参数不参与运行，不会因未启用的算法字段而拒绝初始化。 |
+| 自动备份、安全/完整性策略、云同步、性能监控 | 默认关闭；主动请求时明确拒绝。版本化存档服务的备份和 checksum 是独立能力。 |
+| `EnableDataValidation` | 必须为 true；键与文件格式检查始终执行。 |
+| 泛型文件存储格式 | 只接受 JSON 负载；其他格式由宿主编码后使用原始 `byte[]` API，原始字节仍不经过压缩或混淆。 |
+
+默认配置关闭加密及未实现功能。`GetPreset(Release)` 与 `GetPreset(Production)` 使用未加密的 GZip；`Debug` 显式使用旧 XOR，`Development` 使用普通 JSON。旧 Release/Production 文件实际使用 XOR/GZip，读取时应显式使用下列兼容配置和旧密钥；需要真实加密、云同步或额外编码时接入相应实现，不会自动降级。
+
+```csharp
+var legacy = new DataPersistenceConfig
+{
+    DataRootPath = oldDataDirectory,
+    EnableEncryption = true,
+    EncryptionAlgorithm = EncryptionAlgorithm.XOR,
+    EncryptionKey = oldKey,
+    EnableCompression = true,
+    CompressionAlgorithm = CompressionAlgorithm.GZip
+};
+```
+
+内置 JSON/二进制 JSON 编码器的 `SerializationConfig.IncludeTypeInfo` 默认 false，显式 true 会抛出 `NotSupportedException`；普通 JSON 编码器收到压缩请求也会明确拒绝。格式化、空值忽略与自定义日期格式真正应用于文件和编码器；日期格式默认为 null，使用保留小数秒和时区的 ISO 8601 格式。文件格式化由外层 `PrettyPrint` 控制，文件压缩由外层开关控制，内层 `SerializationConfig.EnableCompression=true` 会被拒绝。旧二进制 JSON version 1、旧 XOR/GZip 文件和旧未压缩回退文件仍可读取。
 
 从 Unity 迁移时由宿主传入 `Application.persistentDataPath`，并设置 `BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData")` 以保留旧二进制目录。`SaveSettingsAsync` / `LoadSettingsAsync` 现在使用配置的默认存储；需要 Unity PlayerPrefs 时显式选择 `StorageType.PlayerPrefs`，并注册 Unity 适配器提供的 `PlayerPrefsStorage`。
 

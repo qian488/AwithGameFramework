@@ -5,16 +5,12 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace AwithGameFrame.Tools.Configuration
 {
     /// <summary>A deterministic, dependency-free configuration compiler used by CI and hosts.</summary>
-    public static class ConfigurationCompiler
+    public static partial class ConfigurationCompiler
     {
-        private static readonly Regex Identifier = new Regex("^[A-Z][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant);
-        private static readonly HashSet<string> Types = new HashSet<string> { "int", "long", "float", "double", "bool", "string" };
-
         public static void AssertOutputSet(string directory, IEnumerable<string> names)
         {
             if (!Directory.Exists(directory)) return;
@@ -28,31 +24,16 @@ namespace AwithGameFrame.Tools.Configuration
         {
             using var schema = JsonDocument.Parse(schemaJson);
             var root = schema.RootElement;
-            var ns = root.GetProperty("namespace").GetString();
-            if (string.IsNullOrWhiteSpace(ns) || ns.Split('.').Any(p => !Identifier.IsMatch(p)))
-                throw new InvalidDataException("namespace must contain PascalCase C# identifiers.");
-            var tables = root.GetProperty("tables").EnumerateArray().ToArray();
+            var model = new ConfigurationSchema(root);
+            var ns = model.Namespace;
             var tableIds = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
             var parsed = new Dictionary<string, JsonDocument>(StringComparer.Ordinal);
             var outputs = new Dictionary<string, string>(StringComparer.Ordinal);
             try
             {
-                foreach (var table in tables)
+                foreach (var table in model.Tables)
                 {
-                    var name = table.GetProperty("name").GetString();
-                    if (name == null || name == "SchemaHash" || !Identifier.IsMatch(name) || tableIds.ContainsKey(name))
-                        throw new InvalidDataException("Invalid or duplicate table name: " + name);
-                    var fields = table.GetProperty("fields").EnumerateArray().ToArray();
-                    var names = new HashSet<string>(StringComparer.Ordinal);
-                    foreach (var field in fields)
-                    {
-                        var fieldName = field.GetProperty("name").GetString();
-                        var type = field.GetProperty("type").GetString();
-                        if (fieldName == null || !Identifier.IsMatch(fieldName) || fieldName == "SchemaHash" || fieldName == name || !names.Add(fieldName) || !Types.Contains(type))
-                            throw new InvalidDataException("Invalid field in " + name + ": " + fieldName);
-                    }
-                    if (!fields.Any(f => f.GetProperty("name").GetString() == "Id" && f.GetProperty("type").GetString() == "int"))
-                        throw new InvalidDataException(name + " requires an int Id field.");
+                    var name = table.Name;
                     if (!data.TryGetValue(name, out var rowsJson)) throw new InvalidDataException("Missing data for " + name);
                     var document = JsonDocument.Parse(rowsJson);
                     parsed.Add(name, document);
@@ -61,46 +42,28 @@ namespace AwithGameFrame.Tools.Configuration
                     tableIds.Add(name, ids);
                     foreach (var row in document.RootElement.EnumerateArray())
                     {
-                        if (row.ValueKind != JsonValueKind.Object) throw new InvalidDataException(name + " row must be an object.");
-                        var rowNames = new HashSet<string>(StringComparer.Ordinal);
-                        foreach (var value in row.EnumerateObject())
-                            if (!names.Contains(value.Name) || !rowNames.Add(value.Name)) throw new InvalidDataException(name + " unknown or duplicate field: " + value.Name);
-                        foreach (var field in fields)
-                        {
-                            var fieldName = field.GetProperty("name").GetString();
-                            if (!row.TryGetProperty(fieldName, out var value) || !Matches(value, field.GetProperty("type").GetString()))
-                                throw new InvalidDataException(name + "." + fieldName + " is missing or has the wrong type.");
-                        }
+                        model.ValidateObject(row, table, name);
                         var id = row.GetProperty("Id").GetInt32();
                         if (!ids.Add(id)) throw new InvalidDataException(name + " duplicate Id: " + id);
                     }
                 }
                 foreach (var name in data.Keys)
                     if (!tableIds.ContainsKey(name)) throw new InvalidDataException("Unknown data table: " + name);
-                foreach (var table in tables)
+                // Existing scalar-only schemas retain their exact schema hash and generated bytes.
+                var hashInput = Canonical(root.GetProperty("tables")) + "|" + ns;
+                foreach (var extension in new[] { "enums", "types" })
+                    if (root.TryGetProperty(extension, out var definitions) && definitions.GetArrayLength() != 0)
+                        hashInput += "|" + extension + "=" + Canonical(definitions);
+                string hash;
+                using (var sha = SHA256.Create())
+                    hash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(hashInput))).Replace("-", "").ToLowerInvariant();
+                foreach (var definition in model.Enums.Values) outputs.Add(definition.Name + ".cs", model.EmitEnum(definition));
+                foreach (var definition in model.Structures.Values) outputs.Add(definition.Name + ".cs", model.EmitClass(definition, null));
+                foreach (var table in model.Tables)
                 {
-                    var name = table.GetProperty("name").GetString();
-                    var fields = table.GetProperty("fields").EnumerateArray().ToArray();
-                    foreach (var field in fields)
-                    {
-                        if (!field.TryGetProperty("references", out var reference)) continue;
-                        var target = reference.GetString();
-                        if (target == null || !tableIds.TryGetValue(target, out var targetIds) || field.GetProperty("type").GetString() != "int")
-                            throw new InvalidDataException(name + " invalid reference target: " + target);
-                        foreach (var row in parsed[name].RootElement.EnumerateArray())
-                            if (!targetIds.Contains(row.GetProperty(field.GetProperty("name").GetString()).GetInt32()))
-                                throw new InvalidDataException(name + " references missing " + target + " Id.");
-                    }
-                    // Hash the schema, independent of JSON property order/indentation. Data edits retain the schema version.
-                    var hashInput = Canonical(root.GetProperty("tables")) + "|" + ns;
-                    string hash;
-                    using (var sha = SHA256.Create())
-                        hash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(hashInput))).Replace("-", "").ToLowerInvariant();
-                    var code = new StringBuilder("// <auto-generated />\nusing System;\n\nnamespace ").Append(ns).Append("\n{\n    [global::System.SerializableAttribute]\n    public sealed class ").Append(name).Append("\n    {\n        public const string SchemaHash = \"").Append(hash).Append("\";\n");
-                    foreach (var field in fields)
-                        code.Append("        public ").Append(field.GetProperty("type").GetString()).Append(' ').Append(field.GetProperty("name").GetString()).Append(" { get; set; }\n");
-                    code.Append("    }\n}\n");
-                    outputs.Add(name + ".cs", code.ToString());
+                    var name = table.Name;
+                    foreach (var row in parsed[name].RootElement.EnumerateArray()) model.ValidateReferences(row, table, tableIds, name);
+                    outputs.Add(name + ".cs", model.EmitClass(table, hash));
                     var sortedRows = parsed[name].RootElement.EnumerateArray().OrderBy(r => r.GetProperty("Id").GetInt32()).ToArray();
                     outputs.Add(name + ".json", "{\"schemaHash\":\"" + hash + "\",\"rows\":[" + string.Join(",", sortedRows.Select(Canonical)) + "]}\n");
                 }
@@ -108,22 +71,6 @@ namespace AwithGameFrame.Tools.Configuration
             }
             finally { foreach (var document in parsed.Values) document.Dispose(); }
         }
-
-        private static bool Matches(JsonElement value, string type)
-        {
-            switch (type)
-            {
-                case "int": return value.TryGetInt32Safe();
-                case "long": return value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out _);
-                case "float": return value.ValueKind == JsonValueKind.Number && value.TryGetSingle(out var f) && !float.IsInfinity(f) && !float.IsNaN(f);
-                case "double": return value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var d) && !double.IsInfinity(d) && !double.IsNaN(d);
-                case "bool": return value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False;
-                case "string": return value.ValueKind == JsonValueKind.String;
-                default: return false;
-            }
-        }
-
-        private static bool TryGetInt32Safe(this JsonElement value) => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out _);
 
         private static string Canonical(JsonElement element)
         {
@@ -143,8 +90,7 @@ namespace AwithGameFrame.Tools.Configuration
                 if (args.Length >= 1 && args[0] == "--protocol") return GenerateProtocol(args);
                 if (args.Length < 3 || args.Length > 4 || (args.Length == 4 && args[3] != "--check"))
                     throw new ArgumentException("Usage: ConfigGen <schema.json> <data-directory> <output-directory> [--check]");
-                var data = Directory.GetFiles(args[1], "*.json").ToDictionary(Path.GetFileNameWithoutExtension, File.ReadAllText, StringComparer.Ordinal);
-                var outputs = ConfigurationCompiler.Compile(File.ReadAllText(args[0]), data);
+                var outputs = ConfigurationCompiler.CompileDirectory(File.ReadAllText(args[0]), args[1]);
                 ConfigurationCompiler.AssertOutputSet(args[2], outputs.Keys);
                 foreach (var output in outputs)
                 {

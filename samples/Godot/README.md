@@ -2,6 +2,8 @@
 
 使用 Godot 4.5.2 **.NET** 打开 `project.godot`，先构建 C#，再运行。进入关卡、完成并保存，重新打开后应恢复金币和完成次数。UI 使用原生 Control，应用逻辑来自 `samples/Shared`。
 
+默认入口组合原生菜单、关卡场景、循环音频与模态设置。空格执行关卡动作，Esc 开关设置；语言、音量、静音与空格/回车映射保存后会在新会话恢复。`DemoGodotView` 使用显式绑定与本地化订阅，关闭前解绑；实际应用逻辑与 Unity 使用同一个 `DemoExperience`。资源来自 `Resources/Demo*.tscn`、`DemoTone.wav`，缺失会报告加载失败。验收执行同一 `DemoExperienceScenario` 并检查 `COMPOSED_APPLICATION_PASSED`。
+
 配置由 `tools/generate-config.ps1` 生成，禁止手改 `Configuration/LevelConfig.json`。本机运行验收：
 
 ```powershell

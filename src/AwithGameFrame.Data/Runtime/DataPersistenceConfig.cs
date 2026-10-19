@@ -18,11 +18,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <summary>默认序列化格式</summary>
         public SerializationFormat DefaultSerializationFormat = SerializationFormat.Json;
         
-        /// <summary>默认安全级别</summary>
-        public SecurityLevel DefaultSecurityLevel = SecurityLevel.Basic;
+        /// <summary>旧安全策略选项；内置文件存储要求 None。</summary>
+        public SecurityLevel DefaultSecurityLevel = SecurityLevel.None;
         
-        /// <summary>默认备份策略</summary>
-        public BackupStrategy DefaultBackupStrategy = BackupStrategy.Local;
+        /// <summary>旧备份策略选项；内置文件存储要求 None。</summary>
+        public BackupStrategy DefaultBackupStrategy = BackupStrategy.None;
         
         /// <summary>数据根目录</summary>
         public string DataRootPath = "Data";
@@ -45,10 +45,10 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <summary>键前缀</summary>
         public string KeyPrefix = "";
         
-        /// <summary>加密密钥</summary>
+        /// <summary>旧 XOR 混淆密钥，不提供密码学保密性。</summary>
         public string EncryptionKey = "DefaultEncryptionKey123456789012345678901234567890";
         
-        /// <summary>序列化配置</summary>
+        /// <summary>JSON 选项；文件压缩使用外层 EnableCompression，禁止内层再次请求压缩。</summary>
         public SerializationConfig SerializationConfig = new SerializationConfig();
         /// <summary>首选序列化格式</summary>
         public SerializationFormat PreferredSerializationFormat = SerializationFormat.Json;
@@ -57,14 +57,14 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         #region 功能开关
 
-        /// <summary>是否启用自动备份</summary>
-        public bool EnableAutoBackup = true;
+        /// <summary>保留旧选项；内置文件存储未实现，启用时拒绝初始化。</summary>
+        public bool EnableAutoBackup = false;
         
-        /// <summary>是否启用数据验证</summary>
+        /// <summary>内置文件存储始终验证键与格式，要求为 true。</summary>
         public bool EnableDataValidation = true;
         
-        /// <summary>是否启用性能监控</summary>
-        public bool EnablePerformanceMonitoring = true;
+        /// <summary>保留旧选项；内置文件存储未实现，启用时拒绝初始化。</summary>
+        public bool EnablePerformanceMonitoring = false;
         
         /// <summary>是否启用压缩</summary>
         public bool EnableCompression = false;
@@ -92,27 +92,27 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <summary>压缩算法</summary>
         public CompressionAlgorithm CompressionAlgorithm = CompressionAlgorithm.GZip;
         
-        /// <summary>压缩级别（1-9）</summary>
+        /// <summary>兼容级别；内置 GZip 仅接受 6，使用运行时的 Optimal 策略。</summary>
         public int CompressionLevel = 6;
 
         #endregion
 
         #region 加密配置
 
-        /// <summary>加密算法</summary>
-        public EncryptionAlgorithm EncryptionAlgorithm = EncryptionAlgorithm.AES256;
+        /// <summary>内置文件存储仅支持旧 XOR 混淆；启用 AES256 会明确拒绝。</summary>
+        public EncryptionAlgorithm EncryptionAlgorithm = EncryptionAlgorithm.XOR;
         
-        /// <summary>密钥长度</summary>
-        public int KeyLength = 256;
+        /// <summary>XOR 不使用密码学密钥位数；启用 XOR 时要求为 0。</summary>
+        public int KeyLength = 0;
         
-        /// <summary>是否启用密钥派生</summary>
-        public bool EnableKeyDerivation = true;
+        /// <summary>内置文件存储不提供密钥派生；启用 XOR 时要求为 false。</summary>
+        public bool EnableKeyDerivation = false;
         
         /// <summary>密钥派生迭代次数</summary>
         public int KeyDerivationIterations = 10000;
         
-        /// <summary>是否启用完整性检查</summary>
-        public bool EnableIntegrityCheck = true;
+        /// <summary>保留旧选项；文件存储未实现可配置完整性策略，启用时拒绝初始化。</summary>
+        public bool EnableIntegrityCheck = false;
 
         #endregion
 
@@ -160,7 +160,6 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     config.EnableEncryption = false;
                     config.EnableCompression = false;
                     config.EnableDataValidation = true;
-                    config.EnablePerformanceMonitoring = true;
                     break;
                     
                 case DataPersistencePreset.Debug:
@@ -168,37 +167,75 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     config.EnableEncryption = true;
                     config.EnableCompression = false;
                     config.EnableDataValidation = true;
-                    config.EnablePerformanceMonitoring = true;
                     config.EncryptionAlgorithm = EncryptionAlgorithm.XOR;
                     break;
                     
                 case DataPersistencePreset.Release:
                     config.DefaultStorageType = StorageType.JsonFile;
-                    config.EnableEncryption = true;
+                    config.EnableEncryption = false;
                     config.EnableCompression = true;
                     config.EnableDataValidation = true;
                     config.EnablePerformanceMonitoring = false;
-                    config.EncryptionAlgorithm = EncryptionAlgorithm.AES256;
+                    config.EncryptionAlgorithm = EncryptionAlgorithm.None;
                     config.CompressionAlgorithm = CompressionAlgorithm.GZip;
                     break;
                     
                 case DataPersistencePreset.Production:
                     config.DefaultStorageType = StorageType.JsonFile;
-                    config.EnableEncryption = true;
+                    config.EnableEncryption = false;
                     config.EnableCompression = true;
                     config.EnableDataValidation = true;
                     config.EnablePerformanceMonitoring = false;
-                    config.EncryptionAlgorithm = EncryptionAlgorithm.AES256;
-                    config.CompressionAlgorithm = CompressionAlgorithm.LZ4;
-                    config.EnableKeyDerivation = true;
-                    config.KeyDerivationIterations = 100000;
+                    config.EncryptionAlgorithm = EncryptionAlgorithm.None;
+                    config.CompressionAlgorithm = CompressionAlgorithm.GZip;
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(preset));
             }
             
             return config;
         }
 
         #endregion
+
+        // Capture validated options once. Later edits to a caller's mutable config must not
+        // bypass algorithm validation or change how an already opened file is decoded.
+        internal DataPersistenceConfig CreateFileStorageSnapshot()
+        {
+            if (EnableEncryption)
+            {
+                if (EncryptionAlgorithm != EncryptionAlgorithm.XOR)
+                    throw new NotSupportedException("Built-in file storage supports legacy XOR obfuscation only; AES256 is not implemented.");
+                if (EnableKeyDerivation || KeyLength != 0)
+                    throw new NotSupportedException("Legacy XOR does not implement key derivation or cryptographic key lengths.");
+                if (string.IsNullOrEmpty(EncryptionKey))
+                    throw new ArgumentException("An explicit nonempty XOR key is required.", nameof(EncryptionKey));
+            }
+            if (EnableCompression)
+            {
+                if (CompressionAlgorithm != CompressionAlgorithm.GZip)
+                    throw new NotSupportedException("Built-in file storage supports GZip compression only.");
+                if (CompressionLevel != 6)
+                    throw new NotSupportedException("Built-in GZip accepts CompressionLevel=6 (runtime Optimal) only.");
+            }
+            if (EnableAutoBackup || DefaultBackupStrategy != BackupStrategy.None)
+                throw new NotSupportedException("Built-in file storage does not implement automatic backups; use a versioned save service or a custom provider.");
+            if (EnableIntegrityCheck || DefaultSecurityLevel != SecurityLevel.None)
+                throw new NotSupportedException("Built-in file storage does not implement authenticated encryption or a configurable integrity policy.");
+            if (CloudStorageType != CloudStorageType.None)
+                throw new NotSupportedException("Built-in file storage does not implement cloud synchronization.");
+            if (EnablePerformanceMonitoring)
+                throw new NotSupportedException("Built-in file storage does not implement performance monitoring.");
+            if (!EnableDataValidation)
+                throw new NotSupportedException("Built-in file storage always validates keys and file formats.");
+            if (DefaultSerializationFormat != SerializationFormat.Json || PreferredSerializationFormat != SerializationFormat.Json)
+                throw new NotSupportedException("Built-in typed file storage persists JSON payloads; use an external serializer with the raw byte API for other formats.");
+
+            var snapshot = (DataPersistenceConfig)MemberwiseClone();
+            snapshot.SerializationConfig = (SerializationConfig ?? new SerializationConfig()).CreateSnapshot(false);
+            snapshot.SerializationConfig.PrettyPrint = PrettyPrint;
+            return snapshot;
+        }
     }
 
 }

@@ -95,10 +95,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
             return StrictUtf8.GetString(bytes);
         }
 
-        internal static T DeserializeJson<T>(string json)
+        internal static T DeserializeJson<T>(string json, SerializationConfig config = null)
         {
             if (string.IsNullOrWhiteSpace(json)) throw new InvalidDataException("The stored JSON is empty.");
-            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings());
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json,
+                config == null ? PortableJson.CreateSettings() : PortableJson.CreateSettings(config));
         }
 
         internal static byte[] Compress(byte[] bytes)

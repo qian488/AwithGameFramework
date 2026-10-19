@@ -26,9 +26,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         public Task<DataOperationResult> InitializeAsync(object config)
         {
+            _isInitialized = false;
             try
             {
-                _config = config as DataPersistenceConfig ?? new DataPersistenceConfig();
+                if (config != null && !(config is DataPersistenceConfig)) throw new ArgumentException("Expected DataPersistenceConfig.", nameof(config));
+                _config = (config as DataPersistenceConfig ?? new DataPersistenceConfig()).CreateFileStorageSnapshot();
                 _dataPath = Path.GetFullPath(_config.BinaryDataRootPath ?? Path.Combine(_config.DataRootPath, "BinaryData"));
                 
                 if (!Directory.Exists(_dataPath))
@@ -40,6 +42,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 
                 FrameworkLogger.Info($"BinaryFileStorage initialized at: {_dataPath}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
+            }
+            catch (NotSupportedException ex)
+            {
+                FrameworkLogger.Error($"Unsupported BinaryFileStorage configuration: {ex.Message}", LogCategory.Core);
+                return Task.FromResult(DataOperationResult.NotImplemented);
             }
             catch (Exception ex)
             {
@@ -81,7 +88,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             try
             {
                 var filePath = GetFilePath(key);
-                var json = JsonConvert.SerializeObject(data, PortableJson.CreateSettings());
+                var json = JsonConvert.SerializeObject(data, PortableJson.CreateSettings(_config.SerializationConfig));
                 var bytes = System.Text.Encoding.UTF8.GetBytes(json);
                 
                 if (_config.EnableEncryption)
@@ -192,7 +199,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     }
                     
                     var json = FileStorageIO.DecodeJson(bytes);
-                    var data = FileStorageIO.DeserializeJson<T>(json);
+                    var data = FileStorageIO.DeserializeJson<T>(json, _config.SerializationConfig);
                     
                     FrameworkLogger.Debug($"Data loaded from binary file: {key}", LogCategory.Core);
                     return Task.FromResult((data, DataOperationResult.Success));

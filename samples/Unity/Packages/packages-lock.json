@@ -1,5 +1,59 @@
 {
   "dependencies": {
+    "com.awithgameframe.core": {
+      "version": "file:../../../src/AwithGameFrame.Core",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
+    "com.awithgameframe.data": {
+      "version": "file:../../../src/AwithGameFrame.Data",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.awithgameframe.core": "0.2.0",
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
+    "com.awithgameframe.gameplay": {
+      "version": "file:../../../src/AwithGameFrame.Gameplay",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.awithgameframe.core": "0.2.0",
+        "com.awithgameframe.data": "0.2.0"
+      }
+    },
+    "com.awithgameframe.networking": {
+      "version": "file:../../../src/AwithGameFrame.Networking",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.awithgameframe.core": "0.2.0"
+      }
+    },
+    "com.awithgameframe.samples.shared": {
+      "version": "file:../../Shared",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.awithgameframe.core": "0.2.0",
+        "com.awithgameframe.data": "0.2.0",
+        "com.awithgameframe.gameplay": "0.2.0"
+      }
+    },
+    "com.awithgameframe.unity": {
+      "version": "file:../../../adapters/unity",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.awithgameframe.core": "0.2.0",
+        "com.awithgameframe.data": "0.2.0",
+        "com.awithgameframe.gameplay": "0.2.0",
+        "com.unity.ugui": "1.0.0",
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
     "com.unity.cinemachine": {
       "version": "2.10.4",
       "depth": 0,

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using AwithGameFrame.Core.Events;
+using AwithGameFrame.Core.Timing;
 
 namespace AwithGameFrame.Core.Hosting
 {
@@ -21,19 +23,29 @@ namespace AwithGameFrame.Core.Hosting
         private bool _ticking;
         private Task _stopTask;
 
-        public GameHost(int dispatchBudgetPerTick = 64, int dispatcherCapacity = 4096)
+        public GameHost(int dispatchBudgetPerTick = 64, int dispatcherCapacity = 4096, int timerCallbackBudgetPerTick = 64)
         {
             if (dispatchBudgetPerTick <= 0) throw new ArgumentOutOfRangeException(nameof(dispatchBudgetPerTick));
+            if (timerCallbackBudgetPerTick <= 0) throw new ArgumentOutOfRangeException(nameof(timerCallbackBudgetPerTick));
             _dispatchBudget = dispatchBudgetPerTick;
             Services = new GameServices();
             Dispatcher = new MainThreadDispatcher(dispatcherCapacity);
-            Context = new GameContext(Services, Dispatcher, _lifetime.Token);
+            Clock = new GameClock();
+            Timers = new TimerScheduler(Clock, timerCallbackBudgetPerTick, _lifetime.Token);
+            Events = new EventBus();
+            Services.Register(Clock);
+            Services.Register(Timers);
+            Services.Register(Events);
+            Context = new GameContext(Services, Dispatcher, _lifetime.Token, Clock, Timers, Events);
         }
 
         public GameServices Services { get; }
         public string Id { get; } = Guid.NewGuid().ToString("N");
         public event Action<HostEvent> Lifecycle;
         public MainThreadDispatcher Dispatcher { get; }
+        public GameClock Clock { get; }
+        public TimerScheduler Timers { get; }
+        public EventBus Events { get; }
         public GameContext Context { get; }
         public GameHostState State { get { lock (_sync) return _state; } }
 
@@ -90,6 +102,7 @@ namespace AwithGameFrame.Core.Hosting
                 var errors = new List<Exception>();
                 CancelSession(errors);
                 await StopStartedAsync(errors, true);
+                DisposeSessionServices(errors);
                 Dispatcher.Dispose();
                 Services.Close();
                 lock (_sync) _state = _stopRequested ? GameHostState.Stopped : GameHostState.Faulted;
@@ -170,6 +183,7 @@ namespace AwithGameFrame.Core.Hosting
                     {
                         CancelSession(errors);
                         await StopStartedAsync(errors, true);
+                        DisposeSessionServices(errors);
                         Dispatcher.Dispose();
                         Services.Close();
                         lock (_sync) _state = _stopRequested ? GameHostState.Stopped : GameHostState.Faulted;
@@ -219,6 +233,7 @@ namespace AwithGameFrame.Core.Hosting
             try
             {
                 await StopStartedAsync(errors);
+                DisposeSessionServices(errors);
                 Dispatcher.Dispose();
                 Services.Close();
                 lock (_sync) _state = GameHostState.Stopped;
@@ -242,7 +257,7 @@ namespace AwithGameFrame.Core.Hosting
             }
         }
 
-        /// <summary>Seconds, not milliseconds. Dispatch continues during startup and pause; game ticks run only while Running.</summary>
+        /// <summary>Unscaled seconds. Simulation ticks run only while Running; optional cleanup maintenance runs while Paused.</summary>
         public void Tick(double deltaSeconds)
         {
             if (double.IsNaN(deltaSeconds) || double.IsInfinity(deltaSeconds) || deltaSeconds < 0)
@@ -257,16 +272,32 @@ namespace AwithGameFrame.Core.Hosting
             {
                 Dispatcher.RunPending(_dispatchBudget);
                 IGameModule[] modules;
-                lock (_sync) modules = _state == GameHostState.Running ? _started.ToArray() : Array.Empty<IGameModule>();
                 List<Exception> errors = null;
+                if (State == GameHostState.Running)
+                {
+                    Clock.Advance(deltaSeconds);
+                    try { Timers.RunDue(() => State == GameHostState.Running); }
+                    catch (AggregateException aggregate) { (errors ??= new List<Exception>()).AddRange(aggregate.InnerExceptions); }
+                }
+                else Clock.Freeze();
+                var scaledDelta = Clock.ScaledDeltaTime;
+                lock (_sync) modules = _state == GameHostState.Running ? _started.ToArray() : Array.Empty<IGameModule>();
                 foreach (var module in modules)
                 {
                     if (State != GameHostState.Running) break;
                     if (!(module is IGameTickModule tickable)) continue;
-                    try { tickable.Tick(Context, deltaSeconds); }
+                    try { tickable.Tick(Context, scaledDelta); }
                     catch (Exception ex) { (errors ??= new List<Exception>()).Add(ex); }
                 }
-                if (errors != null) throw new AggregateException("One or more modules failed during Tick.", errors);
+                lock (_sync) modules = _state == GameHostState.Paused ? _started.ToArray() : Array.Empty<IGameModule>();
+                foreach (var module in modules)
+                {
+                    if (State != GameHostState.Paused) break;
+                    if (!(module is IGameMaintenanceModule maintenance)) continue;
+                    try { maintenance.Maintain(Context); }
+                    catch (Exception ex) { (errors ??= new List<Exception>()).Add(ex); }
+                }
+                if (errors != null) throw new AggregateException("One or more timers or modules failed during Tick.", errors);
             }
             finally { lock (_sync) _ticking = false; }
         }
@@ -282,7 +313,19 @@ namespace AwithGameFrame.Core.Hosting
         {
             try { _lifetime.Cancel(); }
             catch (Exception ex) { errors.Add(ex); }
+            Clock.Stop();
+            try { Timers.Dispose(); }
+            catch (Exception ex) { errors.Add(ex); }
             Dispatcher.CancelPending();
+        }
+
+        private void DisposeSessionServices(List<Exception> errors)
+        {
+            try { Timers.Dispose(); }
+            catch (Exception ex) { errors.Add(ex); }
+            try { Events.Dispose(); }
+            catch (Exception ex) { errors.Add(ex); }
+            Clock.Stop();
         }
 
         private async Task StopStartedAsync(List<Exception> errors, bool rollback = false)

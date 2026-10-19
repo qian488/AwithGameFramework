@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Logging;
@@ -22,7 +21,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         public CompressedJsonSerializer(SerializationConfig config = null)
         {
-            _config = config ?? new SerializationConfig();
+            _config = (config ?? new SerializationConfig()).CreateSnapshot(true);
         }
 
         public Task<byte[]> SerializeAsync<T>(T obj)
@@ -34,7 +33,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     return Task.FromResult(new byte[0]);
                 }
 
-                var json = Newtonsoft.Json.JsonConvert.SerializeObject(obj, PortableJson.CreateSettings(_config.PrettyPrint));
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(obj, PortableJson.CreateSettings(_config));
 
                 var bytes = Encoding.UTF8.GetBytes(json);
                 
@@ -77,7 +76,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
                 // 反序列化
                 var json = Encoding.UTF8.GetString(content);
-                var obj = version == 1 ? DeserializeLegacy<T>(json) : Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings());
+                var obj = version == 1 ? DeserializeLegacy<T>(json) : Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings(_config));
 
                 FrameworkLogger.Debug($"Binary反序列化完成", LogCategory.Core);
                 return Task.FromResult(obj);
@@ -239,7 +238,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         // Version 1 wrote primitives with ToString() and strings without JSON escaping.
         // Preserve those semantics for existing saves; version 2 writes canonical JSON.
-        private static T DeserializeLegacy<T>(string json)
+        private T DeserializeLegacy<T>(string json)
         {
             if (typeof(T) == typeof(string)) return (T)(object)json.Trim('"');
             if (typeof(T) == typeof(bool)) return (T)(object)bool.Parse(json);
@@ -248,7 +247,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (typeof(T) == typeof(ulong)) return (T)(object)ulong.Parse(json);
             if (typeof(T) == typeof(float)) return (T)(object)float.Parse(json);
             if (typeof(T) == typeof(double)) return (T)(object)double.Parse(json);
-            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings());
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings(_config));
         }
 
         /// <summary>
@@ -261,20 +260,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (data == null || data.Length == 0)
                 return data;
 
-            try
-            {
-                using var memoryStream = new MemoryStream();
-                using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
-                {
-                    gzipStream.Write(data, 0, data.Length);
-                }
-                return memoryStream.ToArray();
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"GZip压缩失败: {ex.Message}", LogCategory.Core);
-                return data; // 压缩失败时返回原始数据
-            }
+            return FileStorageIO.Compress(data);
         }
 
         /// <summary>
@@ -287,19 +273,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (compressedData == null || compressedData.Length == 0)
                 return compressedData;
 
-            try
-            {
-                using var memoryStream = new MemoryStream(compressedData);
-                using var gzipStream = new GZipStream(memoryStream, CompressionMode.Decompress);
-                using var resultStream = new MemoryStream();
-                gzipStream.CopyTo(resultStream);
-                return resultStream.ToArray();
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"GZip解压缩失败: {ex.Message}", LogCategory.Core);
-                return compressedData; // 解压缩失败时返回原始数据
-            }
+            return FileStorageIO.Decompress(compressedData);
         }
 
         #endregion

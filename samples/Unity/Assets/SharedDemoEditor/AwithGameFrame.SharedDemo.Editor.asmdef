@@ -1,6 +1,6 @@
 {
   "name": "AwithGameFrame.SharedDemo.Editor",
-  "references": ["AwithGameFrame.Samples"],
+  "references": ["AwithGameFrame.Samples", "AwithGameFrame.Unity", "AwithGameFrame.Unity.Editor", "UnityEngine.UI"],
   "includePlatforms": ["Editor"],
   "autoReferenced": false
 }

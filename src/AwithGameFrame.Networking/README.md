@@ -1,6 +1,6 @@
 # AwithGameFrame.Networking
 
-可选的 HTTP/协议客户端基础包，依赖 Core 与 BCL，目标 `.NET Standard 2.1`。运行时只放在 `Runtime`，.NET 项目和 UPM 引用同一份源码；不依赖引擎、UI、Data 或额外 JSON 包。
+可选的 HTTP/协议、文件内容更新与 WebSocket 客户端基础包，依赖 Core 与 BCL，目标 `.NET Standard 2.1`。运行时只放在 `Runtime`，.NET 项目和 UPM 引用同一份源码；不依赖引擎、UI、Data 或额外 JSON 包。
 
 ```csharp
 using System.Net.Http;
@@ -47,8 +47,12 @@ powershell -File tools/generate-protocol.ps1 -Check
 
 `-Check` 检查生成代码是否过期，并校验协议兼容性：已有 endpoint 不可删除，HTTP 方法和路径不可改变；已有字段不可删除、改类型或改必填性；新增字段必须可选；协议版本不可降低。基线调整属于明确的协议升级决策。当前生成器支持固定路径 HTTP 和 `int`、`long`、`bool`、`double`、`string` 标量字段，GET/DELETE 只支持空请求；查询参数绑定、复杂对象/集合及跨语言生成尚未实现。详见[协议示例](../../samples/Protocol/README.md)。
 
-当前运行时没有 WebSocket、断线重连、推送 ACK 或服务器进程。HttpClient 在具体引擎、AOT 和目标平台上的支持由宿主验证；浏览器平台可以替换 IHttpTransport，不能把包的可编译性当作已验证所有平台联网。
+`Runtime/Realtime` 提供真实 `ClientWebSocketTransport` 和可注入 transport factory，`RealtimeClient` 管理应用 Ping/Pong、有限指数退避重连与 epoch 隔离。`RunSessionAsync(cursor, applyPushAsync, headers?, token)` 返回会话生命周期任务；每次连接及推送缺序均通过显式 `IPushRecovery` 补查连续序号，只有应用回调成功才提交游标。`SendAsync` 始终单次发送，断线后不重放业务消息。Stop/Dispose 等待包括被替换会话在内的连接清理。项目提供恢复接口、鉴权、服务端协议、业务幂等和游标持久化，必须观察会话任务的异常。完整用法、AWRT v1 格式及取消边界见[长连接说明](Runtime/Realtime/README.md)。
+
+`Runtime/Content` 提供 raw 文件发布清单、增量复用、HTTP Range 续传、hash 校验、原子激活/回滚及固定版本快照。此链路与引擎资产构建分开，见[内容更新说明](Runtime/Content/README.md)。
+
+此包不提供推送 ACK 或服务器进程。HttpClient/ClientWebSocket 在具体引擎、AOT 和目标平台上的支持由宿主验证；浏览器平台可以替换 transport，不能把包的可编译性当作已验证所有平台联网。忽略取消的业务回调可能保留自身副作用，项目应合作取消或幂等；客户端只保护后续交付和游标提交。
 
 ```powershell
-dotnet test tests/AwithGameFrame.Core.Tests/AwithGameFrame.Core.Tests.csproj --filter FullyQualifiedName~NetworkingTests
+dotnet test tests/AwithGameFrame.Core.Tests/AwithGameFrame.Core.Tests.csproj --filter "FullyQualifiedName~NetworkingTests|FullyQualifiedName~RealtimeTests|FullyQualifiedName~WebSocketTransportTests|FullyQualifiedName~ContentUpdateTests"
 ```

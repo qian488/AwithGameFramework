@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="SharedAdventureLevel" type="Node2D"]
+
+[node name="LevelMarker" type="Polygon2D" parent="."]
+position = Vector2(900, 240)
+polygon = PackedVector2Array(-70, -70, 70, -70, 70, 70, -70, 70)
+color = Color(0.2, 0.6, 0.9, 1)

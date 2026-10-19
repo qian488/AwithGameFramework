@@ -6,7 +6,7 @@ using AwithGameFrame.Core.Hosting;
 
 namespace AwithGameFrame.Core.Resources
 {
-    /// <summary>Shares one load per key/type while callers wait or hold leases. It does not cache unleased resources.</summary>
+    /// <summary>Shares loads and optionally retains idle resources in a bounded LRU cache.</summary>
     public sealed class ResourceStore : IAsyncDisposable
     {
         private readonly struct Identity : IEquatable<Identity>
@@ -30,21 +30,50 @@ namespace AwithGameFrame.Core.Resources
             public Task ReleaseTask;
             public int Waiters, References;
             public bool Detached, LoadFinished, ReleaseFinished;
+            public LinkedListNode<Entry> CacheNode;
         }
 
         private readonly object _sync = new object();
         private readonly IResourceLoader _loader;
         private readonly MainThreadDispatcher _dispatcher;
+        private readonly ResourceCacheOptions _cacheOptions;
+        private readonly LinkedList<Entry> _idle = new LinkedList<Entry>();
+        private long _cachedBytes;
         private readonly Dictionary<Identity, Entry> _active = new Dictionary<Identity, Entry>();
         private readonly HashSet<Entry> _entries = new HashSet<Entry>();
         private readonly List<Exception> _cleanupErrors = new List<Exception>();
         private bool _closing;
         private Task _disposeTask;
 
-        public ResourceStore(IResourceLoader loader, MainThreadDispatcher dispatcher = null)
+        public ResourceStore(IResourceLoader loader, MainThreadDispatcher dispatcher = null, ResourceCacheOptions cacheOptions = null)
         {
             _loader = loader ?? throw new ArgumentNullException(nameof(loader));
             _dispatcher = dispatcher;
+            _cacheOptions = cacheOptions ?? new ResourceCacheOptions(0, 0);
+        }
+
+        public ResourceCacheSnapshot Cache { get { lock (_sync) return new ResourceCacheSnapshot(_idle.Count, _cachedBytes); } }
+
+        /// <summary>Loads once and returns its lease to the idle cache. A positive cache budget is required.</summary>
+        public async Task PreloadAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
+        {
+            if (_cacheOptions.MaxBytes == 0 || _cacheOptions.MaxEntries == 0)
+                throw new InvalidOperationException("Preloading requires an enabled idle cache.");
+            var lease = await LoadAsync<T>(key, cancellationToken);
+            await lease.DisposeAsync();
+        }
+
+        /// <summary>Evicts idle values, oldest first. Native cleanup may need continued host ticks.</summary>
+        public Task TrimCacheAsync(long targetBytes = 0)
+        {
+            if (targetBytes < 0) throw new ArgumentOutOfRangeException(nameof(targetBytes));
+            var releases = new List<Entry>();
+            lock (_sync)
+            {
+                if (_closing) throw new ObjectDisposedException(nameof(ResourceStore));
+                CollectEvictions(releases, targetBytes, _cacheOptions.MaxEntries);
+            }
+            return ReleaseAllAsync(releases);
         }
 
         public Task<ResourceLease<T>> LoadAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
@@ -64,6 +93,7 @@ namespace AwithGameFrame.Core.Resources
                     _entries.Add(entry);
                     start = true;
                 }
+                RemoveIdle(entry);
                 entry.Waiters++;
             }
             if (start) _ = LoadEntryAsync(entry);
@@ -159,13 +189,52 @@ namespace AwithGameFrame.Core.Resources
         private Task ReleaseLeaseAsync(Entry entry)
         {
             bool unused;
+            var releases = new List<Entry>();
             lock (_sync)
             {
                 entry.References--;
                 unused = entry.Waiters == 0 && entry.References == 0;
-                if (unused) Detach(entry);
+                if (unused && !entry.Detached)
+                {
+                    var size = entry.Resource?.EstimatedSizeBytes ?? 0;
+                    if (!_closing && size > 0 && size <= _cacheOptions.MaxBytes && _cacheOptions.MaxEntries > 0)
+                    {
+                        CollectEvictions(releases, _cacheOptions.MaxBytes - size, _cacheOptions.MaxEntries - 1);
+                        entry.CacheNode = _idle.AddLast(entry);
+                        _cachedBytes += size;
+                        unused = false;
+                    }
+                    else Detach(entry);
+                }
+                if ((unused || entry.Detached) && !releases.Contains(entry)) releases.Add(entry);
             }
-            return unused || entry.Detached ? ReleaseEntryAsync(entry) : Task.CompletedTask;
+            return ReleaseAllAsync(releases);
+        }
+
+        private void RemoveIdle(Entry entry)
+        {
+            if (entry.CacheNode == null) return;
+            _idle.Remove(entry.CacheNode);
+            entry.CacheNode = null;
+            _cachedBytes -= entry.Resource.EstimatedSizeBytes;
+        }
+
+        private void CollectEvictions(List<Entry> releases, long maxBytes, int maxEntries)
+        {
+            while (_idle.Count > 0 && (_cachedBytes > maxBytes || _idle.Count > maxEntries))
+            {
+                var entry = _idle.First.Value;
+                Detach(entry);
+                releases.Add(entry);
+            }
+        }
+
+        private Task ReleaseAllAsync(List<Entry> entries)
+        {
+            if (entries.Count == 0) return Task.CompletedTask;
+            var tasks = new Task[entries.Count];
+            for (int i = 0; i < entries.Count; i++) tasks[i] = ReleaseEntryAsync(entries[i]);
+            return Task.WhenAll(tasks);
         }
 
         private bool IsValid(Entry entry) { lock (_sync) return !_closing && !entry.Detached; }
@@ -173,6 +242,7 @@ namespace AwithGameFrame.Core.Resources
         // Call while holding _sync. Existing leases may still be held when the entire store is closing.
         private void Detach(Entry entry)
         {
+            RemoveIdle(entry);
             entry.Detached = true;
             if (_active.TryGetValue(entry.Identity, out var current) && ReferenceEquals(current, entry)) _active.Remove(entry.Identity);
             FinishIfReleased(entry);
@@ -275,7 +345,11 @@ namespace AwithGameFrame.Core.Resources
             if (_dispatcher == null || _dispatcher.CheckAccess) return await operation();
             Task<T> pending = null;
             if (cleanup) await _dispatcher.InvokeCleanupAsync(() => pending = operation());
-            else await _dispatcher.InvokeAsync(() => pending = operation(), cancellationToken);
+            else await _dispatcher.InvokeAsync(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                pending = operation();
+            }, CancellationToken.None); // Once started, retain the backend task so late resources can be released.
             if (pending == null) throw new InvalidOperationException("Resource backend returned a null Task.");
             return await pending;
         }

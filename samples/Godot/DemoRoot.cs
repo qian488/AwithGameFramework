@@ -10,18 +10,28 @@ using Godot;
 
 public partial class DemoRoot : GameHostNode
 {
-    private DemoApplication application;
-    private Label status;
-    private Label error;
-    private Button play;
-    private Button complete;
-    private bool busy;
+    private DemoExperience experience;
+    private string smokeDirectory;
 
     protected override void ConfigureHost(GameHost host)
     {
-        host.AddModule(new ResourceModule(new ResourceStore(new GodotResourceLoader(), host.Dispatcher)));
-        application = new DemoApplication(ProjectSettings.GlobalizePath("user://Saves"), Godot.FileAccess.GetFileAsBytes("res://Configuration/LevelConfig.json"));
-        host.AddModule(application);
+        // Unknown native memory sizes remain uncached; a product can supply its own conservative estimator.
+        var resources = new ResourceStore(new GodotThreadedResourceLoader(), host.Dispatcher);
+        var viewRoot = new Control { Name = "DemoViews" }; AddChild(viewRoot); viewRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        var sceneRoot = new Node { Name = "DemoScenes" }; AddChild(sceneRoot);
+        var audioRoot = new Node { Name = "DemoAudio" }; AddChild(audioRoot);
+        bool smoke = OS.GetCmdlineUserArgs().Contains("--framework-smoke");
+        if (smoke) smokeDirectory = ProjectSettings.GlobalizePath("user://ComposedValidation/" + Guid.NewGuid().ToString("N"));
+        var keys = new DemoAssetKeys("res://Resources/DemoMenu.tscn", "res://Resources/DemoPlaying.tscn", "res://Resources/DemoSettings.tscn", "res://Resources/DemoLevel.tscn", "res://Resources/DemoTone.wav");
+        var factory = new GodotViewFactory(viewRoot, (request, content) =>
+        {
+            if (!(content is DemoGodotView hooks)) throw new InvalidOperationException("Complete sample scene requires DemoGodotView.");
+            hooks.Configure(experience, request.Key == keys.Menu ? "menu" : request.Key == keys.Settings ? "settings" : "playing");
+        });
+        experience = DemoExperience.Install(host, Godot.FileAccess.GetFileAsBytes("res://Configuration/LevelConfig.json"),
+            smokeDirectory ?? ProjectSettings.GlobalizePath("user://SharedAdventure"), resources, factory, new GodotSceneBackend(sceneRoot),
+            new GodotAudioBackend(audioRoot), new GodotInputBackend(GetWindow()), keys);
+        if (smoke) experience.InputBackend.ScenarioFrame = new System.Collections.Generic.Dictionary<string, float>();
     }
 
     protected override async Task OnStartedAsync()
@@ -37,48 +47,34 @@ public partial class DemoRoot : GameHostNode
             var directory = ProjectSettings.GlobalizePath("user://Validation/" + Guid.NewGuid().ToString("N"));
             try
             {
+                var previousEngineScale = Engine.TimeScale;
+                try
+                {
+                    Engine.TimeScale = 0;
+                    var before = Host.Clock.UnscaledTime;
+                    await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    if (Host.Clock.UnscaledTime <= before)
+                        throw new InvalidOperationException("Godot engine time scale must not freeze the host's unscaled clock.");
+                    GD.Print("GODOT_UNSCALED_CLOCK_PASSED");
+                }
+                finally { Engine.TimeScale = previousEngineScale; }
+                await PresentationSmoke.RunAsync(Host, this);
+                await InputAudioSmoke.RunAsync(Host, this);
+                await ResourcePackSmoke.RunAsync(Host, this);
+                await DemoExperienceScenario.RunAsync(experience, message => GD.Print(message));
                 await DemoScenario.RunAsync(directory, Godot.FileAccess.GetFileAsBytes("res://Configuration/LevelConfig.json"), message => GD.Print(message));
                 await ShutdownAsync();
                 GD.Print("GODOT_HOST_PASSED");
                 GetTree().Quit();
             }
-            finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+                if (smokeDirectory != null && Directory.Exists(smokeDirectory)) Directory.Delete(smokeDirectory, true);
+            }
             return;
         }
 
-        var panel = new VBoxContainer { Position = new Vector2(48, 48), Size = new Vector2(704, 350) };
-        AddChild(panel);
-        panel.AddChild(new Label { Text = "AwithGameFrame / Godot" });
-        status = new Label();
-        panel.AddChild(status);
-        play = new Button { Text = "Enter level" };
-        complete = new Button { Text = "Complete level and save" };
-        var quit = new Button { Text = "Save is persistent. Exit" };
-        panel.AddChild(play);
-        panel.AddChild(complete);
-        panel.AddChild(quit);
-        error = new Label();
-        panel.AddChild(error);
-        play.Pressed += () => RunCommand(() => application.EnterLevelAsync());
-        complete.Pressed += () => RunCommand(() => application.CompleteLevelAsync());
-        quit.Pressed += async () => { await ShutdownAsync(); GetTree().Quit(); };
-    }
-
-    public override void _Process(double delta)
-    {
-        base._Process(delta);
-        if (status == null) return;
-        status.Text = "Phase: " + application.Phase + "\nCoins: " + application.Coins + " / Completed: " + application.CompletedLevels + "\nFrames: " + application.Frames;
-        play.Disabled = busy || application.Phase != "Menu";
-        complete.Disabled = busy || application.Phase != "Playing";
-    }
-
-    private async void RunCommand(Func<Task> command)
-    {
-        if (busy) return;
-        busy = true;
-        try { error.Text = ""; await command(); }
-        catch (Exception exception) { error.Text = exception.Message; GD.PushError(exception.ToString()); }
-        finally { busy = false; }
     }
 }

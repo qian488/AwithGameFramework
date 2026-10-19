@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://c4ncpr3q5avhk"]
+
+[ext_resource type="Texture2D" uid="uid://v2sprk5u5gb1" path="res://Tile.svg" id="1_texture"]
+[ext_resource type="Material" uid="uid://bhy4ixw1bi63a" path="res://Material.tres" id="2_material"]
+
+[node name="DownloadedScene" type="Node2D"]
+metadata/original_uid = "uid://c4ncpr3q5avhk"
+metadata/declaration_text = "Literal declaration:
+[ext_resource uid=\"uid://c4ncpr3q5avhk\"]"
+
+[node name="Tile" type="Sprite2D" parent="."]
+texture = ExtResource("1_texture")
+material = ExtResource("2_material")

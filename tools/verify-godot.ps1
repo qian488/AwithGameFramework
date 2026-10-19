@@ -14,10 +14,19 @@ New-Item -ItemType Directory -Force -Path $validationRoot | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Godot version query failed.' }
 & dotnet build (Join-Path $sampleRoot 'AwithGameFrame.Godot.Sample.csproj') --configuration Debug --nologo
 if ($LASTEXITCODE -ne 0) { throw 'Godot SDK compilation failed.' }
+$importLog = Join-Path $validationRoot 'Import.log'
+& $editor --headless --editor --path $sampleRoot --import --log-file $importLog
+if ($LASTEXITCODE -ne 0 -or (Select-String -LiteralPath $importLog -Pattern 'SCRIPT ERROR:|ERROR:' -Quiet)) { throw "Godot sample resource import failed. See $importLog" }
+$contentBuild = Join-Path $validationRoot 'Content'
+& (Join-Path $PSScriptRoot 'build-godot-content.ps1') -EditorPath $editor -SourceDirectory (Join-Path $repositoryRoot 'samples/Content/Godot') -AddressMapPath (Join-Path $repositoryRoot 'samples/Content/godot-addresses.json') -OutputDirectory $contentBuild -Version ('validation-' + [Guid]::NewGuid().ToString('N'))
+$contentInstall = Join-Path $validationRoot 'ContentInstall'
+& (Join-Path $PSScriptRoot 'verify-content.ps1') -SourceDirectory $contentBuild -Version 'godot-validation' -OutputDirectory $contentInstall
+$installed = Get-Content -LiteralPath (Join-Path $contentInstall 'Install-report.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$contentCatalog = Join-Path $installed.directory 'pack-catalog.json'
 $logPath = Join-Path $validationRoot 'Runtime.log'
 $processOptions = @{
     FilePath = $editor
-    ArgumentList = @('--headless', '--path', ('"' + $sampleRoot + '"'), '--log-file', ('"' + $logPath + '"'), '--', '--framework-smoke')
+    ArgumentList = @('--headless', '--path', ('"' + $sampleRoot + '"'), '--log-file', ('"' + $logPath + '"'), '--', '--framework-smoke', '--content-catalog', ('"' + $contentCatalog + '"'))
     PassThru = $true
 }
 if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $processOptions.WindowStyle = 'Hidden' }
@@ -28,7 +37,13 @@ if ($process.ExitCode -ne 0) { throw "Godot validation failed ($($process.ExitCo
 if (-not (Test-Path -LiteralPath $logPath) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_HOST_PASSED' -Quiet) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'SHARED_SCENARIO_PASSED' -Quiet) -or
-    (Select-String -LiteralPath $logPath -Pattern 'SCRIPT ERROR:|ERROR:' -Quiet)) {
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'FOUNDATION_CORE_PASSED' -Quiet) -or
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_PRESENTATION_SCENES_PASSED' -Quiet) -or
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_INPUT_AUDIO_PASSED' -Quiet) -or
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_UNSCALED_CLOCK_PASSED' -Quiet) -or
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'COMPOSED_APPLICATION_PASSED' -Quiet) -or
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_RESOURCE_PACK_PASSED' -Quiet) -or
+    (Select-String -LiteralPath $logPath -Pattern 'SCRIPT ERROR:|ERROR:|ObjectDB instances leaked at exit|invalid UID' -Quiet)) {
     throw "Godot assertions failed or emitted errors. See $logPath"
 }
 Write-Host "Godot SDK build and real host scenario passed. Log: $logPath"
@@ -61,7 +76,7 @@ if ($Export) {
     $exportRuntimeLog = Join-Path $validationRoot 'Export-runtime.log'
     $exportOptions = @{
         FilePath = $playerPath
-        ArgumentList = @('--headless', '--log-file', ('"' + $exportRuntimeLog + '"'), '--', '--framework-smoke')
+        ArgumentList = @('--headless', '--log-file', ('"' + $exportRuntimeLog + '"'), '--', '--framework-smoke', '--content-catalog', ('"' + $contentCatalog + '"'))
         PassThru = $true
     }
     if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $exportOptions.WindowStyle = 'Hidden' }
@@ -70,7 +85,13 @@ if ($Export) {
     $exportProcess.Refresh()
     if ($exportProcess.ExitCode -ne 0 -or -not (Test-Path $exportRuntimeLog) -or
         -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_HOST_PASSED' -Quiet) -or
-        (Select-String -LiteralPath $exportRuntimeLog -Pattern 'SCRIPT ERROR:|ERROR:' -Quiet)) {
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'FOUNDATION_CORE_PASSED' -Quiet) -or
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_PRESENTATION_SCENES_PASSED' -Quiet) -or
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_INPUT_AUDIO_PASSED' -Quiet) -or
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_UNSCALED_CLOCK_PASSED' -Quiet) -or
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'COMPOSED_APPLICATION_PASSED' -Quiet) -or
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_RESOURCE_PACK_PASSED' -Quiet) -or
+        (Select-String -LiteralPath $exportRuntimeLog -Pattern 'SCRIPT ERROR:|ERROR:|ObjectDB instances leaked at exit|invalid UID' -Quiet)) {
         throw "Godot exported game failed. See $exportRuntimeLog"
     }
     $manifest = [ordered]@{

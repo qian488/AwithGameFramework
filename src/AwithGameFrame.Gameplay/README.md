@@ -1,11 +1,36 @@
 # Gameplay
 
-跨引擎的本地化与存档槽位管理，依赖 Core 和 Data；公共 API 使用 `Task`。
+跨引擎的本地化、存档、视图与场景管理，依赖 Core 和 Data；公共 API 使用 `Task`。
 
 - `LocalizationManager.LoadDataset(LocalizationDataset)` 接收普通 C# 数据；文件或资源加载通过 `ILocalizationSource` 接入。Unity 的 ScriptableObject 和 Resources 实现在 Unity 适配包。
 - 新存档使用 `VersionedSaveService<T>`，显式传入存档目录、`ISerializer` 和数据结构版本，不依赖全局 `DataPersistenceAPI`。
 - `SaveGameManager` 是保留旧 API 的兼容入口，通过 DataPersistenceAPI 分别保存游戏数据与元信息，未提供自动存档、版本迁移或原子提交。先初始化 Data，再初始化管理器；等待 `Initialization` 后读取槽位列表。可调用 `ReloadSlotsAsync()` 刷新。
 - 原 `AwithGameFrame.Extensions.*` 命名空间保留，程序集改为 `AwithGameFrame.Gameplay`。
+
+`Presentation.ViewService` 用 `IViewFactory` 创建视图并拥有每个视图的 `ResourceScope`；按 layer/创建顺序排序、选择焦点，最上层 modal 阻断下层输入。重复 key 复用 handle，选项变化需先关闭再打开。`ViewFlow` 可接下方导航栈，Exit 关闭视图、再次 Enter 重新创建；导航使用的 key 应由该流程独占，避免手动打开与导航共享同一 handle。`PresentationModule` 默认依赖 `resources` 模块，宿主停止时先关闭视图再释放资源。不要在视图生命周期回调中重入当前服务，可通过宿主 Dispatcher 排队下一次操作。
+
+`InputService(host.Events, new ViewInputRouter(views))` 在发布玩法事件前路由视图，`ViewInput.Payload` 保留完整 `InputActionEvent`。视图处理动作或顶层 modal 都会消费输入；已经交付玩法的持键会收到一次 `Released`，关闭 modal 后继续持键保持抑制，物理释放后再次按下才恢复。`InputUpdateResult.Events` 只含实际交付玩法的事件，`Errors` 收集路由和监听异常；路由异常按已消费处理，并释放此前玩法状态。输入与路由必须在创建线程运行；路由或监听回调不能重入输入修改，视图输入回调不能直接打开/关闭视图，应通过 Dispatcher 排队。
+
+`CaptureBindings()` 返回只读的完整绑定快照；`ApplyBindings(snapshot)` 在全部验证通过后一次替换，支持同 context 内交换控件，不改变 context 的优先级、modal 或启用状态。快照必须精确覆盖所有已有 action；未知、重复、缺失、冲突与非法参数均在提交前拒绝。成功提交释放旧按下状态；释放监听异常在提交后报告，绑定已更新。
+
+`AudioModule(audio)` 默认依赖 `resources`，保证宿主停止时先销毁原生 voice 再归还资源。资源由宿主外部管理时显式使用 `new AudioModule(audio, Array.Empty<string>())`；自定义资源模块可通过 params 指定依赖。`pauseWithHost: false` 的声音在宿主暂停时继续播放，并通过暂停维护检测自然结束、释放 voice/资源与并发容量；手动暂停或跟随宿主暂停的声音保留。暂停维护只清理，不推进模拟与游戏时钟。`HasBus(name)` 可在应用设置前确认音频总线存在。
+
+原生 voice 同时实现 `IAsyncDisposable` 时，音频清理先 Stop、等待 `DisposeAsync` 完成，再归还 ResourceScope 与并发槽；否则使用同步 Dispose。Stop/释放异常均收集，其他清理继续执行。异步原生释放没有强制超时或取消，退出期间必须继续运行引擎帧；后端不完成时宿主关闭也会等待，不能提前归还仍被原生使用的资源。
+
+`ViewBindingScope` 把 `INotifyPropertyChanged` 连接到显式 getter/setter，不使用反射。绑定立即同步，之后仅响应指定属性名或 null/空的全部属性通知；scope 或单个绑定 Dispose 时解绑，构造时传入的 token 取消也会解绑。创建、模型通知和显式 Dispose 必须在创建 scope 的宿主线程上；后台数据先通过 Dispatcher 更新模型。token 可从后台取消，只执行事件解绑，因此模型的事件 remove 必须支持取消线程。getter/setter 异常直接传给 Bind 调用方或 PropertyChanged 发布者；初次同步失败会解绑，后续失败保留绑定以允许修复后更新，token 解绑异常由 Cancel 报告。视图销毁前先 Dispose scope，不依赖 GC 或引擎对象失效检查。
+
+```csharp
+var title = new ObservableValue<string>("Menu");
+using var bindings = new ViewBindingScope(viewLifetimeToken);
+bindings.Bind(title, nameof(title.Value), () => title.Value, text => nativeLabel.Text = text);
+title.Value = "Playing";
+```
+
+`nativeLabel.Text` 由引擎脚本提供：Unity prefab 根可继承 `UnityViewBehaviour`，Godot Control 根可继承 `GodotView`，在 Show 创建绑定、Hide/销毁前释放。通用包不包含引擎控件类型、反射路径、双向绑定或完整 MVVM 系统。
+
+`Scenes.SceneService` 通过 `ISceneBackend` 先加载、激活新场景，成功后 Single 卸载本服务拥有的旧场景，Additive 则保留它们。重复 key 复用实例；Active 卸载会激活另一个已拥有场景。服务不销毁 bootstrap 或其他宿主场景。提交前失败/取消会等待原生晚到结果并清理新实例、释放 scope，保留并恢复旧 Active；提交后会完成旧场景清理。原生卸载失败保留 handle/scope 供显式重试，不报告虚假卸载成功。`SceneModule` 默认也依赖 `resources`。
+
+Unity 后端使用独立 uGUI parent、宿主提供的 Canvas/EventSystem、Resources prefab 与原生 additive SceneManager；Godot 后端使用 PackedScene、专用 Control parent，以及持久 Node 下的子场景，不改全局 CurrentScene。两端只能在引擎主线程调用且需持续运行帧循环，Stop 等待原生释放；不可取消的原生操作必须最终完成。真实示例验收位于两端 `PresentationSmoke`，普通测试验证服务行为不能替代引擎验收。
 
 `AwithGameFrame.Extensions.Presentation.NavigationStack` 提供小型页面/流程返回历史，内部拥有独立的 Core `FlowMachine`，不假设引擎控件、绑定系统或 view 类型：
 

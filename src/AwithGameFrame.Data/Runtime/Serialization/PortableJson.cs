@@ -8,6 +8,14 @@ namespace AwithGameFrame.Foundation.DataPersistence
 {
     internal static class PortableJson
     {
+        internal static JsonSerializerSettings CreateSettings(SerializationConfig config)
+        {
+            var settings = CreateSettings(config.PrettyPrint);
+            settings.NullValueHandling = config.IgnoreNullValues ? NullValueHandling.Ignore : NullValueHandling.Include;
+            if (config.DateFormat != null) settings.DateFormatString = config.DateFormat;
+            return settings;
+        }
+
         internal static JsonSerializerSettings CreateSettings(bool prettyPrint = false)
         {
             return new JsonSerializerSettings

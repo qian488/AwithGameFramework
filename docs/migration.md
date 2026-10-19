@@ -4,9 +4,31 @@
 
 新应用使用 `AwithGameFrame.Core.Hosting.GameHost`，通过 `IGameModule.Id/Dependencies` 声明异步启动依赖；普通服务注册在 `host.Services`，模块通过 `GameContext` 访问。旧 `FrameworkBootstrap/ServiceLocator` 保留兼容，旧静态管理器没有自动获得实例隔离。每个会话创建新宿主，同一宿主停止后不重启。
 
-Unity 可继承 `AwithGameFrame.Unity.Hosting.GameHostBehaviour`；Godot .NET 使用 `GameHostNode`。启动/暂停/停止期间也需在创建线程持续 Tick（秒），处理原生资源释放和主线程投递。删除宿主对象、切走所属场景或主动退出前先等待 `ShutdownAsync`；引擎销毁回调无法保证等待所有异步操作。
+Unity 可继承 `AwithGameFrame.Unity.Hosting.GameHostBehaviour`；Godot .NET 使用 `GameHostNode`。创建线程调用 `host.Tick(unscaledSeconds)`，必须传入未缩放秒数；模块 `Tick` 现在收到 `Clock.ScaledDeltaTime`。自定义驱动不要预先乘引擎时间缩放，否则会重复缩放；默认 TimeScale=1 保持原值。启动/暂停/停止期间也需持续 Tick，处理原生资源释放和主线程投递。删除宿主对象、切走所属场景或主动退出前先等待 `ShutdownAsync`；引擎销毁回调无法保证等待所有异步操作。
 
 共享示例为 Unity `Assets/SharedDemo.unity`、Godot `samples/Godot/Main.tscn` 和 Headless。导航使用 `NavigationStack`，flow 的 Enter/Exit 管理页面与资源；返回或回滚会重新 Enter。
+
+Godot 的 `GameHostNode` 以 `Time.GetTicksUsec()` 单调差值驱动未缩放时间，避免 `_Process` 的 delta 已乘 `Engine.TimeScale` 后重复缩放；应用恢复时重置基线。需要缩放本框架的游戏时间时设置 `Host.Clock.TimeScale`，全局引擎缩放不会自动改动各宿主的独立时钟。
+
+## 新增通用基础服务
+
+`GameHost.Events` / `Context.Events` 是宿主实例的 `Core.Events.EventBus`，按消息类型订阅，支持 IDisposable/token 和 `EventScope` 自动清理。发布在当前线程同步执行，逐个报告监听错误；需要更新引擎对象时先通过 Dispatcher 回到宿主线程。它与旧字符串 `EventCenter` 独立，不会替旧代码转发事件或接管监听器。
+
+`GameHost.Clock/Timers` 提供缩放与未缩放游戏时间、单次/重复定时器及 Delay。只有 Running 推进；宿主暂停与生命周期过渡冻结两个域，调度器继续工作。`TimeScale=0` 只冻结缩放域，未缩放域也不代表暂停期间的现实时间。启动/暂停/关闭回调不能等待游戏时间 Delay；真实超时使用宿主自己的计时。宿主停止取消所有待执行计时器，回调与 Tick 错误需由调用方观察。
+
+`Core.Pooling.ObjectPool<T>` 是普通引用类型的独立实例池，容量包括借出对象，支持预热、租约及引用所有权检查；重复归还、跨池归还和跨线程操作明确失败。它不会自动替换旧 Unity GameObject 池，迁移时显式提供工厂、重置与销毁回调，并由模块 Dispose；租约归还后停止使用对象。
+
+`Extensions.Presentation.ViewService` 管理 layer、modal、焦点和每视图资源 scope，通过 Unity/Godot 的 `IViewFactory` 创建真实控件。`ViewFlow` 可作为导航目的地，重复 key 复用 handle，导航 key 应由对应流程独占。`ViewBindingScope` 用显式 getter/setter 连接 `INotifyPropertyChanged`，无反射路径；绑定立即同步，按属性名更新，Dispose/token 解绑，getter/setter 异常保持可观察。模型更新与显式 Dispose 在创建线程执行，视图销毁前先解绑；后台取消只解绑，事件 remove 必须支持取消线程。旧 UIManager 不会自动转成这些服务或完整 MVVM。
+
+`Extensions.Scenes.SceneService` 按服务实例管理 Single/Additive 所有权；新场景激活成功后才卸载旧场景，失败/取消清理新实例并恢复旧 Active，不销毁 bootstrap。Unity 后端使用 SceneManager additive；Godot 后端把 PackedScene 放在持久 parent 下，不替换全局 CurrentScene。原生 unload 失败保留 handle 供重试。`PresentationModule`、`SceneModule` 默认依赖 `resources`，需在停止资源服务前清理。
+
+`Gameplay.Input.InputService` 提供动作、优先级/模态上下文、重绑和按下/保持/释放事件，通过 `IInputBackend` 读引擎设备；失焦/暂停释放按住状态。`Gameplay.Audio.AudioService` 提供 master/bus 音量、静音、循环/并发与资源租约，通过 `IAudioBackend` 创建原生 voice，分别保存用户暂停和宿主暂停。两者有宿主模块接入与 Unity/Godot 原生后端，须在创建线程使用并等待异步关闭；旧静态输入/音频 API 的状态不自动迁移或隔离。
+
+将 `new ViewInputRouter(views)` 传给 `InputService(events, router)` 或 `SetRouter`，由 UI 优先消费 `InputActionEvent`。消费中的持键不再交付玩法，已交付动作补发 Released，持续抑制到物理释放；关闭弹窗不会凭空触发 Pressed。视图输入回调不可同步开关窗口/停止服务，使用 Dispatcher 延后操作。输入绑定可通过 `CaptureBindings` / `ApplyBindings` 原子读取和恢复。
+
+`AudioModule(audio)` 现在默认依赖 `resources`，确保 voice、资源 scope 先于资源服务关闭。若外部管理音频资源，显式使用 `new AudioModule(audio, Array.Empty<string>())`；自定义模块 ID 则传完整依赖。暂停 Tick 调用可选 `IGameMaintenanceModule.Maintain`，音频在此回收不随宿主暂停的自然结束播放；普通游戏 Tick、Clock 与 Timers 继续冻结。
+
+新增 `Extensions.Localization.LocalizationService` 是宿主实例服务，旧 `LocalizationManager` 保留兼容且不与之同步。通过 `LocalizationModule` 加载普通数据集，`BindText` 返回可解绑订阅，视图关闭时 Dispose。`Gameplay.Settings.UserSettingsService` 将语言、主/分组音量和输入重绑定统一保存；`UserSettingsModule` 在依赖准备后恢复，在依赖释放前保存。`VersionedUserSettingsStore` 使用版本化存档的迁移/备份机制；旧 PlayerPrefs 或自定义设置格式需要项目显式导入。具体 API 与默认值合并规则见 [设置说明](../src/AwithGameFrame.Gameplay/Runtime/Settings/README.md)。
 
 ## Unity 可靠性修正
 
@@ -14,7 +36,15 @@ Unity 可继承 `AwithGameFrame.Unity.Hosting.GameHostBehaviour`；Godot .NET �
 
 池的异步创建直接登记借出，重复归还忽略；预热只实例化，不改变 Prefab。Clear 销毁池拥有的空闲及借出对象，旧引用随后失效。UI 同名在途打开共用加载；Hide、失败或过期请求回调 null，迟到对象回收。音效并发上限包含在途加载，超额请求回调 null；音频与输入 Shutdown 解除订阅。
 
-新增资源租约与旧 Pool/ResourcesManager 分开。UnityResourceLoader 跨 store 计数；直接 Resources.Load 的外部持有者不在所有权记录内，应统一加载入口。Resources 无法原生取消请求或逐个卸载 Prefab：最后租约归还后非 Prefab 资产实际 Unload，Prefab 等待宿主选择 UnloadUnusedAssets。Godot 后端同步加载，使用独立缓存模式并释放原生包装。
+新增资源租约与旧 Pool/ResourcesManager 分开。UnityResourceLoader 跨 store 计数；直接 Resources.Load 的外部持有者不在所有权记录内，应统一加载入口。Resources 无法原生取消请求或逐个卸载 Prefab：后端释放所有权后非 Prefab 资产实际 Unload，Prefab 等待宿主选择 UnloadUnusedAssets。Godot 可选择同步 `GodotResourceLoader` 或后台 `GodotThreadedResourceLoader`，通过宿主 Dispatcher/同步上下文管理独立原生所有权；不可中断的请求仍需等待晚到成功并释放。
+
+## 资源缓存与原始文件内容更新
+
+`ResourceStore` 默认不保留 idle 项。启用 `ResourceCacheOptions(maxBytes, maxEntries)` 后，最后租约归还的资源可进入有限 LRU；只保留大小估算为正且符合预算的项，活跃租约不会因预算被驱逐。后端 `LoadedResource` 可提供 `estimatedSizeBytes`；默认零表示未知，不缓存。`PreloadAsync<T>` 要求已启用缓存，`TrimCacheAsync` 可主动释放空闲项，宿主关闭释放全部。旧代码若依赖“最后租约关闭立即 native unload”，迁移时保持默认缓存配置或显式 trim；预算不代表引擎总内存硬上限。
+
+`tools/publish-content.ps1` 从文件目录生成大小/SHA-256 清单和版本文件，输出使用新目录。`Networking.Content.ContentUpdateService` 负责增量复用、断点续传、校验和原子激活，`ContentSnapshot` 固定一个版本的 key/path，`Core.Resources.FileResourceLoader` 可据此加载 byte[]。创建新版本 store/scope 时使用新快照，已有引用继续使用原版本。
+
+新增 `build-unity-content.ps1` / `build-godot-content.ps1` 负责原生 AssetBundle/PCK 构建、依赖和地址目录，输出可直接交给上述发布工具。Unity 使用 `UnityAssetBundleLoader` 与 `UnityBundleSceneBackend`，最后归还租约会 `Unload(true)`，须先销毁实例。Godot 使用 `GodotPackResourceLoader` 校验并挂载不可变 namespace；PCK 不能进程内卸载，更新需新 namespace，旧磁盘包通常在重启后回收。接入命令见 [资源流水线](content-pipeline.md)。Addressables、发布者认证和 CDN 仍需独立接入。
 
 ## 版本化存档与生成契约
 
@@ -23,6 +53,10 @@ Unity 可继承 `AwithGameFrame.Unity.Hosting.GameHostBehaviour`；Godot .NET �
 新服务不会自动读取旧 `SaveSlot_N` 与 `_Meta` 分离格式。项目需显式用旧提供者读取 DTO、转换并写入新服务，验证完成后决定旧文件处理。旧 SaveGameManager 保留基础槽位 API，未新增自动存档调度。
 
 配置定义/数据见 `samples/Shared/Configuration`，协议及兼容性基线见 `samples/Protocol`。修改源后运行生成脚本，禁止手改 Generated；删除/重命名配置需显式移除旧产物和 meta。Networking 是可选包，HTTP/业务状态、超时/调用取消分别处理；不隐式重试，切换会话后旧响应不交付。已有协议可提供自有 codec。
+
+ConfigGen 现在支持 `enums`、命名 `types` 嵌套结构与 `T[]`（可多层），递归校验必填、类型、枚举及外键；每张表选择一个 UTF-8 JSON/CSV 来源。旧标量 schema 的 hash 和格式保持不变，增加结构定义后需同时重新生成 DTO 与 JSON。CSV 数组/结构单元格使用 JSON 字面量，Excel 导出选择 UTF-8 CSV，详见 [ConfigGen](../tools/ConfigGen/README.md)。
+
+`Networking.Realtime.RealtimeClient` 是另行创建的长连接会话，提供可替换 WebSocket transport/codec、心跳、配置次数与退避的重连、旧会话隔离。`IPushRecovery` 明确要求补查最后应用序号之后的完整推送快照，应用成功后才提交游标；恢复失败、缺序或业务处理失败需观察会话任务。项目实现鉴权、恢复 HTTP/其他接口、服务端消息协议、幂等处理与游标持久化，客户端不会自动重发业务消息。此处已提供客户端与可测试恢复契约，未声明已对接实际业务后端或所有平台的 WebSocket 实现。
 
 ## 打开工程与找源码
 
@@ -95,6 +129,8 @@ SaveSettingsAsync/LoadSettingsAsync 现在使用配置的默认存储。旧版�
 普通字段 JSON 可读取，新增格式支持可写属性和基础类型；Unity 私有 SerializeField 字段需要公开 DTO 或显式 Newtonsoft 注解。MessagePack/Protobuf 需要注册真实编码器，不再假装实现或静默回退。具体文件格式兼容说明以 Data README 为准。
 
 压缩序列化器写入 v2，继续读取 v1 的布尔值、原始字符串和区域数字；JSON 编码器也能读取旧工厂写出的 v1 二进制/Base64 内容。BinaryFileStorage 的独立文件封装保持 v1。文件存储键现在是单个文件名；旧版带目录分隔符的键应迁移为独立存储目录与扁平键名。
+
+内置文件提供者现在严格验证并复制配置：仅支持旧 XOR 混淆与 GZip，主动请求 AES256、LZ4、其他压缩级别或未实现的备份/云同步等选项时返回 `NotImplemented`，不再静默使用其他算法。内置编码器不支持的类型元信息/压缩选项同样明确拒绝。默认关闭未实现功能，Release/Production preset 改为未加密 GZip；旧 preset 写出的文件实际是 XOR/GZip，读取旧档必须显式选择 XOR、GZip 和旧密钥，不能直接套用新 preset。读取后可经应用迁移到新策略，详见 [Data 兼容说明](../src/AwithGameFrame.Data/README.md)。版本化存档的备份与 checksum 是独立能力，不受旧提供者的备份配置影响。
 
 文件覆盖写入改为同目录临时文件完成后替换，保留现有格式；替换失败时保留原文件并返回 Failed。宿主文件系统需要支持 File.Replace。泛型读取空白/非法 JSON、非法编码、截断封装或损坏 GZip 时返回 Corrupted，调用方应据此提示恢复或选择其他存档。原始字节读取不增加内容校验。保存与读取的并发协调只覆盖同一进程内的同路径操作，删除/清空的并发顺序由业务管理。
 

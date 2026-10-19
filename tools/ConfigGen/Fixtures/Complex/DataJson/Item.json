@@ -1,0 +1,12 @@
+[
+  {
+    "Id": 1,
+    "Title": "Sword, \"starter\"\nSecond line",
+    "Rarity": "Rare",
+    "Tags": ["weapon", "shop"],
+    "Modes": ["Common", 1],
+    "Rewards": [{ "ItemId": 1, "Count": 2 }],
+    "Details": { "Bonus": { "ItemId": 1, "Count": 3 }, "Enabled": true },
+    "RelatedIds": [1, 0]
+  }
+]

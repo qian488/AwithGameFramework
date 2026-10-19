@@ -1,0 +1,6 @@
+{
+  "name": "AwithGameFrame.Unity.Editor",
+  "references": ["AwithGameFrame.Unity"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

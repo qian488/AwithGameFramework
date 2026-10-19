@@ -233,6 +233,67 @@ namespace AwithGameFrame.Core.Tests
         }
 
         [Test]
+        public void CancellationDuringDispatchedLoadStartupStillReleasesLateResource()
+        {
+            using var dispatcher = new MainThreadDispatcher();
+            using var cancellation = new CancellationTokenSource();
+            using var entered = new ManualResetEventSlim();
+            var pending = new TaskCompletionSource<LoadedResource>(TaskCreationOptions.RunContinuationsAsynchronously);
+            int owner = Environment.CurrentManagedThreadId, released = 0, releasedOn = 0;
+            var store = new ResourceStore(new Loader
+            {
+                Load = (_, _, token) =>
+                {
+                    entered.Set();
+                    if (!SpinWait.SpinUntil(() => token.IsCancellationRequested, TimeSpan.FromSeconds(3)))
+                        throw new TimeoutException("Caller cancellation did not reach the started backend load.");
+                    return pending.Task;
+                }
+            }, dispatcher);
+            var load = Task.Run(() => store.LoadAsync<object>("startup-cancellation", cancellation.Token));
+            var cancel = Task.Run(() =>
+            {
+                if (!entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException("Backend load did not start.");
+                cancellation.Cancel();
+            });
+            var timeout = Stopwatch.StartNew();
+            while (!entered.IsSet && timeout.Elapsed < TimeSpan.FromSeconds(3)) { dispatcher.RunPending(1); Thread.Yield(); }
+            cancel.GetAwaiter().GetResult();
+            Assert.That(SpinWait.SpinUntil(() => load.IsCompleted, TimeSpan.FromSeconds(3)), Is.True);
+            Assert.That(load.IsCanceled, Is.True, "The caller must cancel without waiting for backend completion.");
+            var dispose = store.DisposeAsync().AsTask();
+            Assert.That(dispose.IsCompleted, Is.False, "The store must retain ownership of the started backend load.");
+            pending.SetResult(Loaded(new object(), () => { released++; releasedOn = Environment.CurrentManagedThreadId; }));
+            timeout.Restart();
+            while (!dispose.IsCompleted && timeout.Elapsed < TimeSpan.FromSeconds(3)) { dispatcher.RunPending(8); Thread.Yield(); }
+            Assert.That(dispose.IsCompleted, Is.True, "Late backend cleanup did not finish.");
+            dispose.GetAwaiter().GetResult();
+            Assert.That(released, Is.EqualTo(1));
+            Assert.That(releasedOn, Is.EqualTo(owner));
+        }
+
+        [Test]
+        public void CancellingQueuedLoadReturnsPromptlyAndSkipsBackendStartup()
+        {
+            using var dispatcher = new MainThreadDispatcher();
+            using var cancellation = new CancellationTokenSource();
+            var loader = new Loader { Load = (_, _, _) => Task.FromResult(Loaded(new object(), () => { })) };
+            var store = new ResourceStore(loader, dispatcher);
+            var load = Task.Run(() => store.LoadAsync<object>("queued-cancellation", cancellation.Token));
+            Assert.That(SpinWait.SpinUntil(() => dispatcher.PendingCount == 1, TimeSpan.FromSeconds(3)), Is.True);
+            cancellation.Cancel();
+            Assert.That(SpinWait.SpinUntil(() => load.IsCompleted, TimeSpan.FromSeconds(3)), Is.True);
+            Assert.That(load.IsCanceled, Is.True);
+            Assert.That(loader.Calls, Is.Zero);
+            var dispose = store.DisposeAsync().AsTask();
+            var timeout = Stopwatch.StartNew();
+            while (!dispose.IsCompleted && timeout.Elapsed < TimeSpan.FromSeconds(3)) { dispatcher.RunPending(8); Thread.Yield(); }
+            Assert.That(dispose.IsCompleted, Is.True);
+            dispose.GetAwaiter().GetResult();
+            Assert.That(loader.Calls, Is.Zero, "Cancelled queued work must never start the backend load.");
+        }
+
+        [Test]
         public void HostResourceModuleReleasesBackendBeforeDispatcherCloses()
         {
             var host = new GameHost();

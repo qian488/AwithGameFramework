@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="DownloadedView" type="PanelContainer"]
+offset_right = 320.0
+offset_bottom = 96.0
+
+[node name="Title" type="Label" parent="."]
+text = "Content pack"

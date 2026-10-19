@@ -16,13 +16,17 @@ namespace AwithGameFrame.Core.Resources
         private readonly Func<Task> _release;
         private Task _releaseTask;
 
-        public LoadedResource(object value, Func<Task> releaseAsync)
+        public LoadedResource(object value, Func<Task> releaseAsync, long estimatedSizeBytes = 0)
         {
+            if (estimatedSizeBytes < 0) throw new ArgumentOutOfRangeException(nameof(estimatedSizeBytes));
             Value = value ?? throw new ArgumentNullException(nameof(value));
             _release = releaseAsync ?? throw new ArgumentNullException(nameof(releaseAsync));
+            EstimatedSizeBytes = estimatedSizeBytes;
         }
 
         public object Value { get; }
+        /// <summary>Backend estimate. Zero means unknown and is never retained in the idle cache.</summary>
+        public long EstimatedSizeBytes { get; }
 
         internal Task ReleaseAsync()
         {
