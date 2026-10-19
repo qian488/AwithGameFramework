@@ -312,6 +312,19 @@ namespace AwithGameFrame.Core
             LoggingAPI.Info(LogCategory.Event, "清空所有事件监听");
         }
 
+        /// <summary>Release subscriptions before this event module is reused by another host session.</summary>
+        public override void Shutdown()
+        {
+            try
+            {
+                Clear();
+            }
+            finally
+            {
+                base.Shutdown();
+            }
+        }
+
         #region EventId 类型安全重载
 
         public void AddEventListener<T>(EventId eventId, Action<T> action) => AddEventListener<T>((string)eventId, action);

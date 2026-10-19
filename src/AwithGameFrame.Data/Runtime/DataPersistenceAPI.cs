@@ -17,6 +17,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
         private static volatile bool isInitialized = false;
         private static bool lifecycleInProgress;
         private static readonly object lockObject = new object();
+        private static int activeOperations;
+        private static TaskCompletionSource<bool> operationsDrained;
 
         public static bool IsInitialized => isInitialized;
 
@@ -37,14 +39,22 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     config = persistenceConfig ?? new DataPersistenceConfig();
                 }
                 await InitializeStorageProviders();
-                isInitialized = true;
                 FrameworkLogger.Info("Data persistence initialized.", LogCategory.Core);
+                lock (lockObject) isInitialized = true;
                 return DataOperationResult.Success;
             }
             catch (Exception ex)
             {
-                isInitialized = false;
-                FrameworkLogger.Error($"Data persistence initialization failed: {ex.Message}", LogCategory.Core);
+                HashSet<IStorageProvider> providers;
+                lock (lockObject)
+                {
+                    isInitialized = false;
+                    providers = new HashSet<IStorageProvider>(storageProviders.Values);
+                    storageProviders.Clear();
+                    config = null;
+                }
+                DisposeProviders(providers);
+                LogLifecycleFailure($"Data persistence initialization failed: {ex.Message}");
                 return DataOperationResult.Failed;
             }
             finally
@@ -54,32 +64,36 @@ namespace AwithGameFrame.Foundation.DataPersistence
             }
         }
 
-        /// <summary>停止接收新操作，释放所有提供者并清除配置；调用前宿主应等待业务中的存储操作结束。</summary>
+        /// <summary>停止接收新操作，等待通过本 API 发起的在途操作完成后释放提供者并清除配置。</summary>
         public static async Task<DataOperationResult> ShutdownAsync()
         {
             await initializationLock.WaitAsync();
-            var result = DataOperationResult.Success;
             try
             {
-                HashSet<IStorageProvider> providers;
+                Task pendingOperations;
                 lock (lockObject)
                 {
                     lifecycleInProgress = true;
                     isInitialized = false;
+                    if (activeOperations == 0)
+                        pendingOperations = Task.CompletedTask;
+                    else
+                    {
+                        operationsDrained = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        pendingOperations = operationsDrained.Task;
+                    }
+                }
+                await pendingOperations;
+
+                HashSet<IStorageProvider> providers;
+                lock (lockObject)
+                {
                     providers = new HashSet<IStorageProvider>(storageProviders.Values);
                     storageProviders.Clear();
                     config = null;
+                    operationsDrained = null;
                 }
-                foreach (var provider in providers)
-                {
-                    try { provider.Dispose(); }
-                    catch (Exception ex)
-                    {
-                        result = DataOperationResult.Failed;
-                        FrameworkLogger.Error($"Failed to dispose storage provider: {ex.Message}", LogCategory.Core);
-                    }
-                }
-                return result;
+                return DisposeProviders(providers);
             }
             finally
             {
@@ -100,10 +114,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>操作结果</returns>
         public static async Task<DataOperationResult> SaveAsync<T>(string key, T data, StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            var targetStorageType = storageType ?? config.DefaultStorageType;
-            return await StorageHelper.SaveDataAsync(key, data, targetStorageType, storageProviders);
+            return await ExecuteOperationAsync(() => StorageHelper.SaveDataAsync(
+                key, data, storageType ?? config.DefaultStorageType, storageProviders));
         }
 
         /// <summary>
@@ -115,10 +127,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>数据和操作结果</returns>
         public static async Task<(T data, DataOperationResult result)> LoadAsync<T>(string key, StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            var targetStorageType = storageType ?? config.DefaultStorageType;
-            return await StorageHelper.LoadDataAsync<T>(key, targetStorageType, storageProviders);
+            return await ExecuteOperationAsync(() => StorageHelper.LoadDataAsync<T>(
+                key, storageType ?? config.DefaultStorageType, storageProviders));
         }
 
         /// <summary>
@@ -129,10 +139,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>操作结果</returns>
         public static async Task<DataOperationResult> DeleteAsync(string key, StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            var targetStorageType = storageType ?? config.DefaultStorageType;
-            return await StorageHelper.DeleteDataAsync(key, targetStorageType, storageProviders);
+            return await ExecuteOperationAsync(() => StorageHelper.DeleteDataAsync(
+                key, storageType ?? config.DefaultStorageType, storageProviders));
         }
 
         /// <summary>
@@ -143,10 +151,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>是否存在</returns>
         public static async Task<bool> ExistsAsync(string key, StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            var targetStorageType = storageType ?? config.DefaultStorageType;
-            return await StorageHelper.ExistsDataAsync(key, targetStorageType, storageProviders);
+            return await ExecuteOperationAsync(() => StorageHelper.ExistsDataAsync(
+                key, storageType ?? config.DefaultStorageType, storageProviders));
         }
 
         #endregion
@@ -232,14 +238,16 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>操作结果</returns>
         public static async Task<DataOperationResult> SaveComplexDataAsync<T>(string key, T complexData, DatabaseType databaseType = DatabaseType.SQLite)
         {
-            var provider = GetDatabaseProvider(databaseType);
-            if (provider == null)
+            return await ExecuteOperationAsync(async () =>
             {
-                FrameworkLogger.Error($"未找到数据库提供者: {databaseType}", LogCategory.Core);
-                return DataOperationResult.Failed;
-            }
-
-            return await provider.SaveAsync(key, complexData);
+                var provider = FindDatabaseProvider(databaseType);
+                if (provider == null)
+                {
+                    FrameworkLogger.Error($"未找到数据库提供者: {databaseType}", LogCategory.Core);
+                    return DataOperationResult.Failed;
+                }
+                return await provider.SaveAsync(key, complexData);
+            });
         }
 
         /// <summary>
@@ -251,14 +259,16 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>复杂数据和操作结果</returns>
         public static async Task<(T complexData, DataOperationResult result)> LoadComplexDataAsync<T>(string key, DatabaseType databaseType = DatabaseType.SQLite)
         {
-            var provider = GetDatabaseProvider(databaseType);
-            if (provider == null)
+            return await ExecuteOperationAsync(async () =>
             {
-                FrameworkLogger.Error($"未找到数据库提供者: {databaseType}", LogCategory.Core);
-                return (default(T), DataOperationResult.Failed);
-            }
-
-            return await provider.LoadAsync<T>(key);
+                var provider = FindDatabaseProvider(databaseType);
+                if (provider == null)
+                {
+                    FrameworkLogger.Error($"未找到数据库提供者: {databaseType}", LogCategory.Core);
+                    return (default(T), DataOperationResult.Failed);
+                }
+                return await provider.LoadAsync<T>(key);
+            });
         }
 
         #endregion
@@ -272,23 +282,18 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>数据键数组</returns>
         public static async Task<string[]> GetAllKeysAsync(StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            if (storageType.HasValue)
+            return await ExecuteOperationAsync(async () =>
             {
-                var provider = GetStorageProvider(storageType.Value);
-                return provider != null ? await provider.GetAllKeysAsync() : new string[0];
-            }
-
-            // 获取所有存储类型的数据键
-            var allKeys = new List<string>();
-            foreach (var provider in storageProviders.Values)
-            {
-                var keys = await provider.GetAllKeysAsync();
-                allKeys.AddRange(keys);
-            }
-            
-            return allKeys.ToArray();
+                if (storageType.HasValue)
+                {
+                    var provider = FindStorageProvider(storageType.Value);
+                    return provider != null ? await provider.GetAllKeysAsync() : new string[0];
+                }
+                var allKeys = new List<string>();
+                foreach (var provider in new HashSet<IStorageProvider>(storageProviders.Values))
+                    allKeys.AddRange(await provider.GetAllKeysAsync());
+                return allKeys.ToArray();
+            });
         }
 
         /// <summary>
@@ -298,23 +303,18 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>操作结果</returns>
         public static async Task<DataOperationResult> ClearAsync(StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            if (storageType.HasValue)
+            return await ExecuteOperationAsync(async () =>
             {
-                var provider = GetStorageProvider(storageType.Value);
-                return provider != null ? await provider.ClearAsync() : DataOperationResult.Failed;
-            }
-
-            // 清空所有存储类型的数据
-            var results = new List<DataOperationResult>();
-            foreach (var provider in storageProviders.Values)
-            {
-                var result = await provider.ClearAsync();
-                results.Add(result);
-            }
-            
-            return results.Contains(DataOperationResult.Failed) ? DataOperationResult.Failed : DataOperationResult.Success;
+                if (storageType.HasValue)
+                {
+                    var provider = FindStorageProvider(storageType.Value);
+                    return provider != null ? await provider.ClearAsync() : DataOperationResult.Failed;
+                }
+                var result = DataOperationResult.Success;
+                foreach (var provider in new HashSet<IStorageProvider>(storageProviders.Values))
+                    if (await provider.ClearAsync() != DataOperationResult.Success) result = DataOperationResult.Failed;
+                return result;
+            });
         }
 
         /// <summary>
@@ -324,24 +324,22 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>统计信息</returns>
         public static async Task<StorageStatistics> GetStatisticsAsync(StorageType? storageType = null)
         {
-            EnsureInitialized();
-            
-            if (storageType.HasValue)
+            return await ExecuteOperationAsync(async () =>
             {
-                var provider = GetStorageProvider(storageType.Value);
-                return provider != null ? await provider.GetStatisticsAsync() : new StorageStatistics();
-            }
-
-            // 合并所有存储类型的统计信息
-            var totalStats = new StorageStatistics();
-            foreach (var provider in storageProviders.Values)
-            {
-                var stats = await provider.GetStatisticsAsync();
-                totalStats.ItemCount += stats.ItemCount;
-                totalStats.TotalSize += stats.TotalSize;
-            }
-            
-            return totalStats;
+                if (storageType.HasValue)
+                {
+                    var provider = FindStorageProvider(storageType.Value);
+                    return provider != null ? await provider.GetStatisticsAsync() : new StorageStatistics();
+                }
+                var totalStats = new StorageStatistics();
+                foreach (var provider in new HashSet<IStorageProvider>(storageProviders.Values))
+                {
+                    var stats = await provider.GetStatisticsAsync();
+                    totalStats.ItemCount += stats.ItemCount;
+                    totalStats.TotalSize += stats.TotalSize;
+                }
+                return totalStats;
+            });
         }
 
         #endregion
@@ -355,8 +353,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>存储提供者</returns>
         public static IStorageProvider GetStorageProvider(StorageType storageType)
         {
-            EnsureInitialized();
-            return storageProviders.TryGetValue(storageType, out var provider) ? provider : null;
+            lock (lockObject)
+            {
+                EnsureInitialized();
+                return FindStorageProvider(storageType);
+            }
         }
 
         /// <summary>
@@ -366,9 +367,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <returns>数据库存储提供者</returns>
         public static DatabaseStorageProvider GetDatabaseProvider(DatabaseType databaseType)
         {
-            EnsureInitialized();
-            var provider = GetStorageProvider(StorageType.Database) as DatabaseStorageProvider;
-            return provider?.DatabaseType == databaseType ? provider : null;
+            lock (lockObject)
+            {
+                EnsureInitialized();
+                return FindDatabaseProvider(databaseType);
+            }
         }
 
         /// <summary>
@@ -396,6 +399,60 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         #region 私有方法
 
+        private static IStorageProvider FindStorageProvider(StorageType storageType)
+        {
+            return storageProviders.TryGetValue(storageType, out var provider) ? provider : null;
+        }
+
+        private static DatabaseStorageProvider FindDatabaseProvider(DatabaseType databaseType)
+        {
+            var provider = FindStorageProvider(StorageType.Database) as DatabaseStorageProvider;
+            return provider?.DatabaseType == databaseType ? provider : null;
+        }
+
+        private static async Task<T> ExecuteOperationAsync<T>(Func<Task<T>> operation)
+        {
+            lock (lockObject)
+            {
+                EnsureInitialized();
+                activeOperations++;
+            }
+            try
+            {
+                return await operation();
+            }
+            finally
+            {
+                lock (lockObject)
+                {
+                    activeOperations--;
+                    if (activeOperations == 0) operationsDrained?.TrySetResult(true);
+                }
+            }
+        }
+
+        private static DataOperationResult DisposeProviders(IEnumerable<IStorageProvider> providers)
+        {
+            var result = DataOperationResult.Success;
+            foreach (var provider in providers)
+            {
+                try { provider.Dispose(); }
+                catch (Exception ex)
+                {
+                    result = DataOperationResult.Failed;
+                    LogLifecycleFailure($"Failed to dispose storage provider: {ex.Message}");
+                }
+            }
+            return result;
+        }
+
+        private static void LogLifecycleFailure(string message)
+        {
+            // A host log callback must not interrupt rollback or skip remaining resources.
+            try { FrameworkLogger.Error(message, LogCategory.Core); }
+            catch { }
+        }
+
         /// <summary>
         /// 确保系统已初始化
         /// </summary>
@@ -420,7 +477,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     storageProviders[StorageType.BinaryFile] = new BinaryFileStorage();
             }
 
-            foreach (var provider in storageProviders.Values)
+            foreach (var provider in new HashSet<IStorageProvider>(storageProviders.Values))
             {
                 var result = await provider.InitializeAsync(config);
                 if (result != DataOperationResult.Success)

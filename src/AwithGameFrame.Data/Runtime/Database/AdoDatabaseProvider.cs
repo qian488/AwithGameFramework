@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
+using System.Reflection;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Logging;
 
@@ -8,13 +10,14 @@ namespace AwithGameFrame.Foundation.DataPersistence
 {
     /// <summary>
     /// 使用宿主提供的 ADO.NET 连接执行数据库操作。
-    /// 保留已有 SQLite 表结构查询规则，其他 SQL 方言应提供对应的 IDatabaseProvider。
+    /// 表结构辅助方法使用 SQLite 方言，其他 SQL 方言应提供对应的 IDatabaseProvider。
+    /// 实例及其连接不支持并发操作。
     /// </summary>
     public class AdoDatabaseProvider : IDatabaseProvider
     {
         private readonly Func<string, IDbConnection> connectionFactory;
-        private IDbConnection _connection;
-        private IDbTransaction _currentTransaction;
+        private IDbConnection connection;
+        private SQLiteTransaction currentTransaction;
 
         public AdoDatabaseProvider(DatabaseType databaseType, Func<string, IDbConnection> connectionFactory)
         {
@@ -23,91 +26,69 @@ namespace AwithGameFrame.Foundation.DataPersistence
         }
 
         public DatabaseType DatabaseType { get; }
-        public bool IsConnected => _connection?.State == ConnectionState.Open;
+        public bool IsConnected => connection?.State == ConnectionState.Open;
         public string ConnectionString { get; private set; }
 
         public Task<DataOperationResult> InitializeAsync(string connectionString)
         {
+            if (ReleaseResources() != DataOperationResult.Success)
+                return Task.FromResult(DataOperationResult.Failed);
+
+            IDbConnection candidate = null;
             try
             {
                 ConnectionString = connectionString;
-                
-                // 连接类型与驱动由宿主提供。
-                _connection = connectionFactory(connectionString) ?? throw new InvalidOperationException("The connection factory returned null.");
-                _connection.Open();
-                
+                candidate = connectionFactory(connectionString) ?? throw new InvalidOperationException("The connection factory returned null.");
+                candidate.Open();
+                connection = candidate;
                 FrameworkLogger.Info($"{DatabaseType}数据库连接已建立", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"{DatabaseType}数据库初始化失败: {ex.Message}", LogCategory.Core);
+                connection = null;
+                try { candidate?.Dispose(); }
+                catch (Exception disposeError) { LogFailure("释放未成功打开的连接失败", disposeError); }
+                LogFailure($"{DatabaseType}数据库初始化失败", ex);
                 return Task.FromResult(DataOperationResult.Failed);
             }
         }
 
-        public Task<DataOperationResult> CloseAsync()
+        public Task<DataOperationResult> CloseAsync() => Task.FromResult(ReleaseResources());
+
+        private DataOperationResult ReleaseResources()
         {
-            try
-            {
-                if (_currentTransaction != null)
-                {
-                    _currentTransaction.Rollback();
-                    _currentTransaction.Dispose();
-                    _currentTransaction = null;
-                }
+            var transaction = currentTransaction;
+            currentTransaction = null;
+            var ownedConnection = connection;
+            connection = null;
+            var result = DataOperationResult.Success;
 
-                if (_connection != null)
-                {
-                    _connection.Close();
-                    _connection.Dispose();
-                    _connection = null;
-                }
-
-                FrameworkLogger.Info($"{DatabaseType}数据库连接已关闭", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Success);
-            }
-            catch (Exception ex)
+            // Each resource gets a cleanup attempt even if an earlier operation fails.
+            if (transaction != null && transaction.RollbackAsync().GetAwaiter().GetResult() != DataOperationResult.Success)
+                result = DataOperationResult.Failed;
+            if (ownedConnection != null)
             {
-                FrameworkLogger.Error($"关闭{DatabaseType}数据库连接失败: {ex.Message}", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
+                try { ownedConnection.Close(); }
+                catch (Exception ex) { LogFailure("关闭数据库连接失败", ex); result = DataOperationResult.Failed; }
+                try { ownedConnection.Dispose(); }
+                catch (Exception ex) { LogFailure("释放数据库连接失败", ex); result = DataOperationResult.Failed; }
             }
+            return result;
         }
 
         public Task<DataOperationResult> ExecuteAsync(string sql, Dictionary<string, object> parameters = null)
         {
             try
             {
-                if (!IsConnected)
-                {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult(DataOperationResult.NotInitialized);
-                }
-
-                using (var command = _connection.CreateCommand())
-                {
-                    command.CommandText = sql;
-                    
-                    // 添加参数
-                    if (parameters != null)
-                    {
-                        foreach (var param in parameters)
-                        {
-                        var parameter = command.CreateParameter();
-                        parameter.ParameterName = param.Key;
-                        parameter.Value = param.Value ?? DBNull.Value;
-                        command.Parameters.Add(parameter);
-                        }
-                    }
-                    
+                if (!IsConnected) return Task.FromResult(DataOperationResult.NotInitialized);
+                using (var command = CreateCommand(connection, currentTransaction?.NativeTransaction, sql, parameters))
                     command.ExecuteNonQuery();
-                    FrameworkLogger.Info($"SQL执行成功: {sql}", LogCategory.Core);
-                    return Task.FromResult(DataOperationResult.Success);
-                }
+                return Task.FromResult(DataOperationResult.Success);
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"执行SQL命令失败: {ex.Message}", LogCategory.Core);
+                LogFailure("执行SQL命令失败", ex);
                 return Task.FromResult(DataOperationResult.Failed);
             }
         }
@@ -116,50 +97,18 @@ namespace AwithGameFrame.Foundation.DataPersistence
         {
             try
             {
-                if (!IsConnected)
-                {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult((new List<T>(), DataOperationResult.NotInitialized));
-                }
-
+                if (!IsConnected) return Task.FromResult((new List<T>(), DataOperationResult.NotInitialized));
                 var results = new List<T>();
-                
-                using (var command = _connection.CreateCommand())
+                using (var command = CreateCommand(connection, currentTransaction?.NativeTransaction, sql, parameters))
+                using (var reader = command.ExecuteReader())
                 {
-                    command.CommandText = sql;
-                    
-                    // 添加参数
-                    if (parameters != null)
-                    {
-                        foreach (var param in parameters)
-                        {
-                            var parameter = command.CreateParameter();
-                            parameter.ParameterName = param.Key;
-                            parameter.Value = param.Value ?? DBNull.Value;
-                            command.Parameters.Add(parameter);
-                        }
-                    }
-                    
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            // 简单的对象映射 - 实际项目中可能需要更复杂的ORM
-                            var obj = MapReaderToObject<T>(reader);
-                            if (obj != null)
-                            {
-                                results.Add(obj);
-                            }
-                        }
-                    }
+                    while (reader.Read()) results.Add(MapReaderToObject<T>(reader));
                 }
-                
-                FrameworkLogger.Info($"查询完成，返回 {results.Count} 条记录", LogCategory.Core);
                 return Task.FromResult((results, DataOperationResult.Success));
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"查询数据失败: {ex.Message}", LogCategory.Core);
+                LogFailure("查询数据失败", ex);
                 return Task.FromResult((new List<T>(), DataOperationResult.Failed));
             }
         }
@@ -168,74 +117,17 @@ namespace AwithGameFrame.Foundation.DataPersistence
         {
             try
             {
-                if (!IsConnected)
+                if (!IsConnected) return Task.FromResult((default(T), DataOperationResult.NotInitialized));
+                using (var command = CreateCommand(connection, currentTransaction?.NativeTransaction, sql, parameters))
+                using (var reader = command.ExecuteReader())
                 {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult((default(T), DataOperationResult.NotInitialized));
-                }
-
-                using (var command = _connection.CreateCommand())
-                {
-                    command.CommandText = sql;
-                    
-                    // 添加参数
-                    if (parameters != null)
-                    {
-                        foreach (var param in parameters)
-                        {
-                            var parameter = command.CreateParameter();
-                            parameter.ParameterName = param.Key;
-                            parameter.Value = param.Value ?? DBNull.Value;
-                            command.Parameters.Add(parameter);
-                        }
-                    }
-                    
-                    using (var reader = command.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            // 对于基本类型，直接转换
-                            if (typeof(T) == typeof(string))
-                            {
-                                var value = reader.IsDBNull(0) ? default(T) : (T)(object)reader.GetString(0);
-                                FrameworkLogger.Info("单条查询成功", LogCategory.Core);
-                                return Task.FromResult((value, DataOperationResult.Success));
-                            }
-                            if (typeof(T) == typeof(int))
-                            {
-                                var value = reader.IsDBNull(0) ? default(T) : (T)(object)reader.GetInt32(0);
-                                FrameworkLogger.Info("单条查询成功", LogCategory.Core);
-                                return Task.FromResult((value, DataOperationResult.Success));
-                            }
-                            if (typeof(T) == typeof(float))
-                            {
-                                var value = reader.IsDBNull(0) ? default(T) : (T)(object)reader.GetFloat(0);
-                                FrameworkLogger.Info("单条查询成功", LogCategory.Core);
-                                return Task.FromResult((value, DataOperationResult.Success));
-                            }
-                            if (typeof(T) == typeof(bool))
-                            {
-                                var value = reader.IsDBNull(0) ? default(T) : (T)(object)reader.GetBoolean(0);
-                                FrameworkLogger.Info("单条查询成功", LogCategory.Core);
-                                return Task.FromResult((value, DataOperationResult.Success));
-                            }
-                            
-                            // 对于复杂对象，使用映射方法
-                            var obj = MapReaderToObject<T>(reader);
-                            FrameworkLogger.Info("单条查询成功", LogCategory.Core);
-                            return Task.FromResult((obj, DataOperationResult.Success));
-                        }
-                        else
-                        {
-                            FrameworkLogger.Info("未找到匹配的记录", LogCategory.Core);
-                            return Task.FromResult((default(T), DataOperationResult.NotFound));
-                        }
-                    }
+                    if (!reader.Read()) return Task.FromResult((default(T), DataOperationResult.NotFound));
+                    return Task.FromResult((MapReaderToObject<T>(reader), DataOperationResult.Success));
                 }
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"查询单条数据失败: {ex.Message}", LogCategory.Core);
+                LogFailure("查询单条数据失败", ex);
                 return Task.FromResult((default(T), DataOperationResult.Failed));
             }
         }
@@ -244,297 +136,209 @@ namespace AwithGameFrame.Foundation.DataPersistence
         {
             try
             {
-                if (!IsConnected)
+                if (!IsConnected || currentTransaction != null) return Task.FromResult<IDatabaseTransaction>(null);
+                currentTransaction = new SQLiteTransaction(connection.BeginTransaction(), completed =>
                 {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult<IDatabaseTransaction>(null);
-                }
-
-                _currentTransaction = _connection.BeginTransaction();
-                FrameworkLogger.Info("事务已开始", LogCategory.Core);
-                return Task.FromResult<IDatabaseTransaction>(new SQLiteTransaction(_currentTransaction));
+                    if (ReferenceEquals(currentTransaction, completed)) currentTransaction = null;
+                });
+                return Task.FromResult<IDatabaseTransaction>(currentTransaction);
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"开始事务失败: {ex.Message}", LogCategory.Core);
+                LogFailure("开始事务失败", ex);
                 return Task.FromResult<IDatabaseTransaction>(null);
             }
         }
 
-        public Task<bool> TableExistsAsync(string tableName)
+        /// <summary>使用 SQLite sqlite_master 查询；不是跨 SQL 方言的结构探测。</summary>
+        public async Task<bool> TableExistsAsync(string tableName)
         {
-            try
-            {
-                if (!IsConnected)
-                {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult(false);
-                }
-
-                var sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=@tableName";
-                var parameters = new Dictionary<string, object> { { "@tableName", tableName } };
-                
-                var (result, dataResult) = QuerySingleAsync<string>(sql, parameters).GetAwaiter().GetResult();
-                var exists = dataResult == DataOperationResult.Success && !string.IsNullOrEmpty(result);
-                
-                FrameworkLogger.Info($"表 '{tableName}' 存在性检查: {exists}", LogCategory.Core);
-                return Task.FromResult(exists);
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"检查表是否存在失败: {ex.Message}", LogCategory.Core);
-                return Task.FromResult(false);
-            }
+            var result = await QuerySingleAsync<string>(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=@tableName",
+                new Dictionary<string, object> { ["@tableName"] = tableName });
+            return result.result == DataOperationResult.Success && !string.IsNullOrEmpty(result.data);
         }
 
         public Task<DataOperationResult> CreateTableAsync(string tableName, Dictionary<string, string> columns)
         {
+            if (!IsConnected) return Task.FromResult(DataOperationResult.NotInitialized);
             try
             {
-                if (!IsConnected)
-                {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult(DataOperationResult.NotInitialized);
-                }
-
-                // 构建CREATE TABLE SQL
-                var columnDefinitions = new List<string>();
-                foreach (var column in columns)
-                {
-                    columnDefinitions.Add($"{column.Key} {column.Value}");
-                }
-                
-                var sql = $"CREATE TABLE IF NOT EXISTS {tableName} ({string.Join(", ", columnDefinitions)})";
-                var result = ExecuteAsync(sql).GetAwaiter().GetResult();
-                
-                if (result == DataOperationResult.Success)
-                {
-                    FrameworkLogger.Info($"表 '{tableName}' 创建成功", LogCategory.Core);
-                }
-                
-                return Task.FromResult(result);
+                var definitions = new List<string>();
+                foreach (var column in columns) definitions.Add($"{column.Key} {column.Value}");
+                return ExecuteAsync($"CREATE TABLE IF NOT EXISTS {tableName} ({string.Join(", ", definitions)})");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"创建表失败: {ex.Message}", LogCategory.Core);
+                LogFailure("创建表失败", ex);
                 return Task.FromResult(DataOperationResult.Failed);
             }
         }
 
-        public Task<DataOperationResult> DropTableAsync(string tableName)
+        public Task<DataOperationResult> DropTableAsync(string tableName) => ExecuteAsync($"DROP TABLE IF EXISTS {tableName}");
+
+        internal static IDbCommand CreateCommand(IDbConnection connection, IDbTransaction transaction,
+            string sql, Dictionary<string, object> parameters)
         {
+            var command = connection.CreateCommand();
             try
             {
-                if (!IsConnected)
+                command.CommandText = sql;
+                if (transaction != null) command.Transaction = transaction;
+                if (parameters != null)
                 {
-                    FrameworkLogger.Error("数据库未连接", LogCategory.Core);
-                    return Task.FromResult(DataOperationResult.NotInitialized);
+                    foreach (var entry in parameters)
+                    {
+                        var parameter = command.CreateParameter();
+                        parameter.ParameterName = entry.Key;
+                        parameter.Value = entry.Value ?? DBNull.Value;
+                        command.Parameters.Add(parameter);
+                    }
                 }
-
-                var sql = $"DROP TABLE IF EXISTS {tableName}";
-                var result = ExecuteAsync(sql).GetAwaiter().GetResult();
-                
-                if (result == DataOperationResult.Success)
-                {
-                    FrameworkLogger.Info($"表 '{tableName}' 删除成功", LogCategory.Core);
-                }
-                
-                return Task.FromResult(result);
+                return command;
             }
-            catch (Exception ex)
+            catch
             {
-                FrameworkLogger.Error($"删除表失败: {ex.Message}", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
+                command.Dispose();
+                throw;
             }
         }
 
-        /// <summary>
-        /// 将DataReader映射到对象
-        /// 这是一个简单的实现，实际项目中可能需要更复杂的ORM
-        /// </summary>
-        private T MapReaderToObject<T>(IDataReader reader)
+        private static T MapReaderToObject<T>(IDataRecord reader)
         {
-            try
+            var type = typeof(T);
+            var valueType = Nullable.GetUnderlyingType(type) ?? type;
+            if (IsScalar(valueType)) return (T)ConvertValue(reader.GetValue(0), type);
+
+            var instance = Activator.CreateInstance(type);
+            var properties = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                // 对于基本类型，直接返回
-                if (typeof(T) == typeof(string))
-                {
-                    return (T)(object)reader.GetString(0);
-                }
-                if (typeof(T) == typeof(int))
-                {
-                    return (T)(object)reader.GetInt32(0);
-                }
-                if (typeof(T) == typeof(float))
-                {
-                    return (T)(object)reader.GetFloat(0);
-                }
-                if (typeof(T) == typeof(double))
-                {
-                    return (T)(object)reader.GetDouble(0);
-                }
-                if (typeof(T) == typeof(bool))
-                {
-                    return (T)(object)reader.GetBoolean(0);
-                }
-                if (typeof(T) == typeof(long))
-                {
-                    return (T)(object)reader.GetInt64(0);
-                }
-                if (typeof(T) == typeof(ulong))
-                {
-                    return (T)(object)reader.GetInt64(0);
-                }
-                if (typeof(T) == typeof(byte[]))
-                {
-                    // 处理byte[]类型
-                    var value = reader.GetValue(0);
-                    if (value is byte[] byteArray)
-                    {
-                        return (T)(object)byteArray;
-                    }
-                    else if (value is string str)
-                    {
-                        // 如果是字符串，尝试转换为byte[]
-                        return (T)(object)System.Text.Encoding.UTF8.GetBytes(str);
-                    }
-                    else
-                    {
-                        return default(T);
-                    }
-                }
-                
-                // 对于复杂对象，这里提供基础实现
-                // 实际项目中建议使用专门的ORM库
-                try
-                {
-                    // 检查是否有无参构造函数
-                    var constructor = typeof(T).GetConstructor(Type.EmptyTypes);
-                    if (constructor == null)
-                    {
-                        FrameworkLogger.Error($"类型 {typeof(T).Name} 没有无参构造函数", LogCategory.Core);
-                        return default(T);
-                    }
-                    
-                    var obj = Activator.CreateInstance<T>();
-                    var properties = typeof(T).GetProperties();
-                    
-                    for (int i = 0; i < reader.FieldCount && i < properties.Length; i++)
-                    {
-                        var property = properties[i];
-                        if (property.CanWrite)
-                        {
-                            try
-                            {
-                                var value = reader.GetValue(i);
-                                if (value != DBNull.Value)
-                                {
-                                    property.SetValue(obj, value);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                FrameworkLogger.Warn($"映射属性 {property.Name} 失败: {ex.Message}", LogCategory.Core);
-                            }
-                        }
-                    }
-                    
-                    return obj;
-                }
-                catch (Exception ex)
-                {
-                    FrameworkLogger.Error($"创建对象实例失败: {ex.Message}", LogCategory.Core);
-                    return default(T);
-                }
+                if (property.GetSetMethod() != null && property.GetIndexParameters().Length == 0)
+                    properties[property.Name] = property;
             }
-            catch (Exception ex)
+            var fields = new Dictionary<string, FieldInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
-                FrameworkLogger.Error($"对象映射失败: {ex.Message}", LogCategory.Core);
-                return default(T);
+                if (!field.IsInitOnly && !field.IsLiteral) fields[field.Name] = field;
+            }
+            for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
+            {
+                var name = reader.GetName(ordinal);
+                if (properties.TryGetValue(name, out var property))
+                    property.SetValue(instance, ConvertValue(reader.GetValue(ordinal), property.PropertyType));
+                else if (fields.TryGetValue(name, out var field))
+                    field.SetValue(instance, ConvertValue(reader.GetValue(ordinal), field.FieldType));
+            }
+            return (T)instance;
+        }
+
+        private static bool IsScalar(Type type)
+        {
+            return type == typeof(object) || type.IsPrimitive || type.IsEnum || type == typeof(string)
+                || type == typeof(decimal) || type == typeof(DateTime) || type == typeof(DateTimeOffset)
+                || type == typeof(TimeSpan) || type == typeof(Guid) || type == typeof(byte[]);
+        }
+
+        private static object ConvertValue(object value, Type targetType)
+        {
+            if (value == null || value == DBNull.Value)
+                return targetType.IsValueType && Nullable.GetUnderlyingType(targetType) == null ? Activator.CreateInstance(targetType) : null;
+            var type = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            if (type.IsInstanceOfType(value)) return value;
+            if (type.IsEnum)
+            {
+                if (value is string name) return Enum.Parse(type, name, ignoreCase: true);
+                return Enum.ToObject(type, Convert.ChangeType(value, Enum.GetUnderlyingType(type), CultureInfo.InvariantCulture));
+            }
+            if (type == typeof(Guid)) return value is byte[] guidBytes ? new Guid(guidBytes) : Guid.Parse(Convert.ToString(value, CultureInfo.InvariantCulture));
+            if (type == typeof(DateTimeOffset)) return value is DateTime date ? new DateTimeOffset(date) : DateTimeOffset.Parse(Convert.ToString(value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+            if (type == typeof(TimeSpan)) return TimeSpan.Parse(Convert.ToString(value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+            if (type == typeof(DateTime) && value is string timestamp) return DateTime.Parse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            if (type == typeof(byte[]) && value is string text) return System.Text.Encoding.UTF8.GetBytes(text);
+            return Convert.ChangeType(value, type, CultureInfo.InvariantCulture);
+        }
+
+        internal static void LogFailure(string operation, Exception exception)
+        {
+            try { FrameworkLogger.Error($"{operation}: {exception.Message}", LogCategory.Core); }
+            catch
+            {
+                // Host diagnostics must not interrupt rollback or resource cleanup.
             }
         }
     }
 
-    /// <summary>
-    /// ADO.NET 事务实现；保留 SQLiteTransaction 名称以兼容已有调用。
-    /// </summary>
+    /// <summary>ADO.NET 事务实现；保留 SQLiteTransaction 名称与构造函数以兼容已有调用。</summary>
     public class SQLiteTransaction : IDatabaseTransaction
     {
-        private readonly IDbTransaction _transaction;
-        private readonly IDbConnection _connection;
+        private IDbTransaction transaction;
+        private IDbConnection connection;
+        private Action<SQLiteTransaction> onCompleted;
 
-        public SQLiteTransaction(IDbTransaction transaction)
+        public SQLiteTransaction(IDbTransaction transaction) : this(transaction, null) { }
+
+        internal SQLiteTransaction(IDbTransaction transaction, Action<SQLiteTransaction> onCompleted)
         {
-            _transaction = transaction;
-            _connection = transaction.Connection;
+            this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            connection = transaction.Connection;
+            this.onCompleted = onCompleted;
         }
 
-        public Task<DataOperationResult> CommitAsync()
+        internal IDbTransaction NativeTransaction => transaction;
+
+        public Task<DataOperationResult> CommitAsync() => Task.FromResult(Complete(commit: true));
+        public Task<DataOperationResult> RollbackAsync() => Task.FromResult(Complete(commit: false));
+
+        private DataOperationResult Complete(bool commit)
         {
+            var pending = transaction;
+            if (pending == null) return DataOperationResult.NotInitialized;
+            transaction = null;
+            connection = null;
+            var completion = onCompleted;
+            onCompleted = null;
+            var result = DataOperationResult.Success;
             try
             {
-                _transaction.Commit();
-                FrameworkLogger.Info("事务提交成功", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Success);
+                if (commit) pending.Commit();
+                else pending.Rollback();
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"事务提交失败: {ex.Message}", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
+                AdoDatabaseProvider.LogFailure(commit ? "事务提交失败" : "事务回滚失败", ex);
+                result = DataOperationResult.Failed;
+                if (commit)
+                {
+                    try { pending.Rollback(); }
+                    catch (Exception rollbackError) { AdoDatabaseProvider.LogFailure("提交失败后回滚事务失败", rollbackError); }
+                }
             }
-        }
-
-        public Task<DataOperationResult> RollbackAsync()
-        {
-            try
+            finally
             {
-                _transaction.Rollback();
-                FrameworkLogger.Info("事务回滚成功", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Success);
+                try { pending.Dispose(); }
+                catch (Exception ex) { AdoDatabaseProvider.LogFailure("释放事务失败", ex); result = DataOperationResult.Failed; }
+                finally { completion?.Invoke(this); }
             }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"事务回滚失败: {ex.Message}", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
-            }
+            return result;
         }
 
         public Task<DataOperationResult> ExecuteAsync(string sql, Dictionary<string, object> parameters = null)
         {
+            if (transaction == null) return Task.FromResult(DataOperationResult.NotInitialized);
             try
             {
-                using (var command = _connection.CreateCommand())
-                {
-                    command.Transaction = _transaction;
-                    command.CommandText = sql;
-                    
-                    // 添加参数
-                    if (parameters != null)
-                    {
-                        foreach (var param in parameters)
-                        {
-                            var parameter = command.CreateParameter();
-                            parameter.ParameterName = param.Key;
-                            parameter.Value = param.Value ?? DBNull.Value;
-                            command.Parameters.Add(parameter);
-                        }
-                    }
-                    
+                using (var command = AdoDatabaseProvider.CreateCommand(connection, transaction, sql, parameters))
                     command.ExecuteNonQuery();
-                    FrameworkLogger.Info($"事务中SQL执行成功: {sql}", LogCategory.Core);
-                    return Task.FromResult(DataOperationResult.Success);
-                }
+                return Task.FromResult(DataOperationResult.Success);
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"事务中执行SQL命令失败: {ex.Message}", LogCategory.Core);
+                AdoDatabaseProvider.LogFailure("事务中执行SQL命令失败", ex);
                 return Task.FromResult(DataOperationResult.Failed);
             }
         }
 
-        public void Dispose()
-        {
-            _transaction?.Dispose();
-        }
+        public void Dispose() { Complete(commit: false); }
     }
 }

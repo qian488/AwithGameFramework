@@ -11,6 +11,7 @@ namespace AwithGameFrame.Core.DI
     {
         private static readonly Dictionary<Type, object> _instances = new Dictionary<Type, object>();
         private static readonly Dictionary<Type, Func<object>> _factories = new Dictionary<Type, Func<object>>();
+        [ThreadStatic] private static HashSet<Type> _resolvingTypes;
 
         /// <summary>
         /// 注册服务实例（立即创建）
@@ -62,10 +63,24 @@ namespace AwithGameFrame.Core.DI
 
             if (_factories.TryGetValue(type, out var factory))
             {
-                var created = (TInterface)factory();
-                _instances[type] = created;
-                _factories.Remove(type);
-                return created;
+                var resolving = _resolvingTypes ?? (_resolvingTypes = new HashSet<Type>());
+                if (!resolving.Add(type))
+                    throw new InvalidOperationException($"Circular service factory dependency detected while resolving {type.FullName}.");
+
+                try
+                {
+                    var created = (TInterface)factory();
+                    if (created == null)
+                        throw new InvalidOperationException($"The service factory for {type.FullName} returned null.");
+
+                    _instances[type] = created;
+                    _factories.Remove(type);
+                    return created;
+                }
+                finally
+                {
+                    resolving.Remove(type);
+                }
             }
 
             return null;

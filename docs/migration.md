@@ -29,6 +29,14 @@ EventCenter 使用 System.Action 及泛型 Action。方法组与 lambda 可继�
 
 原 UniTaskProvider 实际基于 Task 实现，已改为 Core.Providers.TaskAsyncProvider；Unity 提供过时名称的兼容类。
 
+## 模块启动与失败恢复
+
+在 Bootstrap 前完成模块注册。运行中新增模块、生命周期转换期间重入启动或初始化途中关闭，现在会明确抛出 InvalidOperationException。已运行时重复 Bootstrap、已关闭时重复 Shutdown 保持幂等。
+
+Initialize / PostInitialize 失败会逆序关闭已经开始初始化的模块，包含初始化到一半抛错的模块。自定义 IModule.Shutdown 必须能清理部分初始化状态。回滚后保留注册，可修正依赖后重试；回滚自身也失败时以 AggregateException 同时报告启动和清理异常。正常 Shutdown 会继续关闭其他模块，再清空注册并集中报告清理异常；尚未启动的模块只移除注册。
+
+EventCenter.Shutdown 现在清除监听器；重启后需要重新订阅。ServiceLocator 的循环工厂依赖及返回 null 的工厂会明确失败，失败工厂保留以便修正依赖后重试。
+
 ## 日志和时间
 
 UnityPlatform 自动接入 Unity 日志、Application.persistentDataPath 和 Unity 时间；UnityFrameDriver 驱动性能监控与日志刷新。其他宿主设置 LoggingHost.Output、LoggingHost.DataPath、TimeHelper.TimeSource。纯日历时间和性能计时无需游戏时钟；游戏时间方法在没有宿主时明确失败。
@@ -50,15 +58,21 @@ CreateConfig / UseUnityPaths(config) 使用旧 JSON 目录 persistentDataPath/Da
 
 默认数据库在 DataRootPath/DatabaseName；旧数据库可能位于工程工作目录，迁移前通过 config.StorageConfigs[StorageType.Database] = new StorageConfig { databasePath = existingPath } 指定已有文件。本仓库原 game_data.db 随示例工程移到 samples/Unity/game_data.db。
 
-Unity 自动安装 PlayerPrefs 与 SQLite 驱动工厂；数据库存储仅在 enableDatabase 为 true 时注册。DataPersistenceAPI 的默认提供者只有 JSON/二进制。初始化后不能替换提供者；等待业务操作结束并调用 ShutdownAsync，再注册和初始化。
+Unity 自动安装 PlayerPrefs 与 SQLite 驱动工厂；数据库存储仅在 enableDatabase 为 true 时注册。DataPersistenceAPI 的默认提供者只有 JSON/二进制。初始化后不能替换提供者；停止业务继续发起请求，再 await ShutdownAsync，然后重新注册和初始化。
+
+ShutdownAsync 开始后 IsInitialized 立即为 false，新请求被拒绝；通过 DataPersistenceAPI 已经开始的操作完成后才释放提供者。取出提供者直接调用的操作仍由宿主自行等待。初始化失败会释放本次所有提供者并清空注册，重试前重新注册自定义提供者；同一提供者实例注册在多个存储类型下只初始化、释放一次。
 
 SQLiteDatabaseProvider 现仅负责绑定 Unity 工程内的 Mono.Data.Sqlite 连接；数据库操作移至 Data 的 AdoDatabaseProvider，通过连接工厂接入宿主驱动，并保留原 SQLite 查询约定。
+
+数据库对象映射改为按列名匹配公开可写属性/字段，忽略大小写；需要用 SQL 列别名匹配 DTO 成员，不再依赖属性反射顺序。类型转换失败返回 Failed。提交、回滚或 Dispose 后事务已结束，再次提交或执行返回 NotInitialized；重新初始化会关闭旧连接。单个连接仍需顺序使用。
 
 SaveSettingsAsync/LoadSettingsAsync 现在使用配置的默认存储。旧版强制使用 PlayerPrefs。需要继续读取旧 Unity 用户设置时显式调用 SaveAsync/LoadAsync，并传 StorageType.PlayerPrefs；之后可按业务规则迁移到新存储。SaveGame 元数据也从默认存储恢复；旧版只从 PlayerPrefs 推测槽位，未保存可靠的恢复索引，必要时由项目迁移已有槽位。
 
 普通字段 JSON 可读取，新增格式支持可写属性和基础类型；Unity 私有 SerializeField 字段需要公开 DTO 或显式 Newtonsoft 注解。MessagePack/Protobuf 需要注册真实编码器，不再假装实现或静默回退。具体文件格式兼容说明以 Data README 为准。
 
 压缩序列化器写入 v2，继续读取 v1 的布尔值、原始字符串和区域数字；JSON 编码器也能读取旧工厂写出的 v1 二进制/Base64 内容。BinaryFileStorage 的独立文件封装保持 v1。文件存储键现在是单个文件名；旧版带目录分隔符的键应迁移为独立存储目录与扁平键名。
+
+文件覆盖写入改为同目录临时文件完成后替换，保留现有格式；替换失败时保留原文件并返回 Failed。宿主文件系统需要支持 File.Replace。泛型读取空白/非法 JSON、非法编码、截断封装或损坏 GZip 时返回 Corrupted，调用方应据此提示恢复或选择其他存档。原始字节读取不增加内容校验。保存与读取的并发协调只覆盖同一进程内的同路径操作，删除/清空的并发顺序由业务管理。
 
 ## 验证
 

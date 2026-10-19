@@ -59,7 +59,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             try
             {
                 var filePath = GetFilePath(key);
-                File.WriteAllBytes(filePath, data);
+                FileStorageIO.WriteAllBytes(filePath, data);
                 FrameworkLogger.Debug($"Saved binary data to: {filePath}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
             }
@@ -94,18 +94,16 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     bytes = CompressBytes(bytes);
                 }
                 
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-                using (var writer = new BinaryWriter(fileStream))
+                FileStorageIO.Write(filePath, fileStream =>
                 {
-                    // 写入版本信息
-                    writer.Write(1); // 数据版本
-                    
-                    // 写入数据长度
-                    writer.Write(bytes.Length);
-                    
-                    // 写入数据
-                    writer.Write(bytes);
-                }
+                    using (var writer = new BinaryWriter(fileStream, System.Text.Encoding.UTF8, leaveOpen: true))
+                    {
+                        // Keep the existing version 1 [version][length][payload] format.
+                        writer.Write(1);
+                        writer.Write(bytes.Length);
+                        writer.Write(bytes);
+                    }
+                });
                 
                 FrameworkLogger.Debug($"Data saved to binary file: {key}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
@@ -135,7 +133,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     return Task.FromResult<(byte[], DataOperationResult)>((null, DataOperationResult.NotFound));
                 }
 
-                var data = File.ReadAllBytes(filePath);
+                var data = FileStorageIO.ReadAllBytes(filePath);
                 FrameworkLogger.Debug($"Loaded binary data from: {filePath}", LogCategory.Core);
                 return Task.FromResult<(byte[], DataOperationResult)>((data, DataOperationResult.Success));
             }
@@ -164,7 +162,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     return Task.FromResult((default(T), DataOperationResult.NotFound));
                 }
                 
-                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                using (var fileStream = new MemoryStream(FileStorageIO.ReadAllBytes(filePath), writable: false))
                 using (var reader = new BinaryReader(fileStream))
                 {
                     // 读取版本信息
@@ -179,6 +177,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     
                     // 读取数据
                     var bytes = reader.ReadBytes(dataLength);
+                    if (bytes.Length != dataLength) throw new InvalidDataException("The binary file is truncated.");
                     
                     // 解压缩
                     if (_config.EnableCompression)
@@ -192,8 +191,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
                         bytes = DecryptBytes(bytes);
                     }
                     
-                    var json = System.Text.Encoding.UTF8.GetString(bytes);
-                    var data = JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings());
+                    var json = FileStorageIO.DecodeJson(bytes);
+                    var data = FileStorageIO.DeserializeJson<T>(json);
                     
                     FrameworkLogger.Debug($"Data loaded from binary file: {key}", LogCategory.Core);
                     return Task.FromResult((data, DataOperationResult.Success));
@@ -202,7 +201,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             catch (Exception ex)
             {
                 FrameworkLogger.Error($"Failed to load data from binary file: {ex.Message}", LogCategory.Core);
-                return Task.FromResult((default(T), DataOperationResult.Failed));
+                return Task.FromResult((default(T), FileStorageIO.IsCorruptData(ex) ? DataOperationResult.Corrupted : DataOperationResult.Failed));
             }
         }
 
@@ -392,53 +391,12 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         private byte[] CompressBytes(byte[] data)
         {
-            // 使用GZip压缩
-            if (data == null || data.Length == 0)
-                return data;
-
-            try
-            {
-                using (var memoryStream = new MemoryStream())
-                {
-                    using (var gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress))
-                    {
-                        gzipStream.Write(data, 0, data.Length);
-                    }
-                    return memoryStream.ToArray();
-                }
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"Failed to compress bytes: {ex.Message}", LogCategory.Core);
-                return data;
-            }
+            return FileStorageIO.Compress(data);
         }
 
         private byte[] DecompressBytes(byte[] compressedData)
         {
-            // 使用GZip解压缩
-            if (compressedData == null || compressedData.Length == 0)
-                return compressedData;
-
-            try
-            {
-                using (var memoryStream = new MemoryStream(compressedData))
-                {
-                    using (var gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Decompress))
-                    {
-                        using (var resultStream = new MemoryStream())
-                        {
-                            gzipStream.CopyTo(resultStream);
-                            return resultStream.ToArray();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"Failed to decompress bytes: {ex.Message}", LogCategory.Core);
-                return compressedData;
-            }
+            return FileStorageIO.Decompress(compressedData);
         }
 
         private long GetAvailableSpace()

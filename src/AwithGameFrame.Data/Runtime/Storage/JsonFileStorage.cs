@@ -59,7 +59,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             try
             {
                 var filePath = GetFilePath(key);
-                File.WriteAllBytes(filePath, data);
+                FileStorageIO.WriteAllBytes(filePath, data);
                 FrameworkLogger.Debug($"Saved binary data to: {filePath}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
             }
@@ -91,11 +91,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 if (_config.EnableCompression)
                 {
                     var compressed = CompressString(json);
-                    File.WriteAllBytes(filePath, compressed);
+                    FileStorageIO.WriteAllBytes(filePath, compressed);
                 }
                 else
                 {
-                    File.WriteAllText(filePath, json);
+                    FileStorageIO.WriteAllText(filePath, json);
                 }
                 
                 FrameworkLogger.Debug($"Data saved to JSON file: {key}", LogCategory.Core);
@@ -126,7 +126,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     return Task.FromResult<(byte[], DataOperationResult)>((null, DataOperationResult.NotFound));
                 }
 
-                var data = File.ReadAllBytes(filePath);
+                var data = FileStorageIO.ReadAllBytes(filePath);
                 FrameworkLogger.Debug($"Loaded binary data from: {filePath}", LogCategory.Core);
                 return Task.FromResult<(byte[], DataOperationResult)>((data, DataOperationResult.Success));
             }
@@ -159,12 +159,12 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 
                 if (_config.EnableCompression)
                 {
-                    var compressed = File.ReadAllBytes(filePath);
+                    var compressed = FileStorageIO.ReadAllBytes(filePath);
                     json = DecompressString(compressed);
                 }
                 else
                 {
-                    json = File.ReadAllText(filePath);
+                    json = FileStorageIO.ReadAllText(filePath);
                 }
                 
                 if (_config.EnableEncryption)
@@ -172,7 +172,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     json = DecryptString(json);
                 }
                 
-                var data = JsonConvert.DeserializeObject<T>(json, PortableJson.CreateSettings());
+                var data = FileStorageIO.DeserializeJson<T>(json);
                 
                 FrameworkLogger.Debug($"Data loaded from JSON file: {key}", LogCategory.Core);
                 return Task.FromResult((data, DataOperationResult.Success));
@@ -180,7 +180,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             catch (Exception ex)
             {
                 FrameworkLogger.Error($"Failed to load data from JSON file: {ex.Message}", LogCategory.Core);
-                return Task.FromResult((default(T), DataOperationResult.Failed));
+                return Task.FromResult((default(T), FileStorageIO.IsCorruptData(ex) ? DataOperationResult.Corrupted : DataOperationResult.Failed));
             }
         }
 
@@ -355,75 +355,25 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (string.IsNullOrEmpty(encryptedText))
                 return encryptedText;
 
-            try
+            var bytes = Convert.FromBase64String(encryptedText);
+            var encrypted = FileStorageIO.DecodeJson(bytes);
+            var key = _config.EncryptionKey ?? "DefaultKey";
+            var result = new char[encrypted.Length];
+            for (int i = 0; i < encrypted.Length; i++)
             {
-                var bytes = Convert.FromBase64String(encryptedText);
-                var encrypted = System.Text.Encoding.UTF8.GetString(bytes);
-                var key = _config.EncryptionKey ?? "DefaultKey";
-                var result = new char[encrypted.Length];
-                
-                for (int i = 0; i < encrypted.Length; i++)
-                {
-                    result[i] = (char)(encrypted[i] ^ key[i % key.Length]);
-                }
-                
-                return new string(result);
+                result[i] = (char)(encrypted[i] ^ key[i % key.Length]);
             }
-            catch
-            {
-                return encryptedText; // 如果解密失败，返回原文本
-            }
+            return new string(result);
         }
 
         private byte[] CompressString(string text)
         {
-            // 使用GZip压缩
-            if (string.IsNullOrEmpty(text))
-                return new byte[0];
-
-            try
-            {
-                using (var memoryStream = new MemoryStream())
-                {
-                    using (var gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress))
-                    {
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(text);
-                        gzipStream.Write(bytes, 0, bytes.Length);
-                    }
-                    return memoryStream.ToArray();
-                }
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"Failed to compress string: {ex.Message}", LogCategory.Core);
-                return System.Text.Encoding.UTF8.GetBytes(text);
-            }
+            return FileStorageIO.Compress(System.Text.Encoding.UTF8.GetBytes(text));
         }
 
         private string DecompressString(byte[] compressed)
         {
-            // 使用GZip解压缩
-            if (compressed == null || compressed.Length == 0)
-                return string.Empty;
-
-            try
-            {
-                using (var memoryStream = new MemoryStream(compressed))
-                {
-                    using (var gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Decompress))
-                    {
-                        using (var reader = new StreamReader(gzipStream))
-                        {
-                            return reader.ReadToEnd();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"Failed to decompress string: {ex.Message}", LogCategory.Core);
-                return System.Text.Encoding.UTF8.GetString(compressed);
-            }
+            return FileStorageIO.DecodeJson(FileStorageIO.Decompress(compressed));
         }
 
         private long GetAvailableSpace()
