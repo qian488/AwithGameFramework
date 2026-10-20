@@ -38,6 +38,8 @@ powershell -File tools/verify-godot.ps1 -EditorPath 'Godot .NET console executab
 
 CI 包含通用运行时与固定版本 Godot Linux 编译/运行任务，Godot 下载检查官方 SHA-512。新增 CI 配置的远端运行结果须以实际流水线为准；本地 Windows 验收不能等同 Linux CI 已通过。Unity CI 仍需要编辑器/许可证环境，当前通过本机脚本验收。
 
+2026-10-20 收到的 GitHub Actions 结果中，`verify` 通过，`godot` 在下载校验阶段因 `rg: command not found` 失败，尚未执行 Godot 编译/运行。工作流现改用 `grep -E` 精确选择官方 SHA-512 条目，无需额外安装 ripgrep。本地 Git Bash 在不提供 `rg` 的环境中执行同一下载、校验、解压步骤通过，损坏文件和缺失校验条目均会拒绝；这项检查不替代 Ubuntu 原生运行，修复后的远端结果仍需重新执行流水线确认。
+
 ## 前轮验收记录（不足以关闭目标）
 
 2026-10-19 本轮在基线 commit `4090382` 上验证工作区代码，产物报告记录 `workingTreeModified: true`。下列日志均为忽略提交的本机证据；其他机器应重新运行脚本。
