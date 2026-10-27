@@ -4,7 +4,7 @@
 
 - 先读根 README.md 与 GUIDE.md 的目录/依赖图，再读目标包 README。
 - 通用运行时：src/AwithGameFrame.Core、Data、Gameplay、Networking，各包 Runtime/ 是唯一源码。
-- 引擎实现：adapters/unity、adapters/godot；演示分别位于 samples/Unity、samples/Godot；共享应用样例在 samples/Shared。
+- 引擎实现：adapters/unity、adapters/godot；Unity 旧服务位于 adapters/unity-compat，DOTween/SQLite 位于独立可选包 adapters/unity-dotween、adapters/unity-sqlite。演示分别位于 samples/Unity、samples/Godot；共享应用样例在 samples/Shared。
 - 自动测试：tests；无图形入口：samples/Headless；验证：tools。
 - docs/legacy 和各包 Documentation~/legacy 是历史资料，不是当前需求或开发规则。
 - 不默认扫描 samples/Unity/Assets/Plugins、samples/Unity/Assets/Packages 或 artifacts；先限制 rg 搜索范围。
@@ -30,3 +30,11 @@
 - 配置/协议源在 samples/Shared/Configuration 与 samples/Protocol；生成命令 tools/generate-config.ps1、tools/generate-protocol.ps1。不要手改 Generated；verify 自动检查产物和兼容性基线。
 - 引擎验证：tools/verify-unity.ps1 -RunSmoke -BuildPlayer；tools/verify-godot.ps1（-Export 可测试 Windows .NET 导出）。编辑器/模板路径由本机显式提供，说明见 docs/validation.md。
 - 完成后说明实际变化、验证结果与剩余限制，不把架构可扩展描述成已支持所有引擎。
+
+## 可维护的 Agent 任务
+
+- 开发期工具与模板入口是 `agent/README.md`、`agent/templates`、`templates/portable-feature`；实现位于 `tools/AgentKit`，不加入游戏运行时依赖。
+- 复杂或需要交接的任务先明确目标、读写范围、验收及上下文；可用 `tools/agent.ps1 new/context/plan/run/report` 保存过程，命令见入口文档。模板须按本次真实需求和授权调整，不能当作通用授权。
+- 保留任务创建前的未提交修改；检查相对任务基线的变化，不自动 stash/reset，也不自动提交。公共文档上的原有修改仍须保留。
+- 计划和确认绑定具体工具、输入及当前状态；已有明确授权可记录来源并继续执行，不重复询问。不得伪造人工确认或最终评审；机器检查通过报告为待评审，不冒充人类验收。
+- 上下文与任务产物只保存所需数据，不录入凭据。工具清单是执行策略，外部脚本仍有系统实际权限；不要将它描述为 OS 沙箱或模型质量评测平台。

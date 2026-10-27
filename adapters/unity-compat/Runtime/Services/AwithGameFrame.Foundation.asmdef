@@ -1,0 +1,19 @@
+{
+  "name": "AwithGameFrame.Foundation",
+  "rootNamespace": "AwithGameFrame.Foundation",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Unity",
+    "AwithGameFrame.Data",
+    "UniTask",
+    "UnityEngine.UI",
+    "AwithGameFrame.Unity.Legacy"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": []
+}

@@ -49,7 +49,7 @@ namespace AwithGameFrame.Extensions.Presentation
 
     public interface IViewFactory
     {
-        /// <summary>Return every created view, including late success after cancellation, so the service can release it.</summary>
+        /// <summary>Return every created view, including late success after cancellation, so the service can release it. The resource scope is borrowed; only the service disposes it.</summary>
         Task<IView> CreateAsync(ViewRequest request, ResourceScope resources, CancellationToken cancellationToken);
     }
 
@@ -60,8 +60,8 @@ namespace AwithGameFrame.Extensions.Presentation
         { this.owner = owner; InstanceId = id; Request = request; View = view; Resources = resources; }
         public long InstanceId { get; }
         public ViewRequest Request { get; }
-        public IView View { get; }
-        public ResourceScope Resources { get; }
+        internal IView View { get; }
+        internal ResourceScope Resources { get; }
         public bool IsOpen => owner.Contains(this);
         public bool IsFocused => ReferenceEquals(owner.Focused, this);
         public Task CloseAsync() => owner.CloseAsync(this);

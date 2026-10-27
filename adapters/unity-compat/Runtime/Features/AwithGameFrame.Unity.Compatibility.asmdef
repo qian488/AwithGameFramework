@@ -1,0 +1,11 @@
+{
+  "name": "AwithGameFrame.Unity.Compatibility",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Unity",
+    "AwithGameFrame.Unity.Legacy",
+    "AwithGameFrame.Gameplay",
+    "AwithGameFrame.Extensions"
+  ],
+  "autoReferenced": false
+}

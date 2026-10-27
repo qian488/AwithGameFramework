@@ -9,6 +9,10 @@
 
 `Presentation.ViewService` 用 `IViewFactory` 创建视图并拥有每个视图的 `ResourceScope`；按 layer/创建顺序排序、选择焦点，最上层 modal 阻断下层输入。重复 key 复用 handle，选项变化需先关闭再打开。`ViewFlow` 可接下方导航栈，Exit 关闭视图、再次 Enter 重新创建；导航使用的 key 应由该流程独占，避免手动打开与导航共享同一 handle。`PresentationModule` 默认依赖 `resources` 模块，宿主停止时先关闭视图再释放资源。不要在视图生命周期回调中重入当前服务，可通过宿主 Dispatcher 排队下一次操作。
 
+`ViewLayoutRules.Calculate(items)` 是不调用原生视图的纯计算入口：输入 `ViewLayoutItem(instanceId, request)`，返回按 layer / instanceId 排列的只读 `ViewLayoutEntry` 集合及各自 `ViewState`，不修改输入。最上层 modal 以下的视图被遮挡并禁用输入，焦点只从该 modal 及其上方选择；没有可聚焦视图时不产生焦点。服务只负责捕获事实、应用结果与管理生命周期。
+
+应用通过 `ViewHandle` 读取 `InstanceId`、`Request`、`IsOpen`、`IsFocused`，通过 `CloseAsync()`（或 `DisposeAsync()`）请求服务关闭；`SceneHandle` 提供只读标识、`IsLoaded` 与 `UnloadAsync()`（或 `DisposeAsync()`）。句柄不公开原生实例或资源 scope。工厂和场景后端收到的 `ResourceScope` 是借用资源入口，只能由服务释放；引擎控件初始化和绑定在工厂创建的视图内部完成，先销毁原生实例再归还资源。
+
 `InputService(host.Events, new ViewInputRouter(views))` 在发布玩法事件前路由视图，`ViewInput.Payload` 保留完整 `InputActionEvent`。视图处理动作或顶层 modal 都会消费输入；已经交付玩法的持键会收到一次 `Released`，关闭 modal 后继续持键保持抑制，物理释放后再次按下才恢复。`InputUpdateResult.Events` 只含实际交付玩法的事件，`Errors` 收集路由和监听异常；路由异常按已消费处理，并释放此前玩法状态。输入与路由必须在创建线程运行；路由或监听回调不能重入输入修改，视图输入回调不能直接打开/关闭视图，应通过 Dispatcher 排队。
 
 `CaptureBindings()` 返回只读的完整绑定快照；`ApplyBindings(snapshot)` 在全部验证通过后一次替换，支持同 context 内交换控件，不改变 context 的优先级、modal 或启用状态。快照必须精确覆盖所有已有 action；未知、重复、缺失、冲突与非法参数均在提交前拒绝。成功提交释放旧按下状态；释放监听异常在提交后报告，绑定已更新。

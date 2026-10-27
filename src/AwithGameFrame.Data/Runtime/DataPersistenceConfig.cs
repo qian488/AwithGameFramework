@@ -198,6 +198,21 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         #endregion
 
+        // Session routing and framework-owned nested options do not retain caller-owned containers.
+        // Custom provider options are opaque; their provider owns capturing any mutable contents.
+        internal DataPersistenceConfig CreateSnapshot()
+        {
+            var snapshot = (DataPersistenceConfig)MemberwiseClone();
+            snapshot.SerializationConfig = (SerializationConfig ?? new SerializationConfig()).Copy();
+            snapshot.StorageConfigs = new Dictionary<StorageType, object>();
+            if (StorageConfigs != null)
+                foreach (var pair in StorageConfigs)
+                    snapshot.StorageConfigs.Add(pair.Key, pair.Value is StorageConfig storage
+                        ? storage.CreateSnapshot()
+                        : pair.Value is SerializationConfig serialization ? serialization.Copy() : pair.Value);
+            return snapshot;
+        }
+
         // Capture validated options once. Later edits to a caller's mutable config must not
         // bypass algorithm validation or change how an already opened file is decoded.
         internal DataPersistenceConfig CreateFileStorageSnapshot()
@@ -231,7 +246,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (DefaultSerializationFormat != SerializationFormat.Json || PreferredSerializationFormat != SerializationFormat.Json)
                 throw new NotSupportedException("Built-in typed file storage persists JSON payloads; use an external serializer with the raw byte API for other formats.");
 
-            var snapshot = (DataPersistenceConfig)MemberwiseClone();
+            var snapshot = CreateSnapshot();
             snapshot.SerializationConfig = (SerializationConfig ?? new SerializationConfig()).CreateSnapshot(false);
             snapshot.SerializationConfig.PrettyPrint = PrettyPrint;
             return snapshot;

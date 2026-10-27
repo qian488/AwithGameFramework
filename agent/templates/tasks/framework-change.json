@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "framework-change",
+  "objective": "在明确授权的 Settings 范围内实现一项行为变化，保持通用逻辑与引擎适配边界，并交付测试和人工可审阅的证据。",
+  "readPaths": [
+    "AGENTS.md",
+    "README.md",
+    "GUIDE.md",
+    "src/AGENTS.md",
+    "src/AwithGameFrame.Gameplay/README.md",
+    "src/AwithGameFrame.Gameplay/Runtime/Settings",
+    "tests/AGENTS.md",
+    "tests/AwithGameFrame.Core.Tests/UserSettingsTests.cs",
+    "tests/AwithGameFrame.Core.Tests/UserSettingsRulesTests.cs",
+    "docs/functional-core-pilot.md"
+  ],
+  "writePaths": [
+    "src/AwithGameFrame.Gameplay/Runtime/Settings",
+    "tests/AwithGameFrame.Core.Tests/UserSettingsTests.cs",
+    "tests/AwithGameFrame.Core.Tests/UserSettingsRulesTests.cs",
+    "docs"
+  ],
+  "protectedPaths": [
+    "docs/legacy",
+    "src/AwithGameFrame.Gameplay/Documentation~/legacy"
+  ],
+  "allowedTools": [
+    "portable-verify"
+  ],
+  "requiredChecks": [
+    "portable-verify"
+  ],
+  "acceptance": [
+    "将本任务目标替换为具体输入、预期行为和边界；规则变化由无需引擎的行为测试覆盖，副作用或并发变化保留服务回归。",
+    "相对创建时基线的变化均位于授权范围；需要保留的已有修改已列入 protectedPaths 并保持原样。",
+    "通用 Runtime 不依赖引擎；公共 API 或兼容性变化已更新相应文档，受影响的引擎验证与无法执行的检查均如实记录。"
+  ],
+  "parameters": {}
+}

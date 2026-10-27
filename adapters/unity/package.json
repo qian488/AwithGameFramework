@@ -2,7 +2,7 @@
   "name": "com.awithgameframe.unity",
   "version": "0.2.0",
   "displayName": "AwithGameFrame Unity Adapter",
-  "description": "Unity lifecycle, resources, UI, audio, input, scenes and PlayerPrefs adapters.",
+  "description": "Unity instance host, resources, UI, audio, input and scene backends without legacy plugin dependencies.",
   "unity": "2022.3",
   "dependencies": {
     "com.awithgameframe.core": "0.2.0",

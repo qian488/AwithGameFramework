@@ -1,8 +1,12 @@
 # Godot .NET 适配
 
-基线 Godot **4.5.2 .NET** / .NET 8。`GameHostNode` 创建独立 `GameHost`，在 `_Process(double)` 中用 `Time.GetTicksUsec()` 的单调差值提供未缩放秒数，不把受 `Engine.TimeScale` 影响的 delta 再送入宿主。游戏缩放由 `Host.Clock.TimeScale` 控制；应用恢复时重置时间基线，避免累计后台间隔。节点转发应用暂停/恢复，并在窗口关闭时等待异步清理。覆写 `ConfigureHost` 注册模块，`OnStartedAsync` 中启动应用操作。
+基线 Godot **4.5.2 .NET** / .NET 8。`GameHostNode` 创建独立 `GameHost`，在 `_Process(double)` 中用 `Time.GetTicksUsec()` 的单调差值提供未缩放秒数，不把受 `Engine.TimeScale` 影响的 delta 再送入宿主。游戏缩放由 `Host.Clock.TimeScale` 控制；应用恢复时重置时间基线，避免累计后台间隔。节点记录应用暂停/恢复的最新状态，启动完成后先回放，再调用 `OnStartedAsync`；重复通知及异步切换期间的新通知会串行收敛，不重复 Resume。覆写 `ConfigureHost` 注册模块，`OnStartedAsync` 中启动应用操作。
 
-删除宿主 Node 或主动 `SceneTree.Quit()` 前先 `await ShutdownAsync()`。Godot 的 `_ExitTree` 不可等待异步清理，故该回调只提供尽力清理；正常退出应走显式关闭路径。
+同一 SceneTree 中的宿主共用一个内部退出协调节点：首个宿主保存并接管 `AutoAcceptQuit`，根窗口关闭时同时发起所有宿主的停止，等待全部清理后再退出；重复关闭请求合并。最后一个宿主完成停止后归还原有退出策略，初始化失败也释放注册。默认启动错误会在清理其他宿主后以失败码退出；应用可覆写 `OnFailureAsync` 展示可恢复的错误，`Failure` 仍保留实际异常。
+
+`OnStartedAsync` 是应用工作流，不是模块生命周期。它可以主动 `await ShutdownAsync()`；关闭只等待 Host 的模块停止，不反向等待这个回调。工作流应观察 `Host.Context.LifetimeToken` 并结束，关闭后迟到的取消或对象释放异常不会作为新的启动失败去关闭其他宿主。需要在销毁资源前完成的异步操作应归属模块，由模块 `StopAsync` 取消并等待；不能把必须等待的清理只留给 `OnStartedAsync` 的后续代码。关闭任务在调用停止逻辑前发布，生命周期取消回调或 Stop 回调同步重入关闭时，会加入同一任务。
+
+删除宿主 Node 前先 `await ShutdownAsync()`；直接调用 `SceneTree.Quit()` 会绕过窗口关闭协调，需要先显式等待所有宿主停止。Godot 的 `_ExitTree` 不可等待异步清理；协调节点会继续泵已离树宿主的 Dispatcher，直到清理结束，但不能延长被外部销毁的原生对象寿命，仍须在销毁依赖前显式等待。协调器只管理本框架宿主，应用自身的其他退出回调不得提前调用 Quit。
 
 可写路径使用 `ProjectSettings.GlobalizePath("user://...")`。资源、Control、输入、音频继续使用 Godot 原生类型，普通 C# 模块不引用此项目。现有静态 Unity API 不会自动变为 Godot API。
 
@@ -17,3 +21,5 @@
 `GodotInputBackend` 显式映射 key/mouse/joy 到通用控件名，`InputService` 管理动作上下文、优先级、模态、重绑定和失焦释放；`InputModule` 将其接到宿主生命周期。`GodotAudioBackend` 使用真实 AudioStreamPlayer；`AudioService` 管理资源作用域、音量分组、静音、并发及暂停策略，`AudioModule` 处理宿主暂停/恢复/停止。支持循环的原生流按副本配置，避免修改共享资源；不支持的流类型会明确拒绝循环请求。原生输入和无图形验证边界见 [输入与音频](InputAudio.md)。
 
 打开 `samples/Godot/project.godot`。验证见 `tools/verify-godot.ps1 -EditorPath <Godot .NET executable>`；加 `-Export` 可构建并运行 Windows .NET debug 独立包，`-TemplatePath` 可指定匹配版本的模板。日志与版本/产物 SHA-256 报告保存在 `artifacts/GodotValidation`，详见 `docs/validation.md`。此适配不声明 GDScript、Web、移动设备、主机平台或代码热更新已经验证。
+
+原生样例还执行 `GameHostLifecycleSmoke`：实际创建/移除宿主 Node，发送应用暂停/恢复通知，并在最后向根 Window 发送关闭信号。它验证退出策略归还、配置失败释放、启动中暂停、重复恢复、异步切换期间最新状态、离树后 Dispatcher 清理、应用工作流在外部关闭后取消/释放，以及取消和 Stop 回调同步再次请求关闭时仍等待全部宿主；成功标记为 `GODOT_HOST_LIFECYCLE_PASSED`。这是原生通知与生命周期回归，不能替代目标移动设备的前后台验收。

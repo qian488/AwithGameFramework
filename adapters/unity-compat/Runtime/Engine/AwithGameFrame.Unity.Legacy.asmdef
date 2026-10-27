@@ -1,0 +1,8 @@
+{
+  "name": "AwithGameFrame.Unity.Legacy",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Unity"
+  ],
+  "autoReferenced": false
+}

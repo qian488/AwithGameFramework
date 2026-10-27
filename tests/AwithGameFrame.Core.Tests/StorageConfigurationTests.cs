@@ -265,6 +265,37 @@ namespace AwithGameFrame.Tests.Unit
             finally { await DataPersistenceAPI.ShutdownAsync(); }
         }
 
+        [TestCase(StorageType.JsonFile)]
+        [TestCase(StorageType.BinaryFile)]
+        public async Task StaticSessionKeepsDefaultRoutingAndFileOptionsAfterCallerMutatesConfig(StorageType type)
+        {
+            await DataPersistenceAPI.ShutdownAsync();
+            try
+            {
+                var config = NewConfig(); config.DefaultStorageType = type; config.PrettyPrint = false;
+                config.SerializationConfig.IgnoreNullValues = true; config.SerializationConfig.DateFormat = "yyyy/MM/dd";
+                Assert.That(await DataPersistenceAPI.InitializeAsync(config), Is.EqualTo(DataOperationResult.Success));
+                Assert.That(await DataPersistenceAPI.SaveAsync("before", new Record { Id = 7 }), Is.EqualTo(DataOperationResult.Success));
+
+                config.DefaultStorageType = type == StorageType.JsonFile ? StorageType.BinaryFile : StorageType.JsonFile;
+                config.DataRootPath = Path.Combine(directory, "changed"); config.PrettyPrint = true;
+                config.SerializationConfig.IgnoreNullValues = false; config.SerializationConfig.DateFormat = "yyyy";
+
+                Assert.That(await DataPersistenceAPI.ExistsAsync("before"), Is.True);
+                Assert.That((await DataPersistenceAPI.LoadAsync<Record>("before")).data.Id, Is.EqualTo(7));
+                Assert.That(await DataPersistenceAPI.SaveAsync("after", new Record { Id = 8, SavedAt = new DateTime(2026, 10, 19) }), Is.EqualTo(DataOperationResult.Success));
+                var bytes = File.ReadAllBytes(FilePath(type, "after"));
+                int offset = type == StorageType.JsonFile ? 0 : 8;
+                string json = Encoding.UTF8.GetString(bytes, offset, bytes.Length - offset);
+                Assert.That(json, Does.Contain("2026/10/19").And.Not.Contain("Payload").And.Not.Contain("\n"));
+                Assert.That(await DataPersistenceAPI.ExistsAsync("after", config.DefaultStorageType), Is.False);
+                Assert.That(Directory.Exists(config.DataRootPath), Is.False);
+                Assert.That(await DataPersistenceAPI.DeleteAsync("before"), Is.EqualTo(DataOperationResult.Success));
+                Assert.That(File.Exists(FilePath(type, "before")), Is.False);
+            }
+            finally { await DataPersistenceAPI.ShutdownAsync(); }
+        }
+
         private DataPersistenceConfig NewConfig() => new DataPersistenceConfig { DataRootPath = directory };
         private static IStorageProvider Provider(StorageType type) => type == StorageType.JsonFile ? (IStorageProvider)new JsonFileStorage() : new BinaryFileStorage();
         private string FilePath(StorageType type, string key) => Path.Combine(type == StorageType.JsonFile ? directory : Path.Combine(directory, "BinaryData"), key + ".json");

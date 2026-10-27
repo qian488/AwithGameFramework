@@ -1,21 +1,22 @@
 {
-    "name": "AwithGameFrame.Test",
-    "rootNamespace": "",
-    "references": [
-        "AwithGameFrame.Core",
-        "AwithGameFrame.Unity",
-        "AwithGameFrame.Data",
-        "AwithGameFrame.Gameplay",
-        "AwithGameFrame.Foundation",
-        "AwithGameFrame.Extensions",
-        "UniTask",
-        "UnityEngine.UI"
-    ],
-    "includePlatforms": [],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
-    "autoReferenced": false,
-    "defineConstraints": []
+  "name": "AwithGameFrame.Test",
+  "rootNamespace": "",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Unity",
+    "AwithGameFrame.Data",
+    "AwithGameFrame.Gameplay",
+    "AwithGameFrame.Foundation",
+    "AwithGameFrame.Extensions",
+    "UniTask",
+    "UnityEngine.UI",
+    "AwithGameFrame.Unity.Legacy"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": []
 }

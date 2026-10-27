@@ -30,8 +30,12 @@ namespace AwithGameFrame.Core.Tests
         }
         private sealed class Factory : IViewFactory
         {
+            public readonly Dictionary<string, View> Views = new Dictionary<string, View>();
             public Task<IView> CreateAsync(ViewRequest request, ResourceScope scope, CancellationToken token)
-                => Task.FromResult<IView>(new View());
+            {
+                var view = new View(); Views[request.Key] = view;
+                return Task.FromResult<IView>(view);
+            }
         }
         private sealed class Router : IInputRouter
         {
@@ -44,7 +48,8 @@ namespace AwithGameFrame.Core.Tests
         public void ModalConsumesBeforeGameplayAndHeldKeyStaysReleasedAfterModalCloses()
         {
             var host = new GameHost(); var resources = new ResourceStore(new Loader());
-            var views = new ViewService(host.Context, new Factory(), resources);
+            var factory = new Factory();
+            var views = new ViewService(host.Context, factory, resources);
             using var input = new InputService(host.Events, new ViewInputRouter(views));
             using var game = input.CreateContext("game"); game.Bind("jump", "space");
             var gameplay = new List<InputActionPhase>();
@@ -52,7 +57,7 @@ namespace AwithGameFrame.Core.Tests
             input.ProcessFrame(Frame(1));
             var modal = views.OpenAsync(new ViewRequest("modal", modal: true)).GetAwaiter().GetResult();
             InputActionEvent routed = null;
-            ((View)modal.View).Input = message => { routed = (InputActionEvent)message.Payload; return false; };
+            factory.Views["modal"].Input = message => { routed = (InputActionEvent)message.Payload; return false; };
             var consumed = input.ProcessFrame(Frame(1));
             Assert.That(routed.Phase, Is.EqualTo(InputActionPhase.Held));
             Assert.That(routed.ContextId, Is.EqualTo("game"));
@@ -96,7 +101,8 @@ namespace AwithGameFrame.Core.Tests
         public void ViewRoutingRejectsLifetimeMutationAndWorkerThread()
         {
             var host = new GameHost(); var resources = new ResourceStore(new Loader());
-            var views = new ViewService(host.Context, new Factory(), resources);
+            var factory = new Factory();
+            var views = new ViewService(host.Context, factory, resources);
             var router = new ViewInputRouter(views);
             using var input = new InputService(host.Events, router);
             using var game = input.CreateContext("game"); game.Bind("jump", "space");
@@ -107,11 +113,11 @@ namespace AwithGameFrame.Core.Tests
             }).GetAwaiter().GetResult();
             Assert.That(workerFailure, Is.TypeOf<InvalidOperationException>());
             var modal = views.OpenAsync(new ViewRequest("modal", modal: true)).GetAwaiter().GetResult();
-            ((View)modal.View).Input = _ => { modal.CloseAsync().GetAwaiter().GetResult(); return false; };
+            factory.Views["modal"].Input = _ => { modal.CloseAsync().GetAwaiter().GetResult(); return false; };
             var result = input.ProcessFrame(Frame(1));
             Assert.That(result.Errors[0], Is.TypeOf<InvalidOperationException>());
             Assert.That(views.OpenViews.Count, Is.EqualTo(1));
-            ((View)modal.View).Input = null;
+            factory.Views["modal"].Input = null;
             input.ProcessFrame(Frame(0));
             views.StopAsync().GetAwaiter().GetResult(); resources.DisposeAsync().AsTask().GetAwaiter().GetResult();
             host.StopAsync().GetAwaiter().GetResult();

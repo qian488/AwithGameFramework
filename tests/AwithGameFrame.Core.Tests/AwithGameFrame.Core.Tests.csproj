@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="../../samples/Protocol/Generated/GameProtocol.cs" Link="Generated/GameProtocol.cs" />
     <ProjectReference Include="../../tools/ConfigGen/AwithGameFrame.ConfigGen.csproj" />
+    <ProjectReference Include="../../tools/AgentKit/AwithGameFrame.AgentKit.csproj" />
     <ProjectReference Include="../../samples/Shared/AwithGameFrame.Samples.Shared.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />

@@ -1,6 +1,15 @@
 {
   "name": "AwithGameFrame.UnitySmoke.Editor",
-  "references": ["AwithGameFrame.Core", "AwithGameFrame.Unity", "AwithGameFrame.Foundation", "UnityEngine.UI"],
-  "includePlatforms": ["Editor"],
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Unity",
+    "AwithGameFrame.Foundation",
+    "UnityEngine.UI",
+    "AwithGameFrame.Unity.Legacy",
+    "AwithGameFrame.Unity.Compatibility"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "autoReferenced": false
 }

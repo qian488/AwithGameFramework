@@ -36,5 +36,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// 获取默认配置
         /// </summary>
         public static StorageConfig Default => new StorageConfig();
+
+        internal StorageConfig CreateSnapshot() => (StorageConfig)MemberwiseClone();
     }
 }

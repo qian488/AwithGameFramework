@@ -15,6 +15,7 @@ powershell -File tools/verify.ps1
 ```powershell
 powershell -File tools/verify-unity.ps1 -EditorPath 'Unity.exe' -RunSmoke -BuildPlayer
 powershell -File tools/verify-unity.ps1 -EditorPath 'Unity.exe' -BuildPlayer -ScriptingBackend IL2CPP
+powershell -File tools/verify-unity-minimal.ps1 -EditorPath 'Unity.exe'
 ```
 
 复制到独立验证工程，不改变示例记录版本。依次执行导入编译、AssetBundle 构建/发布/HTTP 安装、真实 PlayMode 断言、共享完整应用、Windows x86_64 Player 构建和运行；默认 Mono，可用 `-ScriptingBackend IL2CPP` 验证 AOT 路径。编辑器和 Player 都使用安装快照中的资源目录。运行必须输出全部成功标记并以 0 退出。`Build-report.json` 保存实际版本、后端、运行验证标志、源码 commit、工作区修改标志和产物 SHA-256。编辑器、平台构建模块和对应原生工具链需在本机可用。
@@ -22,6 +23,8 @@ powershell -File tools/verify-unity.ps1 -EditorPath 'Unity.exe' -BuildPlayer -Sc
 `-PlayerTarget Android` / `WebGL` 提供相应构建入口，WebGL 要求 IL2CPP；这些目标仅构建，报告 `runtimeVerified: false`，需要产品另行运行设备/浏览器验收。PlayMode 使用 Windows bundles，须与这些目标分开运行。未执行的目标不能记为已通过。
 
 当前实测编辑器为 **2022.3.16f1**；示例记录版本仍为 2022.3.40f1c1。无图形模式可能报告现有 Sprite shader 不支持；断言检查真实对象和执行路径，不代替画面、听感、物理输入设备和移动前后台测试。Windows IL2CPP 样例运行只证明所执行代码的 AOT 路径，不代表任意用户 DTO/反射插件/联网协议均已验证。
+
+`verify-unity-minimal.ps1` 创建新的隔离工程，仅安装 Core/Data/Gameplay 与现代 Unity 包、uGUI/Newtonsoft 和引擎内置模块，不复制 Plugins 或兼容服务。它检查可选程序集未编译/加载，使用真实 Unity 后端启动、Tick、暂停、恢复和关闭现代模块，成功标记为 `UNITY_MINIMAL_ADAPTER_PASSED`。完整样例另要求 `UNITY_OPTIONAL_PROVIDERS_PASSED`，验证拆出的 DOTween 注册和 SQLite 原生内存数据库建表/查询；可选初始化程序集带 AlwaysLinkAssembly，并在 Player 内再次断言。
 
 ## Godot .NET
 
@@ -83,6 +86,48 @@ Unity 完整脚本后在同一工程补跑 Mono，`artifacts/unity-completion-fr
 Godot 退出诊断已取得明确复现：相同资源重复加载 100 次，旧原生 threaded 路径留下 193 个 `RefCounted`，同步路径没有；更换加载策略后该泄漏消失。音频的剩余 `AudioStreamPlaybackWAV/AudioStreamWAV` 来自 Stop 后 mixer 尚未归还对象，现通过异步 voice 释放等待真实引用归还，再释放资源。Windows 导出还复现了场景重开与 C# 脚本桥接销毁并发的问题；场景/脚本/未知容器改在引擎线程加载，只有原始纹理和音频进入后台。最小复现、连续 10 轮完整原生流程及 5 轮修复后诊断导出日志位于 `artifacts/GodotDiagnostics`。没有强制 GC 或固定延时消除警告。
 
 最后重新执行完整 Godot 脚本，普通与导出包均包含全部必需标记、以 0 退出且没有运行警告。PCK 源 UID 冲突也已在构建阶段修复并以双版本实测；Unity/Godot 报告仍明确记录未提交工作区，不将上述本机结果扩大为其他设备、平台或远端 CI 已通过。
+
+## 2026-10-26 用户设置函数式试点
+
+在基线 commit `c94cc9f` 上验证未提交工作区。提取 `UserSettingsRules`，由服务在宿主线程采集语言/音频/输入事实并提交候选，保留设备应用、事件、revision 保存及关闭重试语义。新增 20 项不创建宿主的纯规则用例和 3 项服务回归，覆盖规范化后 dirty、排列相同的无副作用更新、加载完成后的输入事实，以及已释放依赖的提交前拒绝。
+
+| 检查 | 本轮实际结果 | 本机记录 |
+| --- | --- | --- |
+| `tools/verify.ps1` | 架构/依赖/metadata/生成检查、Release 构建零警告零错误，NUnit **546/546**，Headless 通过 | `artifacts/verify-settings-functional-pilot.log` |
+| Unity **2022.3.16f1** `-RunSmoke` | 隔离工程导入编译、29 项真实适配器断言、共享应用 PlayMode、AssetBundle 构建及 HTTP 安装通过 | `artifacts/UnityValidation/ae0b6c5e5a804792bece8a927c35767e`，`artifacts/verify-unity-settings-functional-pilot.log` |
+| Godot **4.5.2 .NET** | SDK 构建零警告零错误、资源导入、PCK 构建/HTTP 安装与原生共享宿主运行通过 | `artifacts/GodotValidation/bb3c1667801b495cb7dd6019cfd23b7d`，`artifacts/verify-godot-settings-functional-pilot.log` |
+
+两端共享应用均包含语言、音量、输入重绑、保存及重建恢复路径，全部必需的成功标记通过；Godot 运行无退出泄漏。Unity 工程记录版本仍为 2022.3.40f1c1。本轮只重跑上述编辑器/宿主路径，未重新构建 Unity Player/IL2CPP 或 Godot 独立导出；前轮构建记录保留在上节，不能视为本次工作区的独立程序验收。规则分层、源码规模与数据复制成本见 [试点说明](functional-core-pilot.md)。
+
+## 2026-10-27 开发期 Agent 工程基础
+
+在 `c94cc9f` 基线上继续验证未提交工作区，保留上轮设置试点。新增独立 .NET 8 `AgentKit` 和任务/交接/评审模板，以及可编译的 .NET Standard 2.1 / C# 9 功能模板；游戏运行时不引用开发工具。机器检查通过与人工验收分离，真实确认记录不代签。
+
+标准 `tools/verify.ps1` 通过：Release 零编译警告/错误、框架 NUnit **575/575**（含 29 项 AgentKit/工作区行为测试）、功能模板 **13/13**、Agent 契约、配置/协议及 Headless。日志为 `artifacts/verify-agent-foundation.log`，机器测试结果为 `artifacts/TestResults/framework.trx` 与 `template.trx`；CI 新增上传这两份测试结果的入口，远端执行情况仍以实际流水线为准。
+
+Agent 行为测试使用独立临时 Git 仓库和真实子进程，覆盖脏基线/保护范围、重命名两端、暂存内容漂移、路径/链接边界、并发任务创建、上下文预算及选择变化、确认缺失/拒绝/过期/计划变化、成功/非零退出/超时/取消、日志漂移、机器通过后仍需人工评审。模板验证纯规则输入/输出隔离及命令服务的提交、通知失败、幂等和重入行为。
+
+本机用 `tools/agent.ps1` 从 docs-only 模板实际运行 `new → context → plan → run → report → monitor`，示例位于 `artifacts/agent/tasks/foundation-demo-final-20261027`。该示例仅执行 `agent-contracts`，机器状态为 `ready-for-review`，没有自动登记人工接受；它证明工具闭环，不能替代功能正确性或本轮全部工作的人工验收。
+
+本轮开发工具不改变引擎适配，未重复运行 Unity/Godot 或构建导出。模板只验证普通 C# 与包元数据，尚未导入具体引擎。路径策略只约束 CLI 自身操作，执行的脚本/项目保有系统实际权限；当前无模型 SDK、远程沙箱、线上遥测或模型质量评测。完整使用与限制见 [AgentKit](../agent/README.md)。
+
+## 2026-10-27 框架收敛与生命周期修复
+
+在 `c94cc9f` 基线上保留此前设置试点及开发工具工作区，继续实现游戏框架审查发现的问题。现代 Unity、兼容服务与 DOTween/SQLite 变为独立包；Core 兼容入口集中到独立目录。修复旧单例同步、持久化会话配置所有权、视图/场景句柄权限与 HTTP 响应大小边界，提取 ViewLayoutRules。新增 27 项 NUnit 用例，覆盖并发、未知/虚假长度响应、配置嵌套快照、视图排序/模态/焦点与公共句柄边界。
+
+| 检查 | 本轮实际结果 | 本机记录 |
+| --- | --- | --- |
+| 标准 verify | 依赖/实例与兼容边界、asmdef/UPM/metadata、生成检查通过；Release 零编译警告/错误，框架 **602/602**、模板 **13/13**，Headless 通过 | `artifacts/verify-framework-refinement-final.log`、`artifacts/TestResults/framework.trx` |
+| Unity **2022.3.16f1** 无插件工程 | 仅现代包导入编译及真实后端模块生命周期通过，无 Foundation/Legacy/Compatibility/DOTween/SQLite 程序集 | `artifacts/UnityMinimalValidation/37aaf600c12e41a38cff36826140c2aa`、`artifacts/verify-unity-minimal-refinement.log` |
+| Unity 完整样例与 Windows IL2CPP | 导入、29 项旧适配断言、现代共享应用 PlayMode、AssetBundle/HTTP 安装、独立 Player 构建运行通过；两端均验证可选提供者注册与 SQLite 原生操作 | `artifacts/UnityValidation/33faae0c317f4d63ab5b8ff929aae8e9`、`artifacts/verify-unity-refinement-final.log` |
+| Godot **4.5.2 .NET** | SDK 构建、PCK/HTTP 安装、普通原生运行、Windows debug 导出与独立运行通过；含最终同步重入回归 | `artifacts/GodotValidation/451e2d83f6364b3eb17e50ecb74d77a5`、`artifacts/verify-godot-refinement-final.log` |
+| 移动与文档检查 | 63 份移动的 metadata GUID 各保留唯一对应；修改文档的本地链接及 git diff --check 通过 | `artifacts/framework-refinement-metadata.json` |
+
+Godot 的 `GODOT_HOST_LIFECYCLE_PASSED` 在普通与导出日志中均通过，覆盖原 AutoAcceptQuit 为 true/false 的归还、配置与模块启动失败、启动期暂停与最新恢复状态、异步切换中的重复通知、启动/运行时离树后调度清理、应用工作流关闭后取消/释放，以及取消回调和 Stop 回调同步再次请求窗口关闭。多个宿主中，快宿主完成不能绕过慢宿主的最后清理。两份最终运行日志无 ERROR、UID 或 ObjectDB 退出泄漏。
+
+`OnStartedAsync` 属于应用工作流，可主动等待 ShutdownAsync，故宿主关闭不反向等待整条回调；应用工作流须观察 LifetimeToken。必须在销毁前完成的任务应纳入模块，由 StopAsync 取消并等待。持久化只复制框架已知配置类型，第三方 opaque 选项仍由提供者捕获。函数式提取增加快照分配，未据此声称性能提升。
+
+Unity 实际版本仍为 2022.3.16f1，未修改示例记录版本。本轮重建了 Windows IL2CPP，未另跑 Mono/Android/WebGL 或目标移动设备；Godot 为 Windows .NET debug，未重跑其他平台或远端 CI。首轮完整 Unity 编译暴露并修复了提供者 namespace 引用遗漏，首轮 Godot 之后又补关闭同步重入；最终记录对应这些修复后的代码，不以首轮结果代替最终验收。包/程序集与句柄公共 API 的迁移见 [迁移说明](migration.md)。
 
 ## 尚未声明完成的能力
 

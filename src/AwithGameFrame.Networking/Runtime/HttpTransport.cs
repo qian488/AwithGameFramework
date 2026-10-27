@@ -67,12 +67,26 @@ namespace AwithGameFrame.Networking
     /// <summary>Owns its HttpClient. Inject a handler for platform integration or deterministic HTTP tests.</summary>
     public sealed class HttpClientTransport : IHttpTransport, IDisposable
     {
+        public const int DefaultMaxResponseBodyBytes = 16 * 1024 * 1024;
+
         private readonly HttpClient client;
 
-        public HttpClientTransport() : this(new HttpClientHandler { AllowAutoRedirect = false }) { }
+        /// <summary>Maximum buffered response body size in bytes, including bodies of unsuccessful responses.</summary>
+        public int MaxResponseBodyBytes { get; }
+
+        public HttpClientTransport() : this(DefaultMaxResponseBodyBytes) { }
+
+        public HttpClientTransport(int maxResponseBodyBytes)
+            : this(new HttpClientHandler { AllowAutoRedirect = false }, maxResponseBodyBytes) { }
 
         public HttpClientTransport(HttpMessageHandler handler, bool disposeHandler = true)
+            : this(handler, DefaultMaxResponseBodyBytes, disposeHandler) { }
+
+        /// <param name="maxResponseBodyBytes">Nonnegative response limit. Zero permits only empty bodies.</param>
+        public HttpClientTransport(HttpMessageHandler handler, int maxResponseBodyBytes, bool disposeHandler = true)
         {
+            if (maxResponseBodyBytes < 0) throw new ArgumentOutOfRangeException(nameof(maxResponseBodyBytes));
+            MaxResponseBodyBytes = maxResponseBodyBytes;
             client = new HttpClient(handler ?? throw new ArgumentNullException(nameof(handler)), disposeHandler);
             // ProtocolClient owns the timeout so its cause cannot be confused with caller cancellation.
             client.Timeout = Timeout.InfiniteTimeSpan;
@@ -94,16 +108,30 @@ namespace AwithGameFrame.Networking
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (response.Content == null) return new TransportResponse((int)response.StatusCode, Array.Empty<byte>());
+                    if (response.Content.Headers.ContentLength > MaxResponseBodyBytes) throw ResponseTooLarge();
                     using (var input = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     using (var output = new MemoryStream())
                     {
-                        await input.CopyToAsync(output, 81920, cancellationToken).ConfigureAwait(false);
-                        cancellationToken.ThrowIfCancellationRequested();
+                        var buffer = new byte[Math.Min(MaxResponseBodyBytes, 81919) + 1];
+                        while (true)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            // Read at most one byte beyond the limit, even if Content-Length is absent or false.
+                            var count = (int)Math.Min(buffer.Length, (long)MaxResponseBodyBytes - output.Length + 1);
+                            var read = await input.ReadAsync(buffer, 0, count, cancellationToken).ConfigureAwait(false);
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (read == 0) break;
+                            if (read > MaxResponseBodyBytes - output.Length) throw ResponseTooLarge();
+                            output.Write(buffer, 0, read);
+                        }
                         return new TransportResponse((int)response.StatusCode, output.ToArray());
                     }
                 }
             }
         }
+
+        private HttpRequestException ResponseTooLarge() =>
+            new HttpRequestException($"The HTTP response body exceeds the configured limit of {MaxResponseBodyBytes} bytes.");
 
         public void Dispose() => client.Dispose();
     }

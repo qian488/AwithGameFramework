@@ -52,6 +52,19 @@ foreach ($file in @($sourceFiles | Where-Object { $_.Extension -eq '.cs' })) {
     $code = [regex]::Replace([System.IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
     if ($code -match $enginePattern) { throw "Engine dependency in portable source: $($file.FullName)" }
 }
+# Keep the recommended instance runtime independent of the legacy global facades.
+$instanceDirectories = @('Hosting', 'Flow', 'Events', 'Timing', 'Pooling', 'Resources') |
+    ForEach-Object { Join-Path $sourceRoot "AwithGameFrame.Core/Runtime/$_" }
+$instanceDirectories += @('Audio', 'Input', 'Presentation', 'Scenes', 'Settings') |
+    ForEach-Object { Join-Path $sourceRoot "AwithGameFrame.Gameplay/Runtime/$_" }
+$instanceFiles = @($instanceDirectories | ForEach-Object { Get-ChildItem -LiteralPath $_ -Recurse -Filter '*.cs' -File })
+$instanceFiles += Get-Item -LiteralPath (Join-Path $sourceRoot 'AwithGameFrame.Gameplay/Runtime/Localization/LocalizationService.cs')
+foreach ($file in $instanceFiles) {
+    $code = [regex]::Replace([IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
+    if ($code -match '\b(BaseManager|FrameworkBootstrap|ServiceLocator|EventCenter|DataPersistenceAPI)\b') {
+        throw "Instance runtime depends on a legacy global API: $($file.FullName)"
+    }
+}
 foreach ($file in $projectFiles) {
     [xml]$project = Get-Content -LiteralPath $file.FullName -Raw
     foreach ($reference in $project.SelectNodes("//*[local-name()='ProjectReference']")) {
@@ -77,8 +90,10 @@ foreach ($file in $projectFiles) {
 }
 
 Write-Host 'Checking Unity import metadata, assembly definitions, and package paths...'
+$unityPackageRoots = @(Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'adapters') -Directory |
+    Where-Object { $_.Name -eq 'unity' -or $_.Name.StartsWith('unity-') } | ForEach-Object { $_.FullName })
 $packageRoots = @($sourceFiles | Where-Object { $_.Name -eq 'package.json' } | ForEach-Object { $_.DirectoryName }) +
-    @(Join-Path $repositoryRoot 'adapters/unity') + @(Join-Path $repositoryRoot 'samples/Shared')
+    $unityPackageRoots + @(Join-Path $repositoryRoot 'samples/Shared')
 function Assert-UnityImportMetadata {
     param([string[]]$PackageRoots, [string]$SampleAssetsRoot)
     $importRoots = $PackageRoots + @($SampleAssetsRoot)
@@ -114,9 +129,9 @@ function Assert-UnityImportMetadata {
 Assert-UnityImportMetadata -PackageRoots $packageRoots -SampleAssetsRoot (Join-Path $repositoryRoot 'samples/Unity/Assets')
 $assemblyDefinitions = @{}
 $assemblyGuids = @{}
-$scanRoots = @('src', 'adapters/unity', 'samples/Unity/Assets', 'samples/Shared')
+$scanRoots = @(@('src', 'samples/Unity/Assets', 'samples/Shared') | ForEach-Object { Join-Path $repositoryRoot $_ }) + $unityPackageRoots
 foreach ($relativeRoot in $scanRoots) {
-    foreach ($file in Get-ChildItem -LiteralPath (Join-Path $repositoryRoot $relativeRoot) -Recurse -Filter '*.asmdef' -File) {
+    foreach ($file in Get-ChildItem -LiteralPath $relativeRoot -Recurse -Filter '*.asmdef' -File) {
         $definition = Read-Json $file.FullName
         $name = Get-JsonProperty $definition 'name'
         if ([string]::IsNullOrWhiteSpace($name)) { throw "Unnamed assembly definition: $($file.FullName)" }
@@ -171,6 +186,24 @@ function Visit-Assembly {
 }
 foreach ($name in $assemblyDefinitions.Keys) { Visit-Assembly $name }
 
+foreach ($name in @('AwithGameFrame.Unity', 'AwithGameFrame.Extensions', 'AwithGameFrame.Unity.Editor')) {
+    foreach ($reference in @(Get-JsonProperty $assemblyDefinitions[$name].Definition 'references')) {
+        $resolved = $reference
+        if ($reference.StartsWith('GUID:') -and $assemblyGuids.ContainsKey($reference.Substring(5))) {
+            $resolved = $assemblyGuids[$reference.Substring(5)]
+        }
+        if ($resolved -match 'Foundation|Legacy|Compatibility|UniTask|DOTween|SQLite') {
+            throw "Modern Unity adapter depends on a compatibility/plugin assembly: $name -> $reference"
+        }
+    }
+}
+foreach ($file in Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'adapters/unity') -Recurse -Filter '*.cs' -File) {
+    $code = [regex]::Replace([IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
+    if ($code -match '\b(BaseManager|FrameworkBootstrap|ServiceLocator|EventCenter|DataPersistenceAPI|Cysharp|DOTween|Sqlite)\b') {
+        throw "Modern Unity adapter contains a legacy global or optional plugin dependency: $($file.FullName)"
+    }
+}
+
 $manifestPath = Join-Path $repositoryRoot 'samples/Unity/Packages/manifest.json'
 $manifest = Read-Json $manifestPath
 $localFrameworkPackages = @{}
@@ -186,7 +219,7 @@ foreach ($dependency in $manifest.dependencies.PSObject.Properties) {
     $localFrameworkPackages[$package.name] = $true
 }
 foreach ($packagePath in (@($sourceFiles | Where-Object { $_.Name -eq 'package.json' }) +
-    @(Get-Item -LiteralPath (Join-Path $repositoryRoot 'adapters/unity/package.json')))) {
+    @($unityPackageRoots | ForEach-Object { Get-Item -LiteralPath (Join-Path $_ 'package.json') }))) {
     $package = Read-Json $packagePath.FullName
     if (-not $localFrameworkPackages.ContainsKey($package.name)) {
         throw "Unity sample is missing a local framework package: $($package.name)"
@@ -200,9 +233,11 @@ try {
     & (Join-Path $PSScriptRoot 'generate-protocol.ps1') -Check
     Invoke-DotNet -Arguments @('build', $solutionPath, '--configuration', $Configuration, '--nologo')
     Assert-UnityImportMetadata -PackageRoots $packageRoots -SampleAssetsRoot (Join-Path $repositoryRoot 'samples/Unity/Assets')
-    Invoke-DotNet -Arguments @('test', $solutionPath, '--configuration', $Configuration, '--no-build', '--no-restore', '--nologo')
+    Invoke-DotNet -Arguments @('run', '--project', (Join-Path $repositoryRoot 'tools/AgentKit/AwithGameFrame.AgentKit.csproj'), '--configuration', $Configuration, '--no-build', '--no-restore', '--', 'contracts')
+    Invoke-DotNet -Arguments @('test', $solutionPath, '--configuration', $Configuration, '--no-build', '--no-restore', '--nologo', '--logger', 'trx;LogFileName=framework.trx', '--results-directory', (Join-Path $repositoryRoot 'artifacts/TestResults'))
+    Invoke-DotNet -Arguments @('test', (Join-Path $repositoryRoot 'templates/portable-feature/Tests~/AwithGameFrame.FeatureTemplate.Tests.csproj'), '--configuration', $Configuration, '--nologo', '--logger', 'trx;LogFileName=template.trx', '--results-directory', (Join-Path $repositoryRoot 'artifacts/TestResults'))
     Invoke-DotNet -Arguments @('run', '--project', (Join-Path $repositoryRoot 'samples/Headless/AwithGameFrame.Headless.csproj'), '--configuration', $Configuration, '--no-build', '--no-restore')
 } finally {
     Pop-Location
 }
-Write-Host 'Architecture checks, build, tests, and headless sample passed.'
+Write-Host 'Architecture checks, agent contracts, build, tests, reusable template, and headless sample passed.'

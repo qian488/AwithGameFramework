@@ -16,7 +16,7 @@ namespace AwithGameFrame.Extensions.Scenes
 
     public interface ISceneBackend
     {
-        /// <summary>Load without replacing unrelated scenes. A late native success must be returned for cleanup.</summary>
+        /// <summary>Load without replacing unrelated scenes. A late native success must be returned for cleanup. The resource scope is borrowed; only the service disposes it.</summary>
         Task<ISceneInstance> LoadAsync(string key, ResourceScope resources, CancellationToken cancellationToken);
     }
 
@@ -28,7 +28,7 @@ namespace AwithGameFrame.Extensions.Scenes
         internal ISceneInstance Instance { get; }
         public long InstanceId { get; }
         public string Key { get; }
-        public ResourceScope Resources { get; }
+        internal ResourceScope Resources { get; }
         public bool IsLoaded => owner.Contains(this);
         public Task UnloadAsync() => owner.UnloadAsync(this);
         public ValueTask DisposeAsync() => new ValueTask(UnloadAsync());

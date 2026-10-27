@@ -1,0 +1,8 @@
+{
+  "name": "AwithGameFrame.Unity.SQLite",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Data"
+  ],
+  "autoReferenced": false
+}

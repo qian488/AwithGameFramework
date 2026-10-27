@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ContentVerify", "ContentVer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AwithGameFrame.ContentVerify", "tools\ContentVerify\AwithGameFrame.ContentVerify.csproj", "{34BFCCC1-BD00-4AA6-90A4-4A5BCD329992}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AwithGameFrame.AgentKit", "tools\AgentKit\AwithGameFrame.AgentKit.csproj", "{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -149,6 +151,18 @@ Global
 		{34BFCCC1-BD00-4AA6-90A4-4A5BCD329992}.Release|x64.Build.0 = Release|Any CPU
 		{34BFCCC1-BD00-4AA6-90A4-4A5BCD329992}.Release|x86.ActiveCfg = Release|Any CPU
 		{34BFCCC1-BD00-4AA6-90A4-4A5BCD329992}.Release|x86.Build.0 = Release|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Debug|x64.Build.0 = Debug|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Debug|x86.Build.0 = Debug|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Release|x64.ActiveCfg = Release|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Release|x64.Build.0 = Release|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Release|x86.ActiveCfg = Release|Any CPU
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -165,5 +179,6 @@ Global
 		{233FFA0F-6203-4C03-96A4-F88CA190DCDB} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1D2B6EEE-D3E2-C9B6-A159-39FBEC3A8343} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{34BFCCC1-BD00-4AA6-90A4-4A5BCD329992} = {1D2B6EEE-D3E2-C9B6-A159-39FBEC3A8343}
+		{CA10CFD5-C671-4BB9-BF5F-CA9BF6AA10F1} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 EndGlobal

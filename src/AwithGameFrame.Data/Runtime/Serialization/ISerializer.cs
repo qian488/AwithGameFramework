@@ -87,6 +87,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
         /// <summary>日期格式；null 使用保留精度和时区的默认 ISO 8601 格式。</summary>
         public string DateFormat;
 
+        internal SerializationConfig Copy() => (SerializationConfig)MemberwiseClone();
+
         internal SerializationConfig CreateSnapshot(bool supportsCompression)
         {
             if (IncludeTypeInfo)
@@ -95,7 +97,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 throw new NotSupportedException("This JSON payload does not support compression; use the binary codec or the file provider's EnableCompression option.");
             if (EnableCompression && CompressionLevel != 6)
                 throw new NotSupportedException("Built-in GZip accepts CompressionLevel=6 (runtime Optimal) only.");
-            return (SerializationConfig)MemberwiseClone();
+            return Copy();
         }
     }
 

@@ -47,7 +47,7 @@ namespace AwithGameFrame.Extensions.Localization
         public bool IsReady { get { lock (sync) return !disposed && catalogs.ContainsKey(FallbackLanguage); } }
         public IReadOnlyList<string> AvailableLanguages
         {
-            get { lock (sync) { var names = new List<string>(catalogs.Keys); names.Sort(StringComparer.Ordinal); return names.AsReadOnly(); } }
+            get { lock (sync) { ThrowIfDisposed(); var names = new List<string>(catalogs.Keys); names.Sort(StringComparer.Ordinal); return names.AsReadOnly(); } }
         }
 
         public bool IsLanguageSupported(string languageCode)

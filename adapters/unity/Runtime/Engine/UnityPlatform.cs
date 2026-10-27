@@ -15,14 +15,6 @@ namespace AwithGameFrame.Unity
             TimeHelper.TimeSource = new UnityTimeSource();
         }
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void StartFrameDriver()
-        {
-            var driver = new GameObject("AwithGameFrame.Unity") { hideFlags = HideFlags.HideInHierarchy };
-            Object.DontDestroyOnLoad(driver);
-            driver.AddComponent<UnityFrameDriver>();
-        }
-
         private static void WriteLog(LogLevel level, string message, object context)
         {
             var unityContext = context as Object;

@@ -52,7 +52,7 @@ if ($unityProcess.ExitCode -ne 0) {
 if (Select-String -LiteralPath $logPath -Pattern 'error CS\d+|Scripts have compiler errors' -Quiet) {
     throw "Unity reported compiler errors. See $logPath"
 }
-foreach ($assembly in @('Core', 'Data', 'Gameplay', 'Networking', 'Unity', 'Unity.Editor', 'Foundation', 'Extensions', 'Samples', 'Test')) {
+foreach ($assembly in @('Core', 'Data', 'Gameplay', 'Networking', 'Unity', 'Unity.Editor', 'Foundation', 'Extensions', 'Unity.Legacy', 'Unity.Compatibility', 'Unity.DOTween', 'Unity.SQLite', 'Samples', 'Test')) {
     $assemblyPath = Join-Path $validationRoot "Library/ScriptAssemblies/AwithGameFrame.$assembly.dll"
     if (-not (Test-Path -LiteralPath $assemblyPath -PathType Leaf)) {
         throw "Unity did not compile AwithGameFrame.$assembly. See $logPath"
@@ -94,7 +94,7 @@ if ($RunSmoke) {
     if (-not (Select-String -LiteralPath $adapterLog -SimpleMatch 'Unity adapter smoke passed:' -Quiet)) { throw "Unity adapter assertions missing. See $adapterLog" }
     $sharedLog = Invoke-UnityStep -Name 'Shared-host-smoke' -Method 'AwithGameFrame.Samples.Editor.SharedHostSmoke.Run' -ExtraArguments (@('-awith-shared-smoke') + $contentArguments)
     if (-not (Select-String -LiteralPath $sharedLog -SimpleMatch 'UNITY_SHARED_HOST_PASSED' -Quiet)) { throw "Unity shared host assertions missing. See $sharedLog" }
-    foreach ($marker in @('FOUNDATION_CORE_PASSED', 'UNITY_PRESENTATION_SCENES_PASSED', 'UNITY_INPUT_AUDIO_PASSED', 'COMPOSED_APPLICATION_PASSED', 'UNITY_ASSET_BUNDLE_PASSED')) {
+    foreach ($marker in @('FOUNDATION_CORE_PASSED', 'UNITY_PRESENTATION_SCENES_PASSED', 'UNITY_INPUT_AUDIO_PASSED', 'COMPOSED_APPLICATION_PASSED', 'UNITY_ASSET_BUNDLE_PASSED', 'UNITY_OPTIONAL_PROVIDERS_PASSED')) {
         if (-not (Select-String -LiteralPath $sharedLog -SimpleMatch $marker -Quiet)) { throw "Unity marker $marker missing. See $sharedLog" }
     }
     Write-Host "Unity adapter and shared host PlayMode assertions passed. Logs: $validationRoot"
@@ -119,7 +119,7 @@ if ($BuildPlayer) {
     if ($playerProcess.ExitCode -ne 0 -or -not (Select-String -LiteralPath $playerLog -SimpleMatch 'UNITY_SHARED_HOST_PASSED' -Quiet)) {
         throw "Unity Player assertions failed. See $playerLog"
     }
-    foreach ($marker in @('FOUNDATION_CORE_PASSED', 'UNITY_PRESENTATION_SCENES_PASSED', 'UNITY_INPUT_AUDIO_PASSED', 'COMPOSED_APPLICATION_PASSED', 'UNITY_ASSET_BUNDLE_PASSED')) {
+    foreach ($marker in @('FOUNDATION_CORE_PASSED', 'UNITY_PRESENTATION_SCENES_PASSED', 'UNITY_INPUT_AUDIO_PASSED', 'COMPOSED_APPLICATION_PASSED', 'UNITY_ASSET_BUNDLE_PASSED', 'UNITY_OPTIONAL_PROVIDERS_PASSED')) {
         if (-not (Select-String -LiteralPath $playerLog -SimpleMatch $marker -Quiet)) { throw "Unity Player marker $marker missing. See $playerLog" }
     }
     Write-Host "Unity standalone Player build and runtime passed. Log: $playerLog"

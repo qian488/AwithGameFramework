@@ -1,0 +1,9 @@
+{
+  "name": "com.awithgameframe.unity.sqlite",
+  "version": "0.2.0",
+  "displayName": "AwithGameFrame Unity SQLite",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.awithgameframe.data": "0.2.0"
+  }
+}

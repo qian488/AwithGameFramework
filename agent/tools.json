@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "tools": [
+    {
+      "id": "agent-contracts",
+      "description": "Validate task templates and fixed tool recipes without invoking an engine.",
+      "executable": "dotnet",
+      "arguments": ["run", "--project", "tools/AgentKit/AwithGameFrame.AgentKit.csproj", "--", "contracts"],
+      "inputs": ["tools/AgentKit/Program.cs"],
+      "requiresApproval": false,
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "portable-verify",
+      "description": "Repository architecture, generated contracts, Release build, NUnit and Headless.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify.ps1"],
+      "inputs": ["tools/verify.ps1"],
+      "requiresApproval": false,
+      "timeoutSeconds": 600
+    },
+    {
+      "id": "template-verify",
+      "description": "Compile and test the reusable portable feature template.",
+      "executable": "dotnet",
+      "arguments": ["test", "templates/portable-feature/Tests~/AwithGameFrame.FeatureTemplate.Tests.csproj", "--configuration", "Release", "--nologo"],
+      "inputs": ["templates/portable-feature/AwithGameFrame.FeatureTemplate.csproj", "templates/portable-feature/Tests~/AwithGameFrame.FeatureTemplate.Tests.csproj"],
+      "requiresApproval": false,
+      "timeoutSeconds": 300
+    },
+    {
+      "id": "unity-verify",
+      "description": "Real Unity import, content build/install and PlayMode. Human reviews the editor path and cost.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-unity.ps1", "-EditorPath", "{editorPath}", "-RunSmoke"],
+      "parameters": ["editorPath"],
+      "inputs": ["tools/verify-unity.ps1"],
+      "requiresApproval": true,
+      "timeoutSeconds": 3600
+    },
+    {
+      "id": "godot-verify",
+      "description": "Real Godot SDK build, content installation and host scenario using a reviewed local editor path.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-godot.ps1", "-EditorPath", "{editorPath}"],
+      "parameters": ["editorPath"],
+      "inputs": ["tools/verify-godot.ps1"],
+      "requiresApproval": true,
+      "timeoutSeconds": 600
+    }
+  ]
+}

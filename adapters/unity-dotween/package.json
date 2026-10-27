@@ -1,0 +1,9 @@
+{
+  "name": "com.awithgameframe.unity.dotween",
+  "version": "0.2.0",
+  "displayName": "AwithGameFrame Unity DOTween",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.awithgameframe.unity.compatibility": "0.2.0"
+  }
+}

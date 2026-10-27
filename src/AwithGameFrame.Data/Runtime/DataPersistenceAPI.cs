@@ -36,7 +36,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 lock (lockObject)
                 {
                     lifecycleInProgress = true;
-                    config = persistenceConfig ?? new DataPersistenceConfig();
+                    config = (persistenceConfig ?? new DataPersistenceConfig()).CreateSnapshot();
                 }
                 await InitializeStorageProviders();
                 FrameworkLogger.Info("Data persistence initialized.", LogCategory.Core);

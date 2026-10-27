@@ -36,9 +36,15 @@ namespace AwithGameFrame.Core.Tests
         private sealed class Factory : IViewFactory
         {
             public int Creations;
+            public readonly Dictionary<string, View> Views = new Dictionary<string, View>();
             public Func<ViewRequest, ResourceScope, CancellationToken, Task<IView>> Create;
             public Task<IView> CreateAsync(ViewRequest request, ResourceScope scope, CancellationToken token)
-            { Creations++; return Create?.Invoke(request, scope, token) ?? Task.FromResult<IView>(new View()); }
+            {
+                Creations++;
+                if (Create != null) return Create(request, scope, token);
+                var view = new View(); Views[request.Key] = view;
+                return Task.FromResult<IView>(view);
+            }
         }
         private sealed class SceneBackend : ISceneBackend
         {
@@ -89,18 +95,21 @@ namespace AwithGameFrame.Core.Tests
             var modal = await service.OpenAsync(new ViewRequest("modal", 10, modal: true));
             var background = await service.OpenAsync(new ViewRequest("background", 0));
             var overlay = await service.OpenAsync(new ViewRequest("overlay", 20, takesFocus: false));
-            ((View)background.View).Input = _ => { calls.Add("background"); return true; };
-            ((View)modal.View).Input = _ => { calls.Add("modal"); return false; };
-            ((View)overlay.View).Input = _ => { calls.Add("overlay"); return false; };
+            factory.Views["background"].Input = _ => { calls.Add("background"); return true; };
+            factory.Views["modal"].Input = _ => { calls.Add("modal"); return false; };
+            factory.Views["overlay"].Input = _ => { calls.Add("overlay"); return false; };
             Assert.That(service.Focused, Is.SameAs(modal));
-            Assert.That(((View)background.View).State.IsCovered, Is.True);
-            Assert.That(((View)background.View).State.IsInputEnabled, Is.False);
-            Assert.That(((View)overlay.View).State.Order, Is.EqualTo(2));
+            Assert.That(background.IsOpen && modal.IsFocused && !overlay.IsFocused, Is.True);
+            Assert.That(factory.Views["background"].State.IsCovered, Is.True);
+            Assert.That(factory.Views["background"].State.IsInputEnabled, Is.False);
+            Assert.That(factory.Views["overlay"].State.Order, Is.EqualTo(2));
+            Assert.That(service.OpenViews, Is.EqualTo(new[] { background, modal, overlay }));
             Assert.That(service.RouteInput(new ViewInput("confirm")), Is.True);
             Assert.That(calls, Is.EqualTo(new[] { "overlay", "modal" }));
             await modal.CloseAsync();
             Assert.That(service.Focused, Is.SameAs(background));
-            Assert.That(((View)background.View).State.IsInputEnabled, Is.True);
+            Assert.That(factory.Views["background"].State.IsInputEnabled, Is.True);
+            Assert.That(modal.IsOpen || modal.IsFocused, Is.False);
             await service.StopAsync(); await store.DisposeAsync(); await host.StopAsync();
         }
 

@@ -65,8 +65,9 @@ public partial class DemoRoot : GameHostNode
                 await DemoExperienceScenario.RunAsync(experience, message => GD.Print(message));
                 await DemoScenario.RunAsync(directory, Godot.FileAccess.GetFileAsBytes("res://Configuration/LevelConfig.json"), message => GD.Print(message));
                 await ShutdownAsync();
+                // Runs last: its final case emits the real root-window close signal for two hosts.
+                await GameHostLifecycleSmoke.RunAsync(this);
                 GD.Print("GODOT_HOST_PASSED");
-                GetTree().Quit();
             }
             finally
             {

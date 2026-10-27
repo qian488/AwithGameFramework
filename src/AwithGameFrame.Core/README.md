@@ -10,19 +10,7 @@
 dotnet build src/AwithGameFrame.Core/AwithGameFrame.Core.csproj
 ```
 
-## 宿主接入点
-
-- `LoggingHost.Output`：同步日志回调 `Action<LogLevel, string, object>`，默认写入标准输出/错误。宿主负责自身的线程切换和上下文对象处理。
-- `LoggingHost.DataPath`：默认可写数据目录，日志默认写到该目录下的 `Logs/`。在初始化日志前配置，也可向 `LoggingAPI.Initialize` 传入独立日志目录。
-- `TimeHelper.TimeSource`：由宿主实现 `ITimeSource`，提供模拟时间、帧间隔、时间缩放和目标帧率。日历/时间戳方法无需宿主；模拟时间方法在未注入时明确抛出异常。
-- 每帧调用 `PerformanceMonitor.GetInstance().Tick(unscaledDeltaTime)`，由宿主提供秒数。计时器使用单调 `Stopwatch`；内存/GC 指标使用 BCL。渲染统计在引擎适配器采集。
-- 定期调用 `LoggingManager.GetInstance().Update()` 清理历史文件；退出时调用 `ShutdownFileLogger()`。
-
-事件使用标准 `System.Action`（0–4 个参数）；同一事件 ID 必须保持相同参数签名，否则注册、移除或触发时抛出 `InvalidOperationException`。原有方法名和命名空间保留；直接传入引擎委托变量的调用方需转换为标准委托并保存转换后的实例用于注销。
-
-`LogMode.Console` 是宿主控制台模式；`UnityDebug` 保留为过时兼容别名。枚举数值保持兼容。`FrameworkLog` / `Both` 同时向宿主和文件输出，`None` 关闭输出。
-
-这里禁止添加引擎 SDK 和第三方运行时依赖。需要宿主能力时，先在内核声明最小接口，再由适配器实现；保留迁移文件的 `.meta` GUID。
+旧单例、启动器、全局服务表和字符串事件集中在 [Runtime/Compatibility](Runtime/Compatibility/README.md)。新模块使用下文的实例宿主，标准检查阻止实例模块回流旧全局 API。
 
 ## 实例宿主与异步流程
 
@@ -97,3 +85,17 @@ UseAsset(lease.Value);
 `Shutdown()` 尝试关闭全部已启动模块，即使某个模块抛错也继续，然后清空本次注册和启动状态；清理异常统一通过 `AggregateException` 返回。重复关闭不会再次清理模块，尚未启动的注册只会被移除。模块回调不能重入启动或在初始化途中关闭；关闭回调中的重复关闭安全返回。`EventCenter.Shutdown()` 会释放事件监听；派发中的监听变更在下一次派发生效。
 
 `ServiceLocator` 的工厂需要返回非空实例。循环依赖或返回 `null` 会明确抛出 `InvalidOperationException`；失败工厂保留，以便依赖恢复后重试。生命周期编排和服务注册由宿主在同一线程顺序调用，未提供并发注册/解析保证。
+
+## 兼容入口的宿主接入点
+
+- `LoggingHost.Output`：同步日志回调 `Action<LogLevel, string, object>`，默认写入标准输出/错误。宿主负责自身的线程切换和上下文对象处理。
+- `LoggingHost.DataPath`：默认可写数据目录，日志默认写到该目录下的 `Logs/`。在初始化日志前配置，也可向 `LoggingAPI.Initialize` 传入独立日志目录。
+- `TimeHelper.TimeSource`：由宿主实现 `ITimeSource`，提供模拟时间、帧间隔、时间缩放和目标帧率。日历/时间戳方法无需宿主；模拟时间方法在未注入时明确抛出异常。
+- 每帧调用 `PerformanceMonitor.GetInstance().Tick(unscaledDeltaTime)`，由宿主提供秒数。计时器使用单调 `Stopwatch`；内存/GC 指标使用 BCL。渲染统计在引擎适配器采集。
+- 定期调用 `LoggingManager.GetInstance().Update()` 清理历史文件；退出时调用 `ShutdownFileLogger()`。
+
+事件使用标准 `System.Action`（0–4 个参数）；同一事件 ID 必须保持相同参数签名，否则注册、移除或触发时抛出 `InvalidOperationException`。原有方法名和命名空间保留；直接传入引擎委托变量的调用方需转换为标准委托并保存转换后的实例用于注销。
+
+`LogMode.Console` 是宿主控制台模式；`UnityDebug` 保留为过时兼容别名。枚举数值保持兼容。`FrameworkLog` / `Both` 同时向宿主和文件输出，`None` 关闭输出。
+
+这里禁止添加引擎 SDK 和第三方运行时依赖。需要宿主能力时，先在内核声明最小接口，再由适配器实现；保留迁移文件的 `.meta` GUID。

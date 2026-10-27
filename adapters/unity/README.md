@@ -4,14 +4,13 @@ Unity 需要的代码集中在本包，通用能力来自 src 下的 Core、Data
 
 | 目录 | 职责 / 程序集 |
 | --- | --- |
-| Runtime/Engine | Mono、场景、Unity 类型契约、Inspector 配置、时间/日志接入；AwithGameFrame.Unity |
-| Runtime/Services | 资源、UI、音频、输入、对象池、PlayerPrefs、SQLite 接入与旧 Foundation 门面；AwithGameFrame.Foundation |
-| Runtime/Features | 实例 UI/场景/输入/音频后端、本地化 ScriptableObject/Resources 数据源与 Unity 调试面板；AwithGameFrame.Extensions |
+| Runtime/Engine | 实例宿主、资源后端、时间/日志接入、Unity 动画契约与数学工具；AwithGameFrame.Unity |
+| Runtime/Features | 实例 UI/场景/输入/音频后端、本地化 ScriptableObject/Resources 数据源；AwithGameFrame.Extensions |
 | Editor | AssetBundle 构建与地址/依赖目录；AwithGameFrame.Unity.Editor，仅编辑器 |
 
-UnityPlatform 自动安装日志、目录和时间源，UnityFrameDriver 提供帧驱动。UnityDataPersistence.CreateConfig() 设置旧存档目录；InitializeAsync(config, enableDatabase: true) 可显式启用数据库存储。详细行为见根 docs/migration.md。
+UnityPlatform 自动安装日志、目录和时间源，实例 GameHostBehaviour 自行驱动宿主。旧静态帧驱动、UnityDataPersistence 与 FrameworkEntry 位于独立 [兼容包](../unity-compat/README.md)。
 
-当前示例工程已安装 UniTask、DOTween 和 Mono.Data.Sqlite 插件，UPM 清单提供 Newtonsoft.Json、uGUI。将适配包安装进其他 Unity 工程时，也需要安装这些现有服务使用的插件；它们不属于通用包依赖。Unity 示例和运行时诊断演示位于 samples/Unity/Assets/Examples。
+新工程只安装本包及 Core/Data/Gameplay、Newtonsoft.Json、uGUI 即可使用现代实例后端，不需要 UniTask、DOTween、Mono.Data.Sqlite。仓库示例另行安装兼容包、[DOTween](../unity-dotween/README.md) 与 [SQLite](../unity-sqlite/README.md) 可选包和真实插件，继续验证旧入口。独立验证入口为 `tools/verify-unity-minimal.ps1 -EditorPath <Unity.exe>`，它创建无 Plugins 的工程并执行现代模块启动、暂停、恢复和关闭。
 
 新增引擎实现放独立 adapters/<engine>，不要修改通用源码添加引擎条件编译分支。
 
@@ -34,6 +33,8 @@ UnityPlatform 自动安装日志、目录和时间源，UnityFrameDriver 提供�
 `UnityViewFactory(parent, initialize)` 的可选初始化回调在 prefab 实例化后、Show 之前接收 `ViewRequest` 与原生 `GameObject`，供宿主注入共享应用/视图模型；回调失败仍销毁部分实例。共享样例通过此入口配置 `DemoUnityView`，引擎类型不进入通用视图契约。
 
 ## 生命周期与配置
+
+下列兼容行为需要另行安装 `com.awithgameframe.unity.compatibility`；Inspector 配置和旧 Mono/场景/类型接口归属 `AwithGameFrame.Unity.Legacy`，调试控制台及旧本地化启动器归属 `AwithGameFrame.Unity.Compatibility`。原 namespace、脚本 GUID 保留；自定义 asmdef 和程序集反射按 [迁移说明](../../docs/migration.md) 更新。
 
 `FrameworkEntry` 是旧静态模块的兼容入口。启动读取 `FrameworkConfig` 的音频、UI、输入、对象池开关；修改模块开关后需结束并重新启动会话。对象池关闭时，资源服务直接加载并销毁 GameObject。一个已启动的旧会话只由创建它的入口负责关闭。
 

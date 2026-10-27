@@ -1,0 +1,9 @@
+{
+  "name": "com.awithgameframe.unity.compatibility",
+  "version": "0.2.0",
+  "displayName": "AwithGameFrame Unity Compatibility",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.awithgameframe.unity": "0.2.0"
+  }
+}

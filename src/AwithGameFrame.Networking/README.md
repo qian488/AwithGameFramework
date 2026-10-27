@@ -20,6 +20,8 @@ if (result.IsSuccess && client.IsCurrentEpoch(result.SessionEpoch)) Apply(result
 
 `IHttpTransport.SendAsync(TransportRequest, token)` 每次发送一个绝对 HTTP(S) 请求，返回真实状态码和字节正文；连接错误和取消可抛出 BCL 异常。内置实现使用 `ResponseHeadersRead`，向发送及正文读取传播取消。请求头按请求设置，不修改共享 DefaultRequestHeaders。TransportRequest 复制传入字节和请求头；调用方应将公开的 Body 视为不可变。
 
+`HttpClientTransport` 默认最多缓冲 16 MiB 响应正文（`DefaultMaxResponseBodyBytes`），包含非 2xx 响应。可用 `new HttpClientTransport(maxResponseBodyBytes: 1024 * 1024)`，或向注入 handler 的构造函数传入同名参数；`MaxResponseBodyBytes` 可读取配置，0 仅允许空正文，负数拒绝。先检查 `Content-Length`，再累计实际读取的字节，因此缺少或低报长度也不能绕过上限。超限抛出说明限制字节数的 `HttpRequestException`，立即释放响应；`ProtocolClient` 将其报告为 `NetworkError`。取消仍传播 `OperationCanceledException`，不改写为超限。
+
 `ProtocolEndpoint<TRequest,TResponse>` 显式定义 HTTP 方法、相对路由和是否发送正文。GET/HEAD 等无正文请求指定 `hasRequestBody: false`，可使用 `EmptyRequest`。基础 URI 按标准 Uri 规则合并路由，目录前缀应以 `/` 结尾；查询参数由宿主正确编码。绝对路由、authority 路由及 fragment 会被拒绝。`SendAsync(endpoint, data, timeout?, token)` 默认超时 15 秒，单次可覆盖，`Timeout.InfiniteTimeSpan` 关闭超时。
 
 `NetworkResult<T>` 分开表示三类结果：

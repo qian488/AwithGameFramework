@@ -10,7 +10,9 @@
 | `src/AwithGameFrame.Data` | 持久化、序列化、数据库契约、强类型配置表与结构校验 |
 | `src/AwithGameFrame.Gameplay` | 实例本地化、用户设置、版本化存档、应用导航、视图/绑定/场景、输入动作与音频策略 |
 | `src/AwithGameFrame.Networking` | 可选 HTTP、文件内容更新、WebSocket 会话/心跳/重连与显式推送恢复契约 |
-| `adapters/unity` | Unity 宿主、UI/场景/输入/音频后端、Resources/AssetBundle、PlayerPrefs 与旧服务 |
+| `adapters/unity` | 无旧插件依赖的 Unity 实例宿主、UI/场景/输入/音频后端、Resources/AssetBundle |
+| `adapters/unity-compat` | 旧 Unity 配置/Mono/静态服务、PlayerPrefs 与 Foundation 兼容入口，需要 UniTask |
+| `adapters/unity-dotween`、`adapters/unity-sqlite` | 可选插件接入，分别需要真实 DOTween、Mono.Data.Sqlite |
 | `adapters/godot` | Godot .NET 宿主、后台资源加载、PCK、Control/场景/输入/音频后端 |
 | `samples/Shared` | 三种宿主的共享流程，以及双引擎共用的完整交互应用 |
 | `samples/Headless` | 无图形 .NET 宿主，验证共享逻辑 |
@@ -19,6 +21,8 @@
 | `samples/Protocol` | 协议定义、兼容性基线及生成的 DTO/endpoint |
 | `tests` | 无需 Unity 的自动化测试 |
 | `tools` | 配置/协议生成、AssetBundle/PCK 构建、内容发布安装、兼容性检查与双引擎验收 |
+| `agent` | 开发任务/上下文约定、工具目录、权限与确认规则、任务和交接模板 |
+| `templates` | 可编译测试的功能结构模板，供人类与 Agent 复制扩展 |
 | `docs` | 架构决策、迁移指南、历史调研 |
 
 ## 开始使用
@@ -45,6 +49,8 @@ Unity Hub 打开 `samples/Unity`。工程记录的编辑器版本为 **2022.3.40
 修改配置/协议源后执行 `tools/generate-config.ps1`、`tools/generate-protocol.ps1`。标准检查使用 `-Check` 验证生成结果与协议兼容性，不会自动覆盖手改产物。
 
 ## 基础能力与边界
+
+本仓库也提供开发期 [AgentKit](agent/README.md)，帮助人类与 AI 协作维护游戏项目：任务有读写范围和工作区基线，上下文按路径和预算收集，固定工具配方产生计划、确认记录、执行日志和评测报告。机器检查与人工验收分别记录，不依赖特定模型或 API 账号。可从 [任务模板](agent/templates/tasks/docs-only.json) 和 [函数式领域/命令式应用功能模板](templates/portable-feature/README.md) 开始；入口为 `powershell -File tools/agent.ps1 help`。它位于开发工具层，游戏运行时无需加载。
 
 每个 `GameHost` 拥有独立的服务表、类型事件总线、游戏时钟和定时器。`host.Tick(unscaledSeconds)` 输入未缩放秒数，模块收到缩放后的 delta；暂停时两个游戏时间域都冻结，主线程调度和维护回调继续工作，使允许继续播放的音效能正常回收。普通对象池按引用检查所有权，可通过租约归还。旧静态 API 保留兼容，使用实例宿主不会自动隔离旧静态管理器。
 

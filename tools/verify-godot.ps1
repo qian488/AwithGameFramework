@@ -36,6 +36,7 @@ $process.Refresh()
 if ($process.ExitCode -ne 0) { throw "Godot validation failed ($($process.ExitCode)). See $logPath" }
 if (-not (Test-Path -LiteralPath $logPath) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_HOST_PASSED' -Quiet) -or
+    -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_HOST_LIFECYCLE_PASSED' -Quiet) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'SHARED_SCENARIO_PASSED' -Quiet) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'FOUNDATION_CORE_PASSED' -Quiet) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'GODOT_PRESENTATION_SCENES_PASSED' -Quiet) -or
@@ -85,6 +86,7 @@ if ($Export) {
     $exportProcess.Refresh()
     if ($exportProcess.ExitCode -ne 0 -or -not (Test-Path $exportRuntimeLog) -or
         -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_HOST_PASSED' -Quiet) -or
+        -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_HOST_LIFECYCLE_PASSED' -Quiet) -or
         -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'FOUNDATION_CORE_PASSED' -Quiet) -or
         -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_PRESENTATION_SCENES_PASSED' -Quiet) -or
         -not (Select-String -LiteralPath $exportRuntimeLog -SimpleMatch 'GODOT_INPUT_AUDIO_PASSED' -Quiet) -or

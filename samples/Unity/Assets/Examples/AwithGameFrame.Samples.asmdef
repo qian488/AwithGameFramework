@@ -9,7 +9,9 @@
     "AwithGameFrame.Foundation",
     "AwithGameFrame.Extensions",
     "UniTask",
-    "UnityEngine.UI"
+    "UnityEngine.UI",
+    "AwithGameFrame.Unity.Legacy",
+    "AwithGameFrame.Unity.Compatibility"
   ],
   "autoReferenced": false
 }

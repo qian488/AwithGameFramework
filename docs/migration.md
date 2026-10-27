@@ -1,5 +1,41 @@
 ﻿# 从旧 Unity 工程迁移
 
+## 2026-10-27 框架收敛
+
+现代 Unity 接入继续使用 `com.awithgameframe.unity`，该包不再导入旧静态服务或要求 UniTask、DOTween、Mono.Data.Sqlite。旧项目另外安装本地包：
+
+| 包与目录 | 用途 / 前置插件 |
+| --- | --- |
+| `com.awithgameframe.unity.compatibility` / `adapters/unity-compat` | 旧 Engine/Foundation/调试和本地化入口；需要 UniTask |
+| `com.awithgameframe.unity.dotween` / `adapters/unity-dotween` | 默认动画提供者；需要兼容包和真实 DOTween |
+| `com.awithgameframe.unity.sqlite` / `adapters/unity-sqlite` | 数据库连接工厂；需要真实 Mono.Data.Sqlite 与目标平台原生库 |
+
+样例 manifest 已安装上述完整组合。旧 Mono、Scene、Inspector 配置和多数 Unity 类型接口的自定义 asmdef 引用改为 `AwithGameFrame.Unity.Legacy`；DebugConsole 与 UnityLocalizationBootstrap 使用 `AwithGameFrame.Unity.Compatibility`。Foundation、现代 Unity/Extensions 的程序集名保持不变；DOTweenProvider、SQLiteDatabaseProvider 分别归属 `AwithGameFrame.Unity.DOTween` / `AwithGameFrame.Unity.SQLite`。源码 namespace 和 .meta/GUID 保留，程序集限定类型名、反射或 linker 配置需同步更新。
+
+`UnityPlatform` 仍安装时间/日志/目录；安装兼容包才启动旧静态帧驱动和本地化单例。现代 GameHostBehaviour 自己驱动会话。缺少动画/数据库可选接入时，使用相应能力会明确失败；自定义动画仍可设置 `ProviderManager.AnimationProvider`，数据库仍可显式注册 `DatabaseFactory`。默认提供者通过可选包注册，无反向插件依赖。
+
+Core 的旧 Base/Bootstrap/DI/Event 物理路径移至 `Runtime/Compatibility`，namespace 与程序集不变。`BaseManager.GetInstance/ResetInstance` 使用同一同步锁，修复半初始化发布及获取返回 null；Reset 仍只适用于停用旧使用者后的测试/替换阶段，不能延长已借出引用的生命周期。新增实例模块由静态检查约束使用 GameContext，不混用旧全局表和事件。
+
+`ViewHandle.View`、`ViewHandle.Resources`、`SceneHandle.Resources` 改为内部属性。应用通过现有 `CloseAsync/UnloadAsync/DisposeAsync` 触发服务负责的有序清理；原生初始化/绑定在 factory/backend 的创建回调内完成，不自行释放服务借出的 scope。布局规则可通过 `ViewLayoutRules.Calculate` 独立计算，服务负责提交和调用原生视图。
+
+`DataPersistenceAPI.InitializeAsync(config)` 现在捕获独立会话配置，包含默认路由、序列化选项、StorageConfigs 字典和内置 StorageConfig。初始化后修改外部 config 不再热切换提供者；需 Shutdown 后重新初始化。自定义 opaque 选项对象的内部快照由第三方提供者在初始化时捕获。
+
+`HttpClientTransport` 原构造签名保留，响应正文默认最多 16 MiB，超限抛出 HttpRequestException（ProtocolClient 报 NetworkError）。可传 `maxResponseBodyBytes` 配置；零只允许空正文。大文件继续使用流式内容下载，不通过协议响应缓冲。
+
+Godot 宿主关闭由每树统一协调，窗口关闭等待所有宿主；最后一个宿主停止后恢复原 AutoAcceptQuit。启动中暂停状态会在启动后回放，重复恢复不再对 Running 宿主调用 Resume。删除节点前仍应显式等待 ShutdownAsync；退出树回调本身无法阻塞等待异步清理。
+
+## Agent 开发工具与模板
+
+新增 `agent`、`tools/AgentKit` 与 `templates/portable-feature`，用于开发任务范围、上下文、受控工具执行、确认、评测、交接及模板复用，不进入游戏运行时依赖。运行时公共 API 与存档格式不受这层工具影响。标准验证现在也检查 Agent 契约并编译测试功能模板，NUnit TRX 位于 `artifacts/TestResults`。
+
+任务/工具清单 `schemaVersion=1`，每次任务创建独立工作区基线；记录的摘要不能替代原文件备份。使用入口见 [AgentKit](../agent/README.md)。
+
+## 用户设置函数式试点
+
+新增 `Gameplay.Settings.UserSettingsRules`，提供默认配置构造、恢复合并、规范化校验、输入绑定覆盖与结构比较，均以普通数据快照为输入并返回独立结果。现有 `UserSettingsService`、模块和存档 DTO/格式保持兼容，调用方可以继续使用现有 API。纯规则不会修改或应用设置，候选要经服务 `Update` 才提交到运行时，持久化仍显式调用 `SaveAsync`。
+
+`LocalizationService.AvailableLanguages` 现在与 `IsLanguageSupported` 一样，在服务释放后抛出 `ObjectDisposedException`，防止采集失效目录后提交设置。试点分层与约束见 [说明](functional-core-pilot.md)。
+
 ## 实例宿主与 Godot
 
 新应用使用 `AwithGameFrame.Core.Hosting.GameHost`，通过 `IGameModule.Id/Dependencies` 声明异步启动依赖；普通服务注册在 `host.Services`，模块通过 `GameContext` 访问。旧 `FrameworkBootstrap/ServiceLocator` 保留兼容，旧静态管理器没有自动获得实例隔离。每个会话创建新宿主，同一宿主停止后不重启。
@@ -65,12 +101,14 @@ Unity Hub 打开 samples/Unity，原 ProjectSettings、场景、资源和插件�
 | 旧位置 | 新位置 |
 | --- | --- |
 | Assets、Packages、ProjectSettings | samples/Unity 下同名目录 |
-| Core 的 Base/Bootstrap/DI/Event/Logging 和通用接口工具 | src/AwithGameFrame.Core/Runtime |
-| Core 的 Mono/Scene、Unity 类型接口和 Inspector 配置 | adapters/unity/Runtime/Engine |
+| Core 的 Base/Bootstrap/DI/Event | src/AwithGameFrame.Core/Runtime/Compatibility |
+| Core 的 Logging 和通用接口工具 | src/AwithGameFrame.Core/Runtime |
+| Core 的 Mono/Scene、旧 Unity 类型接口和 Inspector 配置 | adapters/unity-compat/Runtime/Engine |
 | Foundation 的通用持久化、NewtonsoftJsonProvider | src/AwithGameFrame.Data/Runtime |
-| Foundation 的 UI/音频/输入/资源/对象池与 Unity 提供者 | adapters/unity/Runtime/Services |
+| Foundation 的 UI/音频/输入/资源/对象池与旧提供者门面 | adapters/unity-compat/Runtime/Services |
 | Extensions 的 SaveGame、Localization 管理逻辑 | src/AwithGameFrame.Gameplay/Runtime |
-| ScriptableObject 本地化资源、Unity 数据源、调试面板 | adapters/unity/Runtime/Features |
+| ScriptableObject 本地化资源、Unity 数据源 | adapters/unity/Runtime/Features |
+| 旧本地化启动器、调试面板 | adapters/unity-compat/Runtime/Features |
 | 框架内 Examples、Extensions/Tests | samples/Unity/Assets/Examples |
 | Assets/Test/Unit | tests/AwithGameFrame.Core.Tests |
 | Doc、旧 README/GUIDE | docs/legacy |

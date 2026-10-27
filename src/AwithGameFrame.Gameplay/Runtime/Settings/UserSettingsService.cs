@@ -9,7 +9,7 @@ using AwithGameFrame.Gameplay.Input;
 
 namespace AwithGameFrame.Gameplay.Settings
 {
-    /// <summary>Host-thread mutations, explicit runtime application and revision-aware serialized persistence.</summary>
+    /// <summary>Captures runtime facts, commits pure rule results and coordinates effects and revision-aware persistence.</summary>
     public sealed class UserSettingsService : IAsyncDisposable
     {
         private readonly object sync = new object();
@@ -36,20 +36,10 @@ namespace AwithGameFrame.Gameplay.Settings
             if (!context.Dispatcher.CheckAccess) throw new InvalidOperationException("Create user settings on the host thread.");
             this.audio = audio;
             this.input = input;
-            this.defaults = Copy(defaults ?? throw new ArgumentNullException(nameof(defaults)));
-            if (this.defaults.BusVolumes.Count == 0)
-            {
-                this.defaults.BusVolumes.Add("sfx", 1);
-                this.defaults.BusVolumes.Add("music", 1);
-            }
-            foreach (string bus in this.defaults.BusVolumes.Keys)
-                if (!this.defaults.BusMuted.ContainsKey(bus)) this.defaults.BusMuted.Add(bus, false);
-            foreach (string bus in this.defaults.BusMuted.Keys)
-                if (!this.defaults.BusVolumes.ContainsKey(bus)) throw new ArgumentException("A muted settings bus must have a configured volume.", nameof(defaults));
-            if (input != null && this.defaults.InputBindings.Count == 0)
-                foreach (var binding in input.CaptureBindings()) this.defaults.InputBindings.Add(FromBinding(binding));
-            ValidateShape(this.defaults);
-            current = Copy(this.defaults);
+            if (defaults == null) throw new ArgumentNullException(nameof(defaults));
+            this.defaults = UserSettingsRules.CreateDefaults(defaults,
+                input != null && defaults.InputBindings?.Count == 0 ? input.CaptureBindings() : null);
+            current = UserSettingsRules.Copy(this.defaults);
         }
 
         internal GameContext Context => context;
@@ -59,7 +49,7 @@ namespace AwithGameFrame.Gameplay.Settings
         public bool IsDirty { get { lock (sync) return revision != savedRevision; } }
         public long Revision { get { lock (sync) return revision; } }
         public Exception LastSaveError { get { lock (sync) return lastSaveError; } }
-        public UserSettingsData Snapshot { get { lock (sync) return Copy(current); } }
+        public UserSettingsData Snapshot { get { lock (sync) return UserSettingsRules.Copy(current); } }
 
         public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
@@ -75,16 +65,16 @@ namespace AwithGameFrame.Gameplay.Settings
                 try
                 {
                     var saved = await store.LoadAsync(linked.Token).ConfigureAwait(false);
-                    var restored = saved == null ? Copy(defaults) : Merge(saved);
                     await OnHostAsync(() =>
                     {
                         linked.Token.ThrowIfCancellationRequested();
                         lock (sync) if (closing) throw new ObjectDisposedException(nameof(UserSettingsService));
-                        ValidateRuntime(restored);
+                        var restored = UserSettingsRules.Restore(defaults, saved, localization.AvailableLanguages,
+                            CaptureAvailableAudioBuses(), input?.CaptureBindings());
                         lock (sync)
                         {
                             current = restored;
-                            revision = saved == null || !Equal(saved, restored) ? 1 : 0;
+                            revision = saved == null || !UserSettingsRules.AreEquivalent(saved, restored) ? 1 : 0;
                             savedRevision = 0;
                         }
                         ApplyRuntime(restored, null, true);
@@ -123,13 +113,12 @@ namespace AwithGameFrame.Gameplay.Settings
         public void Update(UserSettingsData settings)
         {
             VerifyMutation();
-            var next = Copy(settings ?? throw new ArgumentNullException(nameof(settings)));
-            ValidateRuntime(next);
+            var next = PrepareCandidate(settings ?? throw new ArgumentNullException(nameof(settings)));
             UserSettingsData previous;
             lock (sync)
             {
                 previous = current;
-                if (Equal(previous, next)) return;
+                if (UserSettingsRules.AreEquivalent(previous, next)) return;
                 current = next;
                 revision++;
                 applying = true;
@@ -148,8 +137,7 @@ namespace AwithGameFrame.Gameplay.Settings
         public void Reapply()
         {
             VerifyMutation();
-            var next = Snapshot;
-            ValidateRuntime(next);
+            var next = PrepareCandidate(Snapshot);
             lock (sync) applying = true;
             try { ApplyRuntime(next, null, true); }
             finally { lock (sync) applying = false; }
@@ -169,7 +157,7 @@ namespace AwithGameFrame.Gameplay.Settings
                     if (!initialized) throw new InvalidOperationException("Load settings before saving.");
                     if (stopped || (closing && !duringStop)) throw new ObjectDisposedException(nameof(UserSettingsService));
                     if (revision == savedRevision) return;
-                    snapshot = Copy(current);
+                    snapshot = UserSettingsRules.Copy(current);
                     writingRevision = revision;
                 }
                 try
@@ -216,70 +204,26 @@ namespace AwithGameFrame.Gameplay.Settings
             }
         }
 
-        private UserSettingsData Merge(UserSettingsData saved)
-        {
-            ValidateShape(saved);
-            var merged = Copy(defaults);
-            merged.Language = saved.Language;
-            merged.MasterVolume = saved.MasterVolume;
-            merged.MasterMuted = saved.MasterMuted;
-            foreach (var pair in saved.BusVolumes)
-            {
-                if (!merged.BusVolumes.ContainsKey(pair.Key)) throw new ArgumentException("Saved settings contain an unknown audio bus: " + pair.Key);
-                merged.BusVolumes[pair.Key] = pair.Value;
-            }
-            foreach (var pair in saved.BusMuted)
-            {
-                if (!merged.BusMuted.ContainsKey(pair.Key)) throw new ArgumentException("Saved settings contain an unknown audio bus: " + pair.Key);
-                merged.BusMuted[pair.Key] = pair.Value;
-            }
-            foreach (var binding in saved.InputBindings)
-            {
-                int index = merged.InputBindings.FindIndex(item => item.ContextId == binding.ContextId && item.Action == binding.Action);
-                if (index < 0) throw new ArgumentException("Saved settings contain an unknown input action.");
-                merged.InputBindings[index] = CopyBinding(binding);
-            }
-            return merged;
-        }
+        private UserSettingsData PrepareCandidate(UserSettingsData candidate) =>
+            UserSettingsRules.Normalize(candidate, defaults, localization.AvailableLanguages,
+                CaptureAvailableAudioBuses(), input?.CaptureBindings());
 
-        private void ValidateRuntime(UserSettingsData settings)
+        // Runtime queries stay here; the rules receive values and never call services.
+        private IReadOnlyCollection<string> CaptureAvailableAudioBuses()
         {
-            ValidateShape(settings);
-            if (!localization.IsLanguageSupported(settings.Language)) throw new ArgumentException("The settings language has no localization dataset.");
-            settings.Language = LocalizationService.NormalizeLanguage(settings.Language);
-            if (settings.BusVolumes.Count != defaults.BusVolumes.Count || settings.BusMuted.Count != defaults.BusMuted.Count)
-                throw new ArgumentException("Settings must include every configured audio bus.");
-            foreach (string bus in settings.BusVolumes.Keys)
-                if (!defaults.BusVolumes.ContainsKey(bus) || !settings.BusMuted.ContainsKey(bus) || (audio != null && !audio.HasBus(bus)))
-                    throw new ArgumentException("The settings audio bus is not configured: " + bus);
-            if (settings.InputBindings.Count != defaults.InputBindings.Count) throw new ArgumentException("Settings must include every configurable input action.");
-            foreach (var binding in settings.InputBindings)
-                if (!defaults.InputBindings.Exists(item => item.ContextId == binding.ContextId && item.Action == binding.Action))
-                    throw new ArgumentException("The settings input action is not configured.");
-            if (input != null) BuildInputSnapshot(settings);
-        }
-
-        private IReadOnlyList<InputBindingSnapshot> BuildInputSnapshot(UserSettingsData settings)
-        {
-            var captured = input.CaptureBindings();
-            var result = new List<InputBindingSnapshot>(captured);
-            foreach (var binding in settings.InputBindings)
-            {
-                int index = result.FindIndex(item => item.ContextId == binding.ContextId && item.Action == binding.Action);
-                if (index < 0) throw new ArgumentException("A settings input context/action has not been created.");
-                result[index] = new InputBindingSnapshot(binding.ContextId, binding.Action, binding.Control, binding.Scale, binding.DeadZone);
-            }
-            var controls = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var binding in result)
-                if (!controls.Add(binding.ContextId + "\0" + binding.Control)) throw new ArgumentException("Settings create a control conflict in one input context.");
-            return result.AsReadOnly();
+            if (audio == null) return null;
+            var available = new List<string>();
+            foreach (string bus in defaults.BusVolumes.Keys)
+                if (audio.HasBus(bus)) available.Add(bus);
+            return available.AsReadOnly();
         }
 
         private void ApplyRuntime(UserSettingsData next, UserSettingsData previous, bool force)
         {
             var errors = new List<Exception>();
-            if (input != null && (force || !BindingsEqual(next.InputBindings, previous.InputBindings)))
-                Try(() => input.ApplyBindings(BuildInputSnapshot(next)), errors);
+            if (input != null && (force || !UserSettingsRules.HaveSameBindings(next.InputBindings, previous.InputBindings)))
+                // Preserve actions outside user settings using the latest runtime snapshot.
+                Try(() => input.ApplyBindings(UserSettingsRules.BuildInputBindings(next, input.CaptureBindings())), errors);
             if (audio != null)
             {
                 if (force || next.MasterVolume != previous.MasterVolume) Try(() => audio.SetMasterVolume(next.MasterVolume), errors);
@@ -301,65 +245,6 @@ namespace AwithGameFrame.Gameplay.Settings
             return context.Dispatcher.InvokeAsync(action, token);
         }
         private static void Try(Action action, List<Exception> errors) { try { action(); } catch (Exception error) { errors.Add(error); } }
-
-        private static void ValidateShape(UserSettingsData settings)
-        {
-            LocalizationService.NormalizeLanguage(settings.Language);
-            Volume(settings.MasterVolume);
-            if (settings.BusVolumes == null || settings.BusMuted == null || settings.InputBindings == null) throw new ArgumentException("Settings collections cannot be null.");
-            foreach (var pair in settings.BusVolumes) { Name(pair.Key); Volume(pair.Value); }
-            foreach (var pair in settings.BusMuted) Name(pair.Key);
-            var actions = new HashSet<string>(StringComparer.Ordinal);
-            var controls = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var binding in settings.InputBindings)
-            {
-                if (binding == null) throw new ArgumentException("Input settings cannot contain null.");
-                Name(binding.ContextId); Name(binding.Action); Name(binding.Control);
-                if (float.IsNaN(binding.Scale) || float.IsInfinity(binding.Scale) || binding.Scale == 0 || Math.Abs(binding.Scale) > 1 ||
-                    float.IsNaN(binding.DeadZone) || binding.DeadZone < 0 || binding.DeadZone >= 1)
-                    throw new ArgumentException("Input scale and dead zone are invalid.");
-                if (!actions.Add(binding.ContextId + "\0" + binding.Action) || !controls.Add(binding.ContextId + "\0" + binding.Control))
-                    throw new ArgumentException("Input actions and controls must be unique within their context.");
-            }
-        }
-        private static void Name(string value)
-        { if (string.IsNullOrWhiteSpace(value) || value.IndexOf('\0') >= 0) throw new ArgumentException("Settings names cannot be empty or contain NUL."); }
-        private static void Volume(float value)
-        { if (float.IsNaN(value) || float.IsInfinity(value) || value < 0 || value > 1) throw new ArgumentOutOfRangeException(nameof(value), "Volume must be finite in [0, 1]."); }
-        private static UserInputBinding FromBinding(InputBindingSnapshot item) => new UserInputBinding
-        { ContextId = item.ContextId, Action = item.Action, Control = item.Control, Scale = item.Scale, DeadZone = item.DeadZone };
-        private static UserInputBinding CopyBinding(UserInputBinding item)
-        {
-            if (item == null) throw new ArgumentException("Input settings cannot contain null.");
-            return new UserInputBinding { ContextId = item.ContextId, Action = item.Action, Control = item.Control, Scale = item.Scale, DeadZone = item.DeadZone };
-        }
-        internal static UserSettingsData Copy(UserSettingsData source)
-        {
-            if (source.BusVolumes == null || source.BusMuted == null || source.InputBindings == null) throw new ArgumentException("Settings collections cannot be null.");
-            var copy = new UserSettingsData { Language = source.Language, MasterVolume = source.MasterVolume, MasterMuted = source.MasterMuted,
-                BusVolumes = new Dictionary<string, float>(source.BusVolumes, StringComparer.Ordinal),
-                BusMuted = new Dictionary<string, bool>(source.BusMuted, StringComparer.Ordinal) };
-            foreach (var binding in source.InputBindings) copy.InputBindings.Add(CopyBinding(binding));
-            return copy;
-        }
-        private static bool BindingsEqual(List<UserInputBinding> a, List<UserInputBinding> b)
-        {
-            if (a.Count != b.Count) return false;
-            foreach (var left in a)
-            {
-                var right = b.Find(item => item.ContextId == left.ContextId && item.Action == left.Action);
-                if (right == null || right.Control != left.Control || right.Scale != left.Scale || right.DeadZone != left.DeadZone) return false;
-            }
-            return true;
-        }
-        private static bool Equal(UserSettingsData a, UserSettingsData b)
-        {
-            if (a.Language != b.Language || a.MasterVolume != b.MasterVolume || a.MasterMuted != b.MasterMuted ||
-                a.BusVolumes.Count != b.BusVolumes.Count || a.BusMuted.Count != b.BusMuted.Count || !BindingsEqual(a.InputBindings, b.InputBindings)) return false;
-            foreach (var pair in a.BusVolumes) if (!b.BusVolumes.TryGetValue(pair.Key, out var value) || pair.Value != value) return false;
-            foreach (var pair in a.BusMuted) if (!b.BusMuted.TryGetValue(pair.Key, out var value) || pair.Value != value) return false;
-            return true;
-        }
     }
 
     public sealed class UserSettingsModule : GameModule

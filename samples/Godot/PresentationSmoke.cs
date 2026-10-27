@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Core.Resources;
@@ -19,7 +21,8 @@ public static class PresentationSmoke
         var sceneRoot = new Node { Name = "Scenes" };
         owner.AddChild(sceneRoot);
         var store = new ResourceStore(new GodotResourceLoader(), host.Dispatcher);
-        var views = new ViewService(host.Context, new GodotViewFactory(viewRoot), store);
+        var viewFactory = new CapturingViewFactory(new GodotViewFactory(viewRoot));
+        var views = new ViewService(host.Context, viewFactory, store);
         var scenes = new SceneService(host.Context, new GodotSceneBackend(sceneRoot), store);
         try
         {
@@ -50,7 +53,7 @@ public static class PresentationSmoke
             await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
             Require(!GodotObject.IsInstanceValid(lower) && viewRoot.GetChildCount() == 0, "All native views freed");
             bool scopeClosed = false;
-            try { await background.Resources.LoadAsync<PackedScene>(background.Request.Key); }
+            try { await viewFactory.Scopes[background.Request.Key].LoadAsync<PackedScene>(background.Request.Key); }
             catch (ObjectDisposedException) { scopeClosed = true; }
             Require(scopeClosed, "Closed view releases its resource scope");
 
@@ -76,6 +79,18 @@ public static class PresentationSmoke
                 try { await scenes.StopAsync(); }
                 finally { await store.DisposeAsync(); owner.QueueFree(); }
             }
+        }
+    }
+
+    private sealed class CapturingViewFactory : IViewFactory
+    {
+        private readonly IViewFactory inner;
+        public readonly Dictionary<string, ResourceScope> Scopes = new Dictionary<string, ResourceScope>();
+        public CapturingViewFactory(IViewFactory inner) => this.inner = inner;
+        public Task<IView> CreateAsync(ViewRequest request, ResourceScope resources, CancellationToken cancellationToken)
+        {
+            Scopes[request.Key] = resources;
+            return inner.CreateAsync(request, resources, cancellationToken);
         }
     }
 

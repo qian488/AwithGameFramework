@@ -53,6 +53,34 @@ namespace AwithGameFrame.Tests.Unit
         }
 
         [Test]
+        public async Task SessionCopiesFrameworkNestedOptionsWithoutImposingFileProviderCapabilities()
+        {
+            var provider = new ControlledStorage();
+            DataPersistenceAPI.RegisterStorageProvider(StorageType.JsonFile, provider);
+            DataPersistenceAPI.RegisterStorageProvider(StorageType.BinaryFile, provider);
+            DataPersistenceAPI.RegisterStorageProvider(StorageType.PlayerPrefs, provider);
+            var databaseOptions = new StorageConfig { databasePath = "original.db" };
+            var config = new DataPersistenceConfig
+            {
+                DataRootPath = directory, DefaultStorageType = StorageType.PlayerPrefs,
+                EnableEncryption = true, EncryptionAlgorithm = EncryptionAlgorithm.AES256,
+                SerializationConfig = new SerializationConfig { IncludeTypeInfo = true }
+            };
+            config.StorageConfigs.Add(StorageType.Database, databaseOptions);
+            Assert.That(await DataPersistenceAPI.InitializeAsync(config), Is.EqualTo(DataOperationResult.Success));
+
+            config.DefaultStorageType = StorageType.Database;
+            config.SerializationConfig.IncludeTypeInfo = false;
+            databaseOptions.databasePath = "changed.db";
+            config.StorageConfigs.Clear();
+            Assert.That(provider.Config, Is.Not.SameAs(config));
+            Assert.That(provider.Config.SerializationConfig.IncludeTypeInfo, Is.True);
+            Assert.That(((StorageConfig)provider.Config.StorageConfigs[StorageType.Database]).databasePath, Is.EqualTo("original.db"));
+            Assert.That(provider.Config.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.AES256));
+            Assert.That(await DataPersistenceAPI.SaveAsync("still-routed", 42), Is.EqualTo(DataOperationResult.Success));
+        }
+
+        [Test]
         public async Task Shutdown_ShouldWaitForEveryAdmittedOperation()
         {
             var first = new TaskCompletionSource<DataOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -247,6 +275,7 @@ namespace AwithGameFrame.Tests.Unit
 
         private sealed class ControlledStorage : IStorageProvider
         {
+            public DataPersistenceConfig Config { get; private set; }
             public StorageType StorageType => StorageType.PlayerPrefs;
             public bool IsInitialized { get; private set; }
             public int InitializeCount { get; private set; }
@@ -259,6 +288,7 @@ namespace AwithGameFrame.Tests.Unit
             public Task<DataOperationResult> InitializeAsync() => InitializeAsync(null);
             public Task<DataOperationResult> InitializeAsync(object config)
             {
+                Config = config as DataPersistenceConfig;
                 InitializeCount++;
                 IsInitialized = true;
                 return Task.FromResult(InitializationResult);

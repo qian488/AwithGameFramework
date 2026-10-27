@@ -233,6 +233,55 @@ namespace AwithGameFrame.Core.Tests
         }
 
         [Test]
+        public void NormalizedRestoreRequiresSaveButEquivalentReorderedUpdateHasNoEffects()
+        {
+            var store = new MemoryStore();
+            using (var seed = new Rig(store)) SettingsHostTest.Wait(seed.Settings.SaveAsync(), seed.Host);
+            store.Data.Language = "FR-ca";
+            using (var rig = new Rig(store))
+            {
+                Assert.That(rig.Settings.Snapshot.Language, Is.EqualTo("fr-CA"));
+                Assert.That(store.Data.Language, Is.EqualTo("FR-ca"));
+                Assert.That(rig.Settings.IsDirty, Is.True);
+                long revision = rig.Settings.Revision;
+                int changes = 0;
+                using var subscription = rig.Host.Events.Subscribe<UserSettingsChanged>(_ => changes++);
+                rig.Input.ProcessFrame(new Dictionary<string, float> { ["key/space"] = 1 });
+                var same = rig.Settings.Snapshot;
+                same.InputBindings.Reverse();
+                rig.Settings.Update(same);
+                Assert.That(rig.Settings.Revision, Is.EqualTo(revision));
+                Assert.That(changes, Is.Zero);
+                Assert.That(rig.Input.ProcessFrame(new Dictionary<string, float> { ["key/space"] = 1 }).Events[0].Phase,
+                    Is.EqualTo(InputActionPhase.Held));
+                SettingsHostTest.Wait(rig.Settings.SaveAsync(), rig.Host);
+                Assert.That(store.Data.Language, Is.EqualTo("fr-CA"));
+            }
+            using var restored = new Rig(store);
+            Assert.That(restored.Settings.IsDirty, Is.False);
+        }
+
+        [Test]
+        public void LoadValidatesAgainstRuntimeBindingsCapturedAfterStorageCompletes()
+        {
+            var pending = new TaskCompletionSource<UserSettingsData>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var store = new MemoryStore { Loading = () => pending.Task };
+            using var rig = new Rig(store, initialize: false);
+            var saved = rig.Settings.Snapshot;
+            saved.InputBindings[0].Control = "key/d";
+            var load = rig.Settings.InitializeAsync();
+            rig.Controls.Bind("dynamic", "key/d");
+            pending.SetResult(saved);
+
+            Assert.Throws<ArgumentException>(() => SettingsHostTest.Wait(load, rig.Host));
+            Assert.That(rig.Settings.IsInitialized, Is.False);
+            Assert.That(rig.Settings.Revision, Is.Zero);
+            Assert.That(rig.Input.CaptureBindings()[0].Control, Is.EqualTo("key/space"));
+            Assert.That(rig.Input.CaptureBindings()[2].Control, Is.EqualTo("key/d"));
+            Assert.That(store.Saves, Is.Zero);
+        }
+
+        [Test]
         public void ListenerFailureCommitsDesiredSettingsAndReapplyCanRecoverRuntime()
         {
             using var rig = new Rig(new MemoryStore());
@@ -242,6 +291,25 @@ namespace AwithGameFrame.Core.Tests
             Assert.That(rig.Localization.CurrentLanguage, Is.EqualTo("fr"));
             subscription.Dispose(); rig.Settings.Reapply();
             Assert.That(rig.Localization.GetText("greeting"), Is.EqualTo("Bonjour"));
+        }
+
+        [Test]
+        public void DisposedLocalizationRejectsChangesBeforeSettingsOrAudioCommit()
+        {
+            using var rig = new Rig(new MemoryStore());
+            rig.Play();
+            long revision = rig.Settings.Revision;
+            int changes = 0;
+            using var subscription = rig.Host.Events.Subscribe<UserSettingsChanged>(_ => changes++);
+            rig.Localization.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => rig.Settings.SetMasterVolume(.2f));
+            Assert.Throws<ObjectDisposedException>(() => rig.Settings.SetLanguage("fr"));
+            Assert.That(rig.Settings.Revision, Is.EqualTo(revision));
+            Assert.That(rig.Settings.Snapshot.MasterVolume, Is.EqualTo(1));
+            Assert.That(rig.Settings.Snapshot.Language, Is.EqualTo("en"));
+            Assert.That(rig.Backend.Last.Volume, Is.EqualTo(1));
+            Assert.That(changes, Is.Zero);
         }
 
         [Test]

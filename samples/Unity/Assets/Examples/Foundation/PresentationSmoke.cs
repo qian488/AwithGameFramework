@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Core.Resources;
@@ -31,7 +33,8 @@ namespace AwithGameFrame.Samples
             var eventObject = EventSystem.current == null ? new GameObject("Smoke events", typeof(EventSystem)) : null;
             if (eventObject != null) eventObject.transform.SetParent(owner.transform, false);
             var store = new ResourceStore(new UnityResourceLoader(), host.Dispatcher);
-            var views = new ViewService(host.Context, new UnityViewFactory((RectTransform)viewRoot.transform), store);
+            var viewFactory = new CapturingViewFactory(new UnityViewFactory((RectTransform)viewRoot.transform));
+            var views = new ViewService(host.Context, viewFactory, store);
             var scenes = new SceneService(host.Context, new UnitySceneBackend(), store);
             try
             {
@@ -63,7 +66,7 @@ namespace AwithGameFrame.Samples
                 await clock.NextFrame();
                 Require(lower == null && viewRoot.transform.childCount == 0, "All native views destroyed");
                 bool scopeClosed = false;
-                try { await background.Resources.LoadAsync<GameObject>("AwithSmoke/Background"); }
+                try { await viewFactory.Scopes[background.Request.Key].LoadAsync<GameObject>("AwithSmoke/Background"); }
                 catch (ObjectDisposedException) { scopeClosed = true; }
                 Require(scopeClosed, "Closed view releases its resource scope");
 
@@ -89,6 +92,18 @@ namespace AwithGameFrame.Samples
                     try { await scenes.StopAsync(); }
                     finally { await store.DisposeAsync(); Destroy(owner); }
                 }
+            }
+        }
+
+        private sealed class CapturingViewFactory : IViewFactory
+        {
+            private readonly IViewFactory inner;
+            public readonly Dictionary<string, ResourceScope> Scopes = new Dictionary<string, ResourceScope>();
+            public CapturingViewFactory(IViewFactory inner) => this.inner = inner;
+            public Task<IView> CreateAsync(ViewRequest request, ResourceScope resources, CancellationToken cancellationToken)
+            {
+                Scopes[request.Key] = resources;
+                return inner.CreateAsync(request, resources, cancellationToken);
             }
         }
 

@@ -69,7 +69,6 @@ namespace AwithGameFrame.Extensions.Presentation
                     if (stopped) throw new OperationCanceledException(operation.Token);
                     added = new ViewHandle(this, ++nextId, request, view, scope);
                     views.Add(added);
-                    SortViews();
                 }
                 ApplyStates();
                 return added;
@@ -177,23 +176,33 @@ namespace AwithGameFrame.Extensions.Presentation
             }
         }
 
-        private void SortViews() => views.Sort((a, b) => a.Request.Layer != b.Request.Layer ? a.Request.Layer.CompareTo(b.Request.Layer) : a.InstanceId.CompareTo(b.InstanceId));
-
         private void ApplyStates()
         {
             ViewHandle[] snapshot;
-            int modal = -1, focus = -1;
+            IReadOnlyList<ViewLayoutEntry> layout;
             lock (sync)
             {
-                snapshot = views.ToArray();
-                for (int i = snapshot.Length - 1; i >= 0; i--) if (snapshot[i].Request.Modal) { modal = i; break; }
-                for (int i = snapshot.Length - 1; i >= Math.Max(0, modal); i--) if (snapshot[i].Request.TakesFocus) { focus = i; break; }
-                focused = focus < 0 ? null : snapshot[focus];
+                var facts = new List<ViewLayoutItem>(views.Count);
+                var handles = new Dictionary<long, ViewHandle>();
+                foreach (var handle in views)
+                {
+                    facts.Add(new ViewLayoutItem(handle.InstanceId, handle.Request));
+                    handles.Add(handle.InstanceId, handle);
+                }
+                layout = ViewLayoutRules.Calculate(facts);
+                snapshot = new ViewHandle[layout.Count];
+                views.Clear(); focused = null;
+                for (int i = 0; i < layout.Count; i++)
+                {
+                    var handle = handles[layout[i].InstanceId];
+                    snapshot[i] = handle; views.Add(handle);
+                    if (layout[i].State.IsFocused) focused = handle;
+                }
             }
             var errors = new List<Exception>();
             for (int i = 0; i < snapshot.Length; i++)
             {
-                try { snapshot[i].View.ApplyState(new ViewState(i, i < modal, i >= modal, i == focus)); }
+                try { snapshot[i].View.ApplyState(layout[i].State); }
                 catch (Exception ex) { errors.Add(ex); }
             }
             if (errors.Count != 0) throw new AggregateException("View state update reported errors.", errors);

@@ -8,11 +8,21 @@
 4. 先在 .NET 测试或无图形宿主验证行为，再验证相应引擎的适配。
 5. 修改边界或公共接口时，同步更新模块 README、迁移指南和受影响的验证。
 
+## 人类与 Agent 协作
+
+需要可交接的开发任务时，从 [AgentKit](agent/README.md) 创建任务清单，填写具体目标、读写目录、保留的已有修改、工具和验收条件。先收集有限上下文，再实现；修改完成后重新收集上下文、生成工具计划、验证并交付报告。任务基线包含创建时的脏文件和暂存状态，不把已有修改自动算成本任务产物。已授权的常规操作继续执行，需要确认的具体计划登记真实的人类决定，不代签或重复索要已有授权。
+
+`agent/tools.json` 是固定命令目录，`tools/AgentKit` 负责执行和留证，`artifacts/agent/tasks` 保存本地任务记录。任务范围能检查外部编辑是否越界，但不能代替操作系统权限隔离；模型 SDK、线上遥测和具体玩法尚由项目接入。新增可复用功能可复制 [portable-feature](templates/portable-feature/README.md)，保留 Domain 纯规则与 Application 显式效果的分工，并按说明重建新包 GUID。
+
 ## 依赖方向
 
 ```mermaid
 graph TD
     UnitySample[samples/Unity] --> Unity[adapters/unity]
+    UnitySample --> UnityCompat[adapters/unity-compat 可选]
+    UnityCompat --> Unity
+    DOTween[adapters/unity-dotween 可选] --> UnityCompat
+    SQLite[adapters/unity-sqlite 可选] --> Data
     Unity --> Gameplay[src/Gameplay]
     Unity --> Data[src/Data]
     Unity --> Core[src/Core]
@@ -64,7 +74,17 @@ graph TD
 
 新模块有真实需求再创建独立项目；不为未接入的引擎建立空壳，不预设所有引擎都具备相同的 UI、音频或资源对象模型。
 
+## 规则与应用编排
+
+用户设置已试点“函数式核心 + 命令式应用层”：`UserSettingsRules` 用显式数据完成合并、规范化、校验和内容比较，`UserSettingsService` 采集运行时事实、提交状态、调用设备和保存。修改设置规则时优先写无需宿主的输入/输出测试，涉及副作用和并发时保留服务回归。具体边界、调用示例与成本见 [试点说明](docs/functional-core-pilot.md)。
+
+其他模块按需求逐步提取可独立计算的规则；不要求生命周期、资源租约或引擎后端改成不可变 reducer。纯函数可在内部使用循环和临时集合，关键是不修改调用方输入、不读取隐藏运行时状态、不产生外部副作用。序列化 DTO 可保持可变，跨规则边界须保证数据所有权。
+
+视图布局也使用 `ViewLayoutRules`：输入视图请求和实例次序，输出排序、模态遮挡、输入与焦点状态；`ViewService` 只负责提交、原生调用和有序清理。视图/场景句柄不再公开原生对象或 scope 的释放权限，应用调用 Close/Unload，原生初始化留在后端回调。
+
 ## 宿主接入
+
+Unity 新工程只安装 `adapters/unity`；旧服务另装 `adapters/unity-compat`（需要 UniTask），DOTween/SQLite 各装独立可选包及真实插件。新包没有旧静态帧驱动和本地化启动器。Core 旧全局表和单例集中在 `Runtime/Compatibility`，标准检查拒绝现代实例模块回流全局 API。包和程序集迁移细节见 [迁移说明](docs/migration.md)。
 
 新项目优先使用可创建实例的 `GameHost`、`GameModule` 与 `GameContext`。模块通过稳定 ID 和 Dependencies 显式声明依赖，异步启动失败会回滚，停止会取消会话并逆序清理。每个会话创建新宿主；旧静态 Bootstrap/ServiceLocator 继续服务兼容代码，旧静态 API 不会随实例宿主自动隔离。
 
