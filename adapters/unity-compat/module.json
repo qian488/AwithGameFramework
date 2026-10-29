@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "unity-compat",
+  "purpose": "Legacy Unity services and migration bridge to the instance host.",
+  "sourcePaths": [
+    "adapters/unity-compat/Runtime"
+  ],
+  "entryPoints": [
+    "adapters/unity-compat/Runtime/Services/FrameworkEntry.cs",
+    "adapters/unity-compat/Runtime/Engine/UnityCompatibilityBootstrap.cs"
+  ],
+  "readme": "adapters/unity-compat/README.md",
+  "dependencies": [
+    "unity"
+  ],
+  "verificationTools": [
+    "unity-verify"
+  ]
+}

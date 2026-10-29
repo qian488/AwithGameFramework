@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "unity-dotween",
+  "purpose": "Optional Unity DOTween integration; requires the external plugin.",
+  "sourcePaths": [
+    "adapters/unity-dotween/Runtime"
+  ],
+  "entryPoints": [
+    "adapters/unity-dotween/Runtime/DOTweenIntegration.cs"
+  ],
+  "readme": "adapters/unity-dotween/README.md",
+  "dependencies": [
+    "unity-compat"
+  ],
+  "verificationTools": [
+    "unity-verify"
+  ]
+}

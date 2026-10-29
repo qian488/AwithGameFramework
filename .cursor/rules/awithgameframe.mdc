@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+description: AwithGameFrame 仓库导航与协作约定入口
+---
+
+先读根 [AGENTS.md](../../AGENTS.md) 和 [GUIDE.md](../../GUIDE.md)，再按任务读取目标目录的 AGENTS.md 与包 README。
+
+目录入口为 [src](../../src/README.md)、[adapters](../../adapters/README.md)、[samples](../../samples/README.md)、[tools](../../tools/README.md) 和 [文档索引](../../docs/README.md)。依赖、权限、元数据、验证与交付规则以仓库约定为准，不在编辑器规则中复制第二套。

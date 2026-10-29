@@ -111,6 +111,13 @@ public static class TaskFiles
         ValidatePaths(ws, task.ReadPaths, nameof(task.ReadPaths));
         ValidatePaths(ws, task.WritePaths, nameof(task.WritePaths));
         ValidatePaths(ws, task.ProtectedPaths, nameof(task.ProtectedPaths));
+        if (task.ReadModules is { Length: > 0 })
+        {
+            if (task.ReadModules.Any(string.IsNullOrWhiteSpace) || task.ReadModules.Distinct(StringComparer.Ordinal).Count() != task.ReadModules.Length)
+                throw new InvalidDataException("readModules must contain unique nonempty module IDs.");
+            var modules = ModuleCatalog.Read(ws);
+            foreach (string id in task.ReadModules) modules.Get(id);
+        }
         if (task.AllowedTools == null || task.RequiredChecks == null || task.Parameters == null)
             throw new InvalidDataException("Task tool, check and parameter collections cannot be null.");
         if (task.RequiredChecks.Length == 0 || task.AllowedTools.Any(string.IsNullOrWhiteSpace) ||

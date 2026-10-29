@@ -32,8 +32,9 @@ feature.SetEnabled(preview.IsEnabled); // 提交，然后通知显式 sink
 2. 重命名 `AwithGameFrame.FeatureTemplate.csproj`、`Runtime/AwithGameFrame.FeatureTemplate.asmdef`、`Tests~/AwithGameFrame.FeatureTemplate.Tests.csproj`，同时重命名对应 `.meta` 文件。将命名空间、asmdef 的 `name/rootNamespace`、测试的 `ProjectReference` 和文档中的 `AwithGameFrame.FeatureTemplate` 改为新名称。
 3. 修改 `package.json` 的 `name`（例如 `com.awithgameframe.your-feature`）、`displayName`、版本和描述。按实际领域重命名 `Feature*` 类型；新增依赖须同时维护 `.csproj`、asmdef、UPM 清单，并遵守根 `AGENTS.md` 的依赖方向。
 4. **复制出新包后，为每个 `.meta` 生成新的唯一 `guid`**；模板和新包不能共享 GUID。此模板没有序列化资源或按 GUID 引用，更新各 `.meta` 的 `guid:` 即可。已有资源的移动仍须保留原 GUID，不能使用复制新包的规则处理移动。
-5. 在宿主/适配层实现 `IFeatureStateSink`，显式构造服务。原生对象、路径、设备与异步资源生命周期留在宿主，不加入 Domain。需要宿主模块时由调用方组合，不要求这个最小模板预设模块或全局单例。
-6. 验证复制后项目和测试，再将新功能接入根验证脚本。不要只更改命名空间而忘记测试引用、程序集名称或包名称。
+5. 更新 `module.json` 的唯一 `id`、职责、所有路径、模块依赖和验证工具 ID。原模板路径和 `portable-feature-template` ID 不能留在新包；入口文件与 README 必须位于新模块目录内。通过 `powershell -File tools/agent.ps1 modules --id <new-id>` 和 `contracts` 检查清单。字段定义见 [AgentKit](../../agent/README.md)。
+6. 在宿主/适配层实现 `IFeatureStateSink`，显式构造服务。原生对象、路径、设备与异步资源生命周期留在宿主，不加入 Domain。需要宿主模块时由调用方组合，不要求这个最小模板预设模块或全局单例。
+7. 验证复制后项目和测试，再将新功能接入根验证脚本。不要只更改命名空间而忘记测试引用、程序集名称或包名称。
 
 在本仓库，父级 `Directory.Build.props` 将运行时和测试构建输出集中到 `artifacts`，本模板不覆盖输出路径。复制到其他仓库时，应提供同类集中输出配置，避免 `bin/obj` 被 Unity 包导入。运行时项目关闭 SDK 默认源码 glob，仅包含 `Runtime/**/*.cs`，因此不会编译 `Tests~` 中的 NUnit 源码。
 

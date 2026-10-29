@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "gameplay",
+  "purpose": "Shared application services and pure rules for presentation, settings, saves, input, audio and scenes.",
+  "sourcePaths": [
+    "src/AwithGameFrame.Gameplay/Runtime"
+  ],
+  "entryPoints": [
+    "src/AwithGameFrame.Gameplay/Runtime/Settings/UserSettingsRules.cs",
+    "src/AwithGameFrame.Gameplay/Runtime/Settings/UserSettingsService.cs",
+    "src/AwithGameFrame.Gameplay/Runtime/Presentation/ViewService.cs"
+  ],
+  "readme": "src/AwithGameFrame.Gameplay/README.md",
+  "dependencies": [
+    "core",
+    "data"
+  ],
+  "verificationTools": [
+    "portable-verify"
+  ]
+}

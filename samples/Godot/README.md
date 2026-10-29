@@ -11,4 +11,4 @@ powershell -File tools/verify-godot.ps1 -EditorPath 'Godot .NET console executab
 powershell -File tools/verify-godot.ps1 -EditorPath 'Godot .NET console executable' -Export -TemplatePath 'windows_debug_x86_64.exe'
 ```
 
-脚本编译真实 Godot SDK 项目，再在真实引擎中执行共享流程断言，检查暂停、隔离和存档重开；`-Export` 使用仓库内 Windows Desktop 预设，发布 C#、打包资源并运行独立 exe。日志与产物报告保留在 `artifacts/GodotValidation`。Windows x86_64 .NET debug 导出运行已实测，其他目标另行验证，详见根 `docs/validation.md`。
+脚本编译真实 Godot SDK 项目，再在真实引擎中执行共享流程断言，检查暂停、隔离和存档重开；`-Export` 使用仓库内 Windows Desktop 预设，发布 C#、打包资源并运行独立 exe。日志与产物报告保留在 `artifacts/GodotValidation`。Windows x86_64 .NET debug 导出运行已实测，其他目标另行验证，详见根 [验证命令](../../docs/reference/verification.md)与[实测记录](../../docs/validation/latest.md)。

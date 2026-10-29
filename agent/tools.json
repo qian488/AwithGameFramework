@@ -3,10 +3,19 @@
   "tools": [
     {
       "id": "agent-contracts",
-      "description": "Validate task templates and fixed tool recipes without invoking an engine.",
+      "description": "Validate module descriptors, task templates and fixed tool recipes without invoking an engine.",
       "executable": "dotnet",
       "arguments": ["run", "--project", "tools/AgentKit/AwithGameFrame.AgentKit.csproj", "--", "contracts"],
-      "inputs": ["tools/AgentKit/Program.cs"],
+      "inputs": ["tools/AgentKit/Program.cs", "tools/AgentKit/ModuleCatalog.cs"],
+      "requiresApproval": false,
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "docs-verify",
+      "description": "Validate maintained documentation entry points and local links.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-docs.ps1"],
+      "inputs": ["tools/verify-docs.ps1"],
       "requiresApproval": false,
       "timeoutSeconds": 120
     },

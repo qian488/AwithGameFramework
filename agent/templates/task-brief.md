@@ -13,7 +13,7 @@
 ## 上下文与边界
 
 - 先读根 AGENTS.md、README.md、GUIDE.md，再读目标模块 README。
-- 已核对的 readPaths / writePaths / protectedPaths：
+- 已核对的 readModules / readPaths / writePaths / protectedPaths：
 - 创建任务前已有修改及需保留的路径：
 - 当前 context.json 摘要与需要额外读取的明确文件：
 - 依赖方向、兼容性及引擎影响：

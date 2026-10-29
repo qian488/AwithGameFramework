@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "data",
+  "purpose": "Portable configuration, serialization and persistent storage.",
+  "sourcePaths": [
+    "src/AwithGameFrame.Data/Runtime"
+  ],
+  "entryPoints": [
+    "src/AwithGameFrame.Data/Runtime/Configuration/ConfigTable.cs",
+    "src/AwithGameFrame.Data/Runtime/Storage/JsonFileStorage.cs"
+  ],
+  "readme": "src/AwithGameFrame.Data/README.md",
+  "dependencies": [
+    "core"
+  ],
+  "verificationTools": [
+    "portable-verify"
+  ]
+}

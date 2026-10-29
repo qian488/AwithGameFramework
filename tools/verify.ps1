@@ -38,6 +38,8 @@ function Invoke-DotNet {
     }
 }
 
+& (Join-Path $PSScriptRoot 'verify-docs.ps1')
+
 Write-Host 'Checking portable source and project dependencies...'
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File | Where-Object {
     $_.FullName -notmatch '[\\/](bin|obj)[\\/]'
@@ -240,4 +242,4 @@ try {
 } finally {
     Pop-Location
 }
-Write-Host 'Architecture checks, agent contracts, build, tests, reusable template, and headless sample passed.'
+Write-Host 'Documentation, architecture checks, agent contracts, build, tests, reusable template, and headless sample passed.'

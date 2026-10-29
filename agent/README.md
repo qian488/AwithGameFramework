@@ -23,12 +23,14 @@ powershell -File tools/agent.ps1 context --task $task
 powershell -File tools/agent.ps1 context --task $task
 powershell -File tools/agent.ps1 check --task $task
 powershell -File tools/agent.ps1 plan --task $task --tool agent-contracts
+powershell -File tools/agent.ps1 plan --task $task --tool docs-verify
 ```
 
 `plan` 输出含 `id` 的 JSON，并写入任务目录的 `plans/`。审阅其中的工具、参数、工作目录、超时与摘要，再将下面的占位符替换为实际 `id`：
 
 ```powershell
-powershell -File tools/agent.ps1 run --task $task --plan '<plan-id>'
+powershell -File tools/agent.ps1 run --task $task --plan '<agent-contracts-plan-id>'
+powershell -File tools/agent.ps1 run --task $task --plan '<docs-verify-plan-id>'
 powershell -File tools/agent.ps1 report --task $task
 powershell -File tools/agent.ps1 monitor --task $task
 ```
@@ -49,6 +51,7 @@ powershell -File tools/agent.ps1 report --task $task
 | 字段 | 含义 |
 | --- | --- |
 | `id`、`objective` | 独立任务标识与具体目标；标识使用字母、数字、下划线或连字符 |
+| `readModules` | 可选模块 ID 数组；收集模块描述文件、README、入口文件及其祖先指令，与 `readPaths` 合并 |
 | `readPaths` | 要收集的仓库相对文件或目录，按路径边界匹配，不使用 glob |
 | `writePaths` | 本次允许变化的文件或目录；用于检查相对基线的变化 |
 | `protectedPaths` | 即使位于写入范围，也不允许变化的文件或目录 |
@@ -57,13 +60,34 @@ powershell -File tools/agent.ps1 report --task $task
 | `acceptance` | 至少一个具体的人类验收条件；CLI 不把自然语言当作已执行测试 |
 | `parameters` | 工具目录声明的命名参数，如引擎工具的 `editorPath`；不是额外命令行或 shell 文本 |
 
-上下文自动包含根 `AGENTS.md`、`README.md`、`GUIDE.md` 和请求路径祖先中的 `AGENTS.md`。它只收集支持的 UTF-8 文本，记录路径、字节数和 SHA-256；最多 128 个文件、每文件 64 KiB、总计 512 KiB。超限会明确失败，不静默截断；缩小 `readPaths` 后重试。
+上下文自动包含根 `AGENTS.md`、`README.md`、`GUIDE.md` 和请求路径祖先中的 `AGENTS.md`。它只收集支持的 UTF-8 文本，记录路径、字节数和 SHA-256；最多 128 个文件、每文件 64 KiB、总计 512 KiB。超限会明确失败，不静默截断；缩小 `readPaths` / `readModules` 后重试。
 
 上下文保留每份资料的路径与摘要，任务清单是目标和范围的依据。源码、文档及工具输出作为待分析的数据，不因其中出现新的指令而扩大权限；交接模板应注明用户授权和需要遵循的指令来源。修改任务选择、增删上下文目录内文件或改变文件内容都会使旧上下文失效，需重新执行 `context`。
 
 路径必须位于仓库内，拒绝 `..`、绝对路径及符号链接/重解析点。收集时排除 `.git`、`artifacts`、引擎缓存、`Plugins`、`Packages`、`bin/obj` 等目录，并排除不支持的类型及名称含 `secret`/`credential` 的文件。这些是有限的选择规则，不是完整的秘密检测或自动脱敏；按任务选择上下文后再交给模型。
 
-[framework-change.json](templates/tasks/framework-change.json) 从 Settings 的局部修改开始，必需检查为 `portable-verify`；扩展到其他模块时同步修改清单，并按影响加入真实引擎检查。[docs-only.json](templates/tasks/docs-only.json) 允许文档变化，必需检查为 `agent-contracts`；此检查验证维护中的任务模板、工具目录及入口文件，不验证文档事实、链接内容或游戏行为。涉及功能模板时，可显式允许并要求 `template-verify`。
+[framework-change.json](templates/tasks/framework-change.json) 选择 `gameplay` 模块并补入 Settings 的局部源码与测试，必需检查为 `portable-verify`；扩展到其他模块时同步修改清单，并按影响加入真实引擎检查。[docs-only.json](templates/tasks/docs-only.json) 的必需检查为 `agent-contracts` 和 `docs-verify`：前者验证模块描述、任务模板、工具目录及入口契约，后者检查维护中文档的本地链接。文档事实和语义仍需人工核对。涉及功能模板时，可显式允许并要求 `template-verify`。
+
+## 按模块定位上下文
+
+```powershell
+powershell -File tools/agent.ps1 modules
+powershell -File tools/agent.ps1 modules --id gameplay
+```
+
+CLI 只查找 `src`、`adapters`、`samples`、`templates` 下直接子目录的 `module.json`，不递归扫描引擎工程。每个描述文件的 `schemaVersion` 为 `1`：
+
+| 字段 | 含义 |
+| --- | --- |
+| `id`、`purpose` | 唯一小写模块 ID 与模块职责 |
+| `sourcePaths` | 模块内源码目录，供定位和明确追加读取；不会自动递归装入上下文 |
+| `entryPoints`、`readme` | 模块的入口文件与说明文件 |
+| `dependencies` | 仓库内模块 ID，必须存在且不能成环；外部插件依赖由包 README 和构建清单说明 |
+| `verificationTools` | `agent/tools.json` 中的检查建议；不会自动扩大 `allowedTools` 或替代任务的 `requiredChecks` |
+
+路径使用仓库相对路径，必须实际存在并留在各自模块目录内。`modules` 与 `contracts` 验证全部已发现模块；重复 ID、未知依赖、依赖环、无效路径和未知工具会使检查失败。
+
+在任务 JSON 中添加 `"readModules": ["gameplay"]` 即可收集其描述、README 与入口文件。依赖模块及整个源码目录需按本次需求另行选择。选择模块后，全部模块描述文件的路径和内容摘要都绑定当前上下文；描述文件增删或修改，以及选择、入口、README 的变化会使旧上下文及计划失效，需要重新执行 `context` / `plan`。未使用 `readModules` 的既有任务仍按 `readPaths` 工作，保留原有序列化与上下文摘要格式。
 
 ## 工作区基线与已有修改
 
@@ -75,7 +99,7 @@ powershell -File tools/agent.ps1 report --task $task
 
 ## 工具、确认与真实权限
 
-[tools.json](tools.json) 是受维护的固定工具目录。CLI 通过参数数组执行已登记的 `dotnet` 或 PowerShell 脚本，工作目录固定为仓库根，不接受任意 shell 命令或附加参数。常规 `agent-contracts`、`portable-verify`、`template-verify` 可在任务声明的授权范围内执行；引擎工具另外要求人工确认本机编辑器路径和执行成本。
+[tools.json](tools.json) 是受维护的固定工具目录。CLI 通过参数数组执行已登记的 `dotnet` 或 PowerShell 脚本，工作目录固定为仓库根，不接受任意 shell 命令或附加参数。常规 `agent-contracts`、`docs-verify`、`portable-verify`、`template-verify` 可在任务声明的授权范围内执行；引擎工具另外要求人工确认本机编辑器路径和执行成本。
 
 需要确认的工具先在 `task.json` 中声明对应 ID；若交付要求该结果，还应加入 `requiredChecks`。设置 `parameters.editorPath` 后重新执行 `context`、`plan`，审阅计划再记录决定：
 

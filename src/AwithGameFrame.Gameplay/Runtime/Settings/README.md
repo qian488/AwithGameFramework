@@ -2,7 +2,7 @@
 
 `UserSettingsService` 将语言、主音量/静音、各音频 bus 音量/静音和输入重绑定放进同一份用户偏好。运行时只依赖 Core/Data 与 Gameplay 服务；Unity/Godot 原生菜单通过同一实例读写。服务不使用静态 `DataPersistenceAPI`。
 
-设置模块采用函数式规则与命令式服务的分工。`UserSettingsRules` 接收普通数据快照，返回独立候选，不读取服务、不提交状态、不应用设备或写盘。`UserSettingsService` 在宿主线程采集运行时事实，调用规则后提交 revision、执行音频/输入/语言操作并发布事件，负责异步保存和关闭。试点效果与取舍见 [说明](../../../../docs/functional-core-pilot.md)。
+设置模块采用函数式规则与命令式服务的分工。`UserSettingsRules` 接收普通数据快照，返回独立候选，不读取服务、不提交状态、不应用设备或写盘。`UserSettingsService` 在宿主线程采集运行时事实，调用规则后提交 revision、执行音频/输入/语言操作并发布事件，负责异步保存和关闭。试点效果与取舍见 [说明](../../../../docs/guides/functional-core.md)。
 
 ```csharp
 // 先创建 InputContext 并配置 action，再构造 settings，以便捕获默认绑定。

@@ -24,7 +24,8 @@ public static class Program
                 "approve --task <path> --plan <id> --by <human> --decision approve|deny --reason <text>\n" +
                 "run --task <path> --plan <id>\n" +
                 "review --task <path> --by <human> --decision accept|reject --reason <text>\n" +
-                "contracts (validate maintained tool/task/template contracts)");
+                "modules [--id <module id>] (list maintained package entry points)\n" +
+                "contracts (validate maintained module/tool/task/template contracts)");
             return 0;
         }
         string command = args[0];
@@ -37,6 +38,13 @@ public static class Program
         string Get(string name) => options.TryGetValue(name, out string? value) ? value : throw new ArgumentException("Missing --" + name);
         var workspace = new Workspace(Workspace.FindRoot());
         if (command == "contracts") { Contracts(workspace); return 0; }
+        if (command == "modules")
+        {
+            var modules = ModuleCatalog.Read(workspace);
+            if (options.TryGetValue("id", out string? moduleId)) Print(modules.Get(moduleId));
+            else Print(modules);
+            return 0;
+        }
         if (command == "new")
         {
             string path = TaskFiles.Create(workspace, Get("template"), Get("id"), options.GetValueOrDefault("objective"));
@@ -109,6 +117,7 @@ public static class Program
     public static void Contracts(Workspace workspace)
     {
         var catalog = ToolRunner.Catalog(workspace);
+        ModuleCatalog.Read(workspace);
         foreach (string path in Directory.EnumerateFiles(workspace.Resolve("agent/templates/tasks", true), "*.json"))
         {
             var task = TaskFiles.ReadTask(workspace, path);

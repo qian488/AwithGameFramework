@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "id": "framework-change",
   "objective": "在明确授权的 Settings 范围内实现一项行为变化，保持通用逻辑与引擎适配边界，并交付测试和人工可审阅的证据。",
+  "readModules": ["gameplay"],
   "readPaths": [
     "AGENTS.md",
     "README.md",
     "GUIDE.md",
     "src/AGENTS.md",
-    "src/AwithGameFrame.Gameplay/README.md",
     "src/AwithGameFrame.Gameplay/Runtime/Settings",
     "tests/AGENTS.md",
     "tests/AwithGameFrame.Core.Tests/UserSettingsTests.cs",
     "tests/AwithGameFrame.Core.Tests/UserSettingsRulesTests.cs",
-    "docs/functional-core-pilot.md"
+    "docs/guides/functional-core.md"
   ],
   "writePaths": [
     "src/AwithGameFrame.Gameplay/Runtime/Settings",

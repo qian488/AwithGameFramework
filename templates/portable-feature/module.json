@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "portable-feature-template",
+  "purpose": "Reusable portable feature with pure domain rules and an imperative application service.",
+  "sourcePaths": [
+    "templates/portable-feature/Runtime"
+  ],
+  "entryPoints": [
+    "templates/portable-feature/Runtime/Domain/FeatureRules.cs",
+    "templates/portable-feature/Runtime/Application/FeatureService.cs"
+  ],
+  "readme": "templates/portable-feature/README.md",
+  "dependencies": [],
+  "verificationTools": [
+    "template-verify"
+  ]
+}

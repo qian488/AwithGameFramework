@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace AwithGameFrame.AgentKit;
 
@@ -8,6 +9,8 @@ public sealed class TaskSpec
     public int SchemaVersion { get; set; } = 1;
     public string Id { get; set; } = "";
     public string Objective { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? ReadModules { get; set; }
     public string[] ReadPaths { get; set; } = Array.Empty<string>();
     public string[] WritePaths { get; set; } = Array.Empty<string>();
     public string[] ProtectedPaths { get; set; } = Array.Empty<string>();

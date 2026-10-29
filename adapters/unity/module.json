@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "unity",
+  "purpose": "Unity host and engine implementations of portable service contracts.",
+  "sourcePaths": [
+    "adapters/unity/Runtime",
+    "adapters/unity/Editor"
+  ],
+  "entryPoints": [
+    "adapters/unity/Runtime/Engine/Hosting/GameHostBehaviour.cs"
+  ],
+  "readme": "adapters/unity/README.md",
+  "dependencies": [
+    "core",
+    "data",
+    "gameplay"
+  ],
+  "verificationTools": [
+    "unity-verify"
+  ]
+}

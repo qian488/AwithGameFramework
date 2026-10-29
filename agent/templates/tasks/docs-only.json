@@ -6,10 +6,11 @@
     "AGENTS.md",
     "README.md",
     "GUIDE.md",
-    "docs/architecture.md",
+    "docs/architecture/overview.md",
     "docs/roadmap.md",
-    "docs/migration.md",
-    "docs/validation.md"
+    "docs/migrations/README.md",
+    "docs/reference/verification.md",
+    "docs/validation/latest.md"
   ],
   "writePaths": [
     "README.md",
@@ -20,15 +21,17 @@
     "docs/legacy"
   ],
   "allowedTools": [
-    "agent-contracts"
+    "agent-contracts",
+    "docs-verify"
   ],
   "requiredChecks": [
-    "agent-contracts"
+    "agent-contracts",
+    "docs-verify"
   ],
   "acceptance": [
     "说明解决了本次具体问题；人工逐项核对命令、路径、链接目标和能力描述，未把规划或未执行检查写成已完成。",
     "相对创建时基线仅修改授权文档，已有源码修改及历史资料保持原样。",
-    "明确记录 agent-contracts 只验证任务与工具入口契约，不把它视为文档事实、链接内容或游戏行为的自动验收。"
+    "agent-contracts 验证模块、任务与工具入口契约，docs-verify 检查维护中文档的本地链接；文档事实与语义仍由人工核对，不把这些检查视为游戏行为验收。"
   ],
   "parameters": {}
 }

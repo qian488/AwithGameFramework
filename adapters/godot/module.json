@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "godot",
+  "purpose": "Godot .NET host and engine implementations of portable service contracts.",
+  "sourcePaths": [
+    "adapters/godot"
+  ],
+  "entryPoints": [
+    "adapters/godot/GameHostNode.cs"
+  ],
+  "readme": "adapters/godot/README.md",
+  "dependencies": [
+    "core",
+    "gameplay"
+  ],
+  "verificationTools": [
+    "godot-verify"
+  ]
+}

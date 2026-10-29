@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace AwithGameFrame.AgentKit;
 
@@ -13,6 +14,8 @@ public sealed class ContextManifest
 {
     public List<ContextEntry> Files { get; set; } = new();
     public string TaskDigest { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ModuleCatalogDigest { get; set; }
     public string Digest { get; set; } = "";
 }
 
@@ -37,7 +40,36 @@ public static class ContextBundle
         var paths = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string required in new[] { "AGENTS.md", "README.md", "GUIDE.md" })
             if (File.Exists(workspace.Resolve(required))) paths.Add(required);
+        ModuleCatalog? catalog = task.ReadModules is { Length: > 0 } ? ModuleCatalog.Read(workspace) : null;
+        foreach (string id in task.ReadModules ?? Array.Empty<string>())
+        {
+            var module = catalog!.Get(id);
+            foreach (string requested in new[] { module.Path, module.Definition.Readme }.Concat(module.Definition.EntryPoints))
+                AddRequested(requested);
+        }
         foreach (string requested in task.ReadPaths)
+            AddRequested(requested);
+        var manifest = new ContextManifest { TaskDigest = Evidence.Digest(task), ModuleCatalogDigest = catalog?.Digest };
+        var bundle = new StringBuilder("# Task context\n\n" + task.Objective + "\n");
+        long total = 0;
+        foreach (string path in paths)
+        {
+            string full = workspace.Resolve(path, true);
+            long size = new FileInfo(full).Length;
+            total += size;
+            if (size > 65536 || total > 524288 || paths.Count > 128)
+                throw new InvalidOperationException("Context budget exceeded (128 files, 64 KiB/file, 512 KiB total). Narrow readPaths/readModules; nothing was silently truncated.");
+            var content = File.ReadAllBytes(full);
+            string text = new UTF8Encoding(false, true).GetString(content);
+            if (text.Contains('\0')) throw new InvalidOperationException("Binary context is unsupported: " + path);
+            manifest.Files.Add(new ContextEntry { Path = path, Hash = Evidence.Hash(content), Bytes = size });
+            bundle.Append("\n## ").Append(path).Append("\n\n").Append(text).Append('\n');
+        }
+        manifest.Digest = Digest(manifest);
+        textBundle = bundle.ToString();
+        return manifest;
+
+        void AddRequested(string requested)
         {
             string full = workspace.Resolve(requested, true);
             foreach (string parent in Ancestors(requested.Replace('\\', '/')))
@@ -47,25 +79,6 @@ public static class ContextBundle
             }
             Collect(workspace, full, paths);
         }
-        var manifest = new ContextManifest { TaskDigest = Evidence.Digest(task) };
-        var bundle = new StringBuilder("# Task context\n\n" + task.Objective + "\n");
-        long total = 0;
-        foreach (string path in paths)
-        {
-            string full = workspace.Resolve(path, true);
-            long size = new FileInfo(full).Length;
-            total += size;
-            if (size > 65536 || total > 524288 || paths.Count > 128)
-                throw new InvalidOperationException("Context budget exceeded (128 files, 64 KiB/file, 512 KiB total). Narrow readPaths; nothing was silently truncated.");
-            var content = File.ReadAllBytes(full);
-            string text = new UTF8Encoding(false, true).GetString(content);
-            if (text.Contains('\0')) throw new InvalidOperationException("Binary context is unsupported: " + path);
-            manifest.Files.Add(new ContextEntry { Path = path, Hash = Evidence.Hash(content), Bytes = size });
-            bundle.Append("\n## ").Append(path).Append("\n\n").Append(text).Append('\n');
-        }
-        manifest.Digest = Evidence.Digest(new { manifest.TaskDigest, manifest.Files });
-        textBundle = bundle.ToString();
-        return manifest;
     }
 
     public static ContextManifest ReadFresh(Workspace workspace, string directory, TaskSpec? task = null)
@@ -73,10 +86,14 @@ public static class ContextBundle
         var manifest = TaskFiles.Load<ContextManifest>(Path.Combine(directory, "context.json"));
         task ??= TaskFiles.ReadTask(workspace, Path.Combine(directory, "task.json"));
         var current = Capture(workspace, task, out _);
-        if (manifest.Digest != Evidence.Digest(new { manifest.TaskDigest, manifest.Files }) || manifest.Digest != current.Digest)
+        if (manifest.Digest != Digest(manifest) || manifest.Digest != current.Digest)
             throw new InvalidOperationException("Task or context files changed. Run context again before planning verification.");
         return manifest;
     }
+
+    private static string Digest(ContextManifest manifest) => manifest.ModuleCatalogDigest == null
+        ? Evidence.Digest(new { manifest.TaskDigest, manifest.Files })
+        : Evidence.Digest(new { manifest.TaskDigest, manifest.Files, manifest.ModuleCatalogDigest });
 
     private static void Collect(Workspace workspace, string full, SortedSet<string> paths)
     {

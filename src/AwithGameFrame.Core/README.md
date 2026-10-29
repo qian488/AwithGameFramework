@@ -2,7 +2,17 @@
 
 面向 `.NET Standard 2.1` / C# 9 的引擎无关内核。可通过项目引用用于 .NET，也可作为本地包用于引擎适配器。`Runtime/AwithGameFrame.Core.asmdef` 禁止引擎引用。
 
-包含模块生命周期、启动编排、服务定位器、实例事件、游戏时钟/定时器、纯 C# 对象池、资源租约/缓存、日志、配置数据基类、字符串/时间工具，以及异步/序列化契约。`TaskAsyncProvider` 提供标准 `Task` 实现。游戏对象、原生场景、输入、音频和引擎资源实现属于 `adapters/`。
+新应用从 `GameHost` 创建独立会话，用 `GameModule` / `GameContext` 组合模块与显式依赖。本包提供实例事件、游戏时钟/定时器、普通对象池、资源租约/缓存与流程；`TaskAsyncProvider` 提供标准 `Task` 实现。日志、配置数据基类、字符串/时间工具及异步/序列化契约也位于本包。游戏对象、原生场景、输入、音频和引擎资源实现属于 [adapters](../../adapters/README.md)。
+
+| 任务 | 源码 / 说明 |
+| --- | --- |
+| 组合模块、管理会话与主线程调度 | `Runtime/Hosting`，见下文实例宿主 |
+| 切换可取消的应用流程 | `Runtime/Flow`，见下文异步流程 |
+| 发布类型事件并绑定订阅作用域 | [Events](Runtime/Events/README.md) |
+| 驱动游戏时钟与调度定时器 | [Timing](Runtime/Timing/README.md) |
+| 借还普通 C# 对象 | [Pooling](Runtime/Pooling/README.md) |
+| 共享资源加载与维护租约、有限缓存 | `Runtime/Resources`，见下文资源租约 |
+| 维护旧单例、全局服务与字符串事件 | [Compatibility](Runtime/Compatibility/README.md)，见末尾兼容入口 |
 
 修改前先在 `Runtime/` 查找对应模块；验证命令：
 
@@ -10,11 +20,11 @@
 dotnet build src/AwithGameFrame.Core/AwithGameFrame.Core.csproj
 ```
 
-旧单例、启动器、全局服务表和字符串事件集中在 [Runtime/Compatibility](Runtime/Compatibility/README.md)。新模块使用下文的实例宿主，标准检查阻止实例模块回流旧全局 API。
+完整检查与引擎验证见 [验证参考](../../docs/reference/verification.md)。旧单例、启动器、全局服务表和字符串事件集中在 `Runtime/Compatibility`，标准检查阻止实例模块回流旧全局 API。
 
 ## 实例宿主与异步流程
 
-新增 `AwithGameFrame.Core.Hosting.GameHost`，用于独立的应用会话。它不调用旧静态管理器，也不共享服务表。旧 `FrameworkBootstrap` / `ServiceLocator` 的兼容 API 保留。
+`AwithGameFrame.Core.Hosting.GameHost` 用于独立的应用会话。它不调用旧静态管理器，也不共享服务表。旧 `FrameworkBootstrap` / `ServiceLocator` 的兼容 API 保留。
 
 ```csharp
 var host = new GameHost(dispatchBudgetPerTick: 64);
@@ -76,7 +86,11 @@ UseAsset(lease.Value);
 
 `ObjectPool<T>` 按引用身份检查借还，容量包含空闲和借出，支持预热、重置/销毁回调和 `RentLease()`；池关闭时清理自己拥有的全部对象，包括尚未归还者。池绑定创建线程，适用于纯 C# 缓冲或业务对象；它不替代引擎 GameObject/Node 的专用实例化策略。细节见 [Pooling](Runtime/Pooling/README.md)。
 
-## 生命周期与失败恢复
+## 兼容入口
+
+以下约定适用于旧静态 API，不是实例 `GameHost` 的生命周期。旧应用显式负责注册、驱动和关闭，迁移时按 [迁移说明](../../docs/migrations/README.md) 逐项替换。
+
+### 旧启动器与失败恢复
 
 在启动前注册所有模块。`FrameworkBootstrap.Bootstrap()` 按优先级降序初始化，再执行全部后初始化；已运行时重复调用不会再次初始化。启动中、关闭中或运行后新增模块会抛出 `InvalidOperationException`，结束当前会话后可重新注册。
 
@@ -86,7 +100,7 @@ UseAsset(lease.Value);
 
 `ServiceLocator` 的工厂需要返回非空实例。循环依赖或返回 `null` 会明确抛出 `InvalidOperationException`；失败工厂保留，以便依赖恢复后重试。生命周期编排和服务注册由宿主在同一线程顺序调用，未提供并发注册/解析保证。
 
-## 兼容入口的宿主接入点
+### 旧宿主接入点
 
 - `LoggingHost.Output`：同步日志回调 `Action<LogLevel, string, object>`，默认写入标准输出/错误。宿主负责自身的线程切换和上下文对象处理。
 - `LoggingHost.DataPath`：默认可写数据目录，日志默认写到该目录下的 `Logs/`。在初始化日志前配置，也可向 `LoggingAPI.Initialize` 传入独立日志目录。

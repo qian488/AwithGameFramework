@@ -1,4 +1,4 @@
-﻿# Unity 适配包
+# Unity 适配包
 
 Unity 需要的代码集中在本包，通用能力来自 src 下的 Core、Data、Gameplay。
 
@@ -24,17 +24,17 @@ UnityPlatform 自动安装日志、目录和时间源，实例 GameHostBehaviour
 
 传入 `ResourceCacheOptions` 可启用通用有限空闲 LRU/预加载；本后端以 Unity Profiler 的 runtime size 估算缓存开销。活跃资源不因空闲预算被淘汰，估算预算不代表实际内存硬上限。缓存条目在淘汰、主动 Trim 或 store 关闭时归还后端所有权。
 
-`UnityAssetBundleLoader` 读取构建生成的 `UnityBundleCatalog`，递归固定 bundle 依赖，跨 store 合并原生 bundle 所有权。普通资源用逻辑 key，场景用 `UnityBundleSceneBackend`，scope 维持到场景卸载。最后所有者释放时 `Unload(true)`，必须先销毁实例再归还租约。`tools/build-unity-content.ps1` 执行原生构建，输出可经通用内容更新安装；命令和版本约束见 [资源流水线](../../docs/content-pipeline.md)。Addressables 另行集成。
+`UnityAssetBundleLoader` 读取构建生成的 `UnityBundleCatalog`，递归固定 bundle 依赖，跨 store 合并原生 bundle 所有权。普通资源用逻辑 key，场景用 `UnityBundleSceneBackend`，scope 维持到场景卸载。最后所有者释放时 `Unload(true)`，必须先销毁实例再归还租约。`tools/build-unity-content.ps1` 执行原生构建，输出可经通用内容更新安装；命令和版本约束见 [资源流水线](../../docs/guides/content-pipeline.md)。Addressables 另行集成。
 
 新增实例后端位于 `Runtime/Features`。`UnityViewFactory` / `UnityViewBehaviour` 用 uGUI root、CanvasGroup、模态遮罩和 EventSystem 接入 `ViewService`；`UnitySceneBackend` 使用原生异步 additive 加载，Single 只替换 SceneService 自己拥有的场景，不卸载 bootstrap/其他宿主场景。`UnityInputBackend` 显式映射原生键鼠/轴到控件名，由 `InputService` 管理动作、上下文、重绑定和失焦释放。`UnityAudioBackend` 用 AudioClip/AudioSource 实现 `AudioService` 的分组音量、静音、并发与暂停策略。这些服务通过各自 module 纳入宿主生命周期，API 详见 Gameplay README；旧静态门面继续保留原有接口。
 
-共享应用入口为 `samples/Unity/Assets/SharedDemo.unity`。运行根 `tools/verify-unity.ps1 -EditorPath <Unity.exe> -RunSmoke -BuildPlayer` 验证适配器、共享 PlayMode 与 Windows Mono Player，详细命令及实测版本见 `docs/validation.md`。
+共享应用入口为 `samples/Unity/Assets/SharedDemo.unity`。运行根 `tools/verify-unity.ps1 -EditorPath <Unity.exe> -RunSmoke -BuildPlayer` 验证适配器、共享 PlayMode 与 Windows Mono Player，详细命令及实测版本见 [验证命令](../../docs/reference/verification.md)与[实测记录](../../docs/validation/latest.md)。
 
 `UnityViewFactory(parent, initialize)` 的可选初始化回调在 prefab 实例化后、Show 之前接收 `ViewRequest` 与原生 `GameObject`，供宿主注入共享应用/视图模型；回调失败仍销毁部分实例。共享样例通过此入口配置 `DemoUnityView`，引擎类型不进入通用视图契约。
 
 ## 生命周期与配置
 
-下列兼容行为需要另行安装 `com.awithgameframe.unity.compatibility`；Inspector 配置和旧 Mono/场景/类型接口归属 `AwithGameFrame.Unity.Legacy`，调试控制台及旧本地化启动器归属 `AwithGameFrame.Unity.Compatibility`。原 namespace、脚本 GUID 保留；自定义 asmdef 和程序集反射按 [迁移说明](../../docs/migration.md) 更新。
+下列兼容行为需要另行安装 `com.awithgameframe.unity.compatibility`；Inspector 配置和旧 Mono/场景/类型接口归属 `AwithGameFrame.Unity.Legacy`，调试控制台及旧本地化启动器归属 `AwithGameFrame.Unity.Compatibility`。原 namespace、脚本 GUID 保留；自定义 asmdef 和程序集反射按 [迁移说明](../../docs/migrations/framework-modernization.md) 更新。
 
 `FrameworkEntry` 是旧静态模块的兼容入口。启动读取 `FrameworkConfig` 的音频、UI、输入、对象池开关；修改模块开关后需结束并重新启动会话。对象池关闭时，资源服务直接加载并销毁 GameObject。一个已启动的旧会话只由创建它的入口负责关闭。
 

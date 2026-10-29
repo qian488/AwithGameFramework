@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "shared-sample",
+  "purpose": "Shared application scenario consumed by Headless, Unity and Godot samples.",
+  "sourcePaths": [
+    "samples/Shared/Runtime"
+  ],
+  "entryPoints": [
+    "samples/Shared/Runtime/DemoExperience.cs"
+  ],
+  "readme": "samples/Shared/README.md",
+  "dependencies": [
+    "core",
+    "data",
+    "gameplay"
+  ],
+  "verificationTools": [
+    "portable-verify"
+  ]
+}

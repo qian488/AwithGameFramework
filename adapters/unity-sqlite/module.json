@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "unity-sqlite",
+  "purpose": "Optional Unity SQLite integration; requires the external plugin.",
+  "sourcePaths": [
+    "adapters/unity-sqlite/Runtime"
+  ],
+  "entryPoints": [
+    "adapters/unity-sqlite/Runtime/SQLiteIntegration.cs"
+  ],
+  "readme": "adapters/unity-sqlite/README.md",
+  "dependencies": [
+    "data"
+  ],
+  "verificationTools": [
+    "unity-verify"
+  ]
+}

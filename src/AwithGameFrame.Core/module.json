@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "core",
+  "purpose": "Engine-independent hosting, events, resources, timing and common contracts.",
+  "sourcePaths": [
+    "src/AwithGameFrame.Core/Runtime"
+  ],
+  "entryPoints": [
+    "src/AwithGameFrame.Core/Runtime/Hosting/GameHost.cs"
+  ],
+  "readme": "src/AwithGameFrame.Core/README.md",
+  "dependencies": [],
+  "verificationTools": [
+    "portable-verify"
+  ]
+}

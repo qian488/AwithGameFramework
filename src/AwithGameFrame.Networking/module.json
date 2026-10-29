@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "networking",
+  "purpose": "Optional portable HTTP, realtime protocols and content delivery.",
+  "sourcePaths": [
+    "src/AwithGameFrame.Networking/Runtime"
+  ],
+  "entryPoints": [
+    "src/AwithGameFrame.Networking/Runtime/ProtocolClient.cs"
+  ],
+  "readme": "src/AwithGameFrame.Networking/README.md",
+  "dependencies": [
+    "core"
+  ],
+  "verificationTools": [
+    "portable-verify"
+  ]
+}
