@@ -29,6 +29,7 @@ namespace AwithGameFrame.Samples.Shared
         private ConfigTable<LevelConfig> levels;
         private NavigationStack flow;
         private DemoSaveData progress = new DemoSaveData();
+        private bool completionCommitted;
         private readonly SemaphoreSlim commands = new SemaphoreSlim(1, 1);
         private CancellationToken lifetime;
 
@@ -67,6 +68,7 @@ namespace AwithGameFrame.Samples.Shared
                 _ = levels[levelId];
                 LevelId = levelId;
                 await flow.NavigateAsync(new PhaseFlow(this, "Playing"), token);
+                completionCommitted = false;
             }, cancellationToken);
         }
 
@@ -75,11 +77,17 @@ namespace AwithGameFrame.Samples.Shared
             return RunCommandAsync(async token =>
             {
                 if (Phase != "Playing") throw new InvalidOperationException("No level is running.");
-                var next = new DemoSaveData { Coins = checked(progress.Coins + levels[LevelId].Reward), CompletedLevels = checked(progress.CompletedLevels + 1) };
-                // Publish new progress only after the durable save succeeds.
-                await saves.SaveAsync(0, next, "Completed level " + LevelId, token);
-                progress = next;
-                if (!await flow.BackAsync(token)) throw new InvalidOperationException("The level has no return destination.");
+                if (!completionCommitted)
+                {
+                    var next = new DemoSaveData { Coins = checked(progress.Coins + levels[LevelId].Reward), CompletedLevels = checked(progress.CompletedLevels + 1) };
+                    // Publish new progress only after the durable save succeeds. A later navigation
+                    // failure must leave completion retryable without granting the same reward twice.
+                    await saves.SaveAsync(0, next, "Completed level " + LevelId, token);
+                    progress = next;
+                    completionCommitted = true;
+                }
+                // The save is the commit point; caller cancellation must not abandon its transition.
+                if (!await flow.BackAsync(CancellationToken.None)) throw new InvalidOperationException("The level has no return destination.");
             }, cancellationToken);
         }
 

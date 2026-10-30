@@ -101,7 +101,11 @@ public static class Program
                 Print(evaluation); return evaluation.ChecksPassed && evaluation.Status != "rejected" ? 0 : 1;
             case "monitor":
                 string eventsPath = Path.Combine(directory, "events.jsonl");
-                var events = File.Exists(eventsPath) ? File.ReadLines(eventsPath).Select(line => JsonDocument.Parse(line).RootElement.Clone()).ToList() : new();
+                var events = File.Exists(eventsPath) ? File.ReadLines(eventsPath).Select(line =>
+                {
+                    using var document = JsonDocument.Parse(line);
+                    return document.RootElement.Clone();
+                }).ToList() : new();
                 string runsPath = Path.Combine(directory, "runs");
                 var results = Directory.Exists(runsPath) ? Directory.EnumerateFiles(runsPath, "*.json").Select(TaskFiles.Load<ToolResult>).ToList() : new();
                 Print(new { task.Id, events = events.Count,

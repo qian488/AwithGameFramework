@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [switch]$StaticOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -67,16 +68,47 @@ foreach ($file in $instanceFiles) {
         throw "Instance runtime depends on a legacy global API: $($file.FullName)"
     }
 }
+$allowedPortableDependencies = @{
+    'AwithGameFrame.Core' = @()
+    'AwithGameFrame.Data' = @('AwithGameFrame.Core')
+    'AwithGameFrame.Gameplay' = @('AwithGameFrame.Core', 'AwithGameFrame.Data')
+    'AwithGameFrame.Networking' = @('AwithGameFrame.Core')
+}
+$portableDependencies = @{}
 foreach ($file in $projectFiles) {
     [xml]$project = Get-Content -LiteralPath $file.FullName -Raw
+    $name = $file.BaseName
+    if (-not $allowedPortableDependencies.ContainsKey($name)) { throw "Portable dependency policy is missing for $name" }
+    $defaultCompile = @($project.SelectNodes("//*[local-name()='EnableDefaultCompileItems']"))
+    $compileItems = @($project.SelectNodes("//*[local-name()='Compile']"))
+    if ($defaultCompile.Count -ne 1 -or $defaultCompile[0].InnerText -ne 'false' -or
+        $defaultCompile[0].SelectNodes('ancestor-or-self::*[@Condition]').Count -gt 0 -or
+        $compileItems.Count -ne 1 -or $compileItems[0].Attributes.Count -ne 1 -or
+        $compileItems[0].GetAttribute('Include').Replace('\', '/') -cne 'Runtime/**/*.cs' -or
+        $compileItems[0].SelectNodes('ancestor::*[@Condition]').Count -gt 0) {
+        throw "Portable projects must compile only the shared Runtime/**/*.cs source: $($file.FullName)"
+    }
+    if ($name -eq 'AwithGameFrame.Core' -and
+        $project.SelectNodes("//*[local-name()='Reference' or local-name()='PackageReference' or local-name()='FrameworkReference']").Count -ne 0) {
+        throw 'Core must use the standard library only, without external assembly or package references.'
+    }
+    $dependencies = @()
     foreach ($reference in $project.SelectNodes("//*[local-name()='ProjectReference']")) {
         $target = [System.IO.Path]::GetFullPath((Join-Path $file.DirectoryName $reference.GetAttribute('Include')))
         if (-not (Test-PathWithin $target $sourceRoot)) {
             throw "Portable project references a host project: $($file.FullName) -> $target"
         }
         if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw "Missing project reference: $target" }
+        $targetName = [IO.Path]::GetFileNameWithoutExtension($target)
+        if ($allowedPortableDependencies[$name] -cnotcontains $targetName) {
+            throw "Forbidden portable dependency: $name -> $targetName"
+        }
+        $dependencies += $targetName
     }
     foreach ($reference in $project.SelectNodes("//*[local-name()='Reference' or local-name()='PackageReference']")) {
+        if ($reference.GetAttribute('Include') -match '^AwithGameFrame\.') {
+            throw "Portable framework dependencies must use ProjectReference: $($file.FullName)"
+        }
         if ($reference.GetAttribute('Include') -match '(?i)Unity|UniTask|Cysharp|Godot') {
             throw "Engine assembly or package reference in portable project: $($file.FullName)"
         }
@@ -89,6 +121,7 @@ foreach ($file in $projectFiles) {
             }
         }
     }
+    $portableDependencies[$name] = @($dependencies | Sort-Object -Unique)
 }
 
 Write-Host 'Checking Unity import metadata, assembly definitions, and package paths...'
@@ -148,7 +181,8 @@ foreach ($relativeRoot in $scanRoots) {
                 throw "Portable Unity assembly must set noEngineReferences: $($file.FullName)"
             }
             foreach ($reference in @(Get-JsonProperty $definition 'precompiledReferences')) {
-                if ($reference -match '(?i)Unity|UniTask|Cysharp') { throw "Engine reference in portable assembly $name" }
+                if ($reference -match '(?i)Unity|UniTask|Cysharp|Godot') { throw "Engine reference in portable assembly $name" }
+                if ($reference -match '^AwithGameFrame\.') { throw "Portable framework dependencies must use asmdef references: $name -> $reference" }
             }
         }
     }
@@ -170,7 +204,7 @@ foreach ($name in $assemblyDefinitions.Keys) {
             }
         } elseif ($targetName.StartsWith('AwithGameFrame.')) {
             throw "Missing framework Unity assembly: $name -> $targetName"
-        } elseif ((Test-PathWithin $entry.Path $sourceRoot) -and $targetName -match '(?i)Unity|UniTask|Cysharp') {
+        } elseif ((Test-PathWithin $entry.Path $sourceRoot) -and $targetName -match '(?i)Unity|UniTask|Cysharp|Godot') {
             throw "Engine reference in portable Unity assembly: $name -> $targetName"
         }
     }
@@ -187,6 +221,54 @@ function Visit-Assembly {
     $visited[$Name] = $true
 }
 foreach ($name in $assemblyDefinitions.Keys) { Visit-Assembly $name }
+
+# A dependency must mean the same thing for .NET, Unity and AgentKit contexts.
+foreach ($file in $projectFiles) {
+    $name = $file.BaseName
+    $dependencies = @($portableDependencies[$name])
+    $assembly = $assemblyDefinitions[$name]
+    if ($null -eq $assembly -or
+        -not (Test-PathWithin $assembly.Path (Join-Path $file.DirectoryName 'Runtime'))) {
+        throw "Portable Runtime assembly is missing for $name"
+    }
+    if (($dependencies -join '|') -cne (@($assembly.Dependencies | Sort-Object -Unique) -join '|')) {
+        throw "Project/asmdef dependency mismatch for $name"
+    }
+    if ($name -eq 'AwithGameFrame.Core' -and
+        (@(Get-JsonProperty $assembly.Definition 'references').Count -gt 0 -or
+         @(Get-JsonProperty $assembly.Definition 'precompiledReferences').Count -gt 0)) {
+        throw 'Core asmdef must not reference external assemblies.'
+    }
+    $package = Read-Json (Join-Path $file.DirectoryName 'package.json')
+    $module = Read-Json (Join-Path $file.DirectoryName 'module.json')
+    $id = $name.Substring('AwithGameFrame.'.Length).ToLowerInvariant()
+    if ($package.name -cne ('com.awithgameframe.' + $id) -or $module.id -cne $id) {
+        throw "Portable package/module identity mismatch for $name"
+    }
+    $expectedIds = @($dependencies | ForEach-Object { $_.Substring('AwithGameFrame.'.Length).ToLowerInvariant() })
+    if (($expectedIds -join '|') -cne (@($module.dependencies | Sort-Object -Unique) -join '|')) {
+        throw "Project/module dependency mismatch for $name"
+    }
+    $packageDependencies = Get-JsonProperty $package 'dependencies'
+    $frameworkIds = @()
+    if ($null -ne $packageDependencies) {
+        foreach ($dependency in $packageDependencies.PSObject.Properties) {
+            if ($name -eq 'AwithGameFrame.Core') { throw 'Core UPM package must not depend on external packages.' }
+            if (-not $dependency.Name.StartsWith('com.awithgameframe.')) { continue }
+            $dependencyId = $dependency.Name.Substring('com.awithgameframe.'.Length)
+            $frameworkIds += $dependencyId
+            $dependencyName = @($dependencies | Where-Object { $_.Substring('AwithGameFrame.'.Length).ToLowerInvariant() -ceq $dependencyId })
+            if ($dependencyName.Count -ne 1) { throw "Forbidden UPM dependency: $name -> $($dependency.Name)" }
+            $dependencyPackage = Read-Json (Join-Path $sourceRoot ($dependencyName[0] + '/package.json'))
+            if ($dependency.Value -cne $dependencyPackage.version) {
+                throw "UPM dependency version mismatch: $name -> $($dependency.Name)"
+            }
+        }
+    }
+    if (($expectedIds -join '|') -cne (@($frameworkIds | Sort-Object -Unique) -join '|')) {
+        throw "Project/UPM dependency mismatch for $name"
+    }
+}
 
 foreach ($name in @('AwithGameFrame.Unity', 'AwithGameFrame.Extensions', 'AwithGameFrame.Unity.Editor')) {
     foreach ($reference in @(Get-JsonProperty $assemblyDefinitions[$name].Definition 'references')) {
@@ -229,6 +311,10 @@ foreach ($packagePath in (@($sourceFiles | Where-Object { $_.Name -eq 'package.j
 }
 
 if (-not (Test-Path -LiteralPath $solutionPath -PathType Leaf)) { throw "Missing solution: $solutionPath" }
+if ($StaticOnly) {
+    Write-Host 'Documentation, portable dependency contracts, Unity metadata and package paths passed. Build, generators, tests and runtime checks were not run.'
+    return
+}
 Push-Location $repositoryRoot
 try {
     & (Join-Path $PSScriptRoot 'generate-config.ps1') -Check

@@ -120,11 +120,26 @@ namespace AwithGameFrame.Extensions.Scenes
                 if (!committed)
                 {
                     var errors = new List<Exception> { failure };
-                    if (instance != null) { try { await instance.DisposeAsync(); } catch (Exception ex) { errors.Add(ex); } }
-                    if (scope != null) { try { await scope.DisposeAsync(); } catch (Exception ex) { errors.Add(ex); } }
+                    bool nativeUnloaded = instance == null;
+                    if (instance != null)
+                    {
+                        try { await instance.DisposeAsync(); nativeUnloaded = true; }
+                        catch (Exception ex)
+                        {
+                            errors.Add(ex);
+                            // Failed rollback still owns a native scene. Expose it through Loaded so
+                            // callers or StopAsync can retry unloading before its assets are released.
+                            lock (sync)
+                            {
+                                if (result == null) result = new SceneHandle(this, ++nextId, key, instance, scope);
+                                if (!loaded.Contains(result)) loaded.Add(result);
+                            }
+                        }
+                    }
+                    if (nativeUnloaded && scope != null) { try { await scope.DisposeAsync(); } catch (Exception ex) { errors.Add(ex); } }
                     if (activationAttempted && previousActive != null && !ReferenceEquals(previousActive, result) && Contains(previousActive))
                     { try { await previousActive.Instance.ActivateAsync(CancellationToken.None); } catch (Exception ex) { errors.Add(ex); } }
-                    if (errors.Count > 1) throw new AggregateException("Scene loading and cleanup reported errors.", errors);
+                    if (errors.Count > 1) throw new AggregateException("Scene loading and cleanup reported errors. Inspect Loaded to retry any scene that could not unload.", errors);
                 }
                 throw;
             }

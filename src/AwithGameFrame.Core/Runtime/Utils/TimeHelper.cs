@@ -33,29 +33,29 @@ namespace AwithGameFrame.Core
         }
 
         /// <summary>
-        /// 将时间戳转换为DateTime
+        /// 将时间戳转换为 UTC DateTime
         /// </summary>
         /// <param name="timestamp">时间戳（秒）</param>
-        /// <returns>DateTime</returns>
+        /// <returns>Kind 为 Utc 的 DateTime</returns>
         public static DateTime TimestampToDateTime(long timestamp)
         {
-            return DateTimeOffset.FromUnixTimeSeconds(timestamp).DateTime;
+            return DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
         }
 
         /// <summary>
-        /// 将时间戳转换为DateTime
+        /// 将时间戳转换为 UTC DateTime
         /// </summary>
         /// <param name="timestamp">时间戳（毫秒）</param>
-        /// <returns>DateTime</returns>
+        /// <returns>Kind 为 Utc 的 DateTime</returns>
         public static DateTime TimestampToDateTimeMilliseconds(long timestamp)
         {
-            return DateTimeOffset.FromUnixTimeMilliseconds(timestamp).DateTime;
+            return DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime;
         }
 
         /// <summary>
         /// 将DateTime转换为时间戳
         /// </summary>
-        /// <param name="dateTime">DateTime</param>
+        /// <param name="dateTime">DateTime；Unspecified 按本地时区解释</param>
         /// <returns>时间戳（秒）</returns>
         public static long DateTimeToTimestamp(DateTime dateTime)
         {
@@ -65,7 +65,7 @@ namespace AwithGameFrame.Core
         /// <summary>
         /// 将DateTime转换为时间戳
         /// </summary>
-        /// <param name="dateTime">DateTime</param>
+        /// <param name="dateTime">DateTime；Unspecified 按本地时区解释</param>
         /// <returns>时间戳（毫秒）</returns>
         public static long DateTimeToTimestampMilliseconds(DateTime dateTime)
         {
@@ -97,12 +97,11 @@ namespace AwithGameFrame.Core
         /// <summary>
         /// 获取相对时间描述
         /// </summary>
-        /// <param name="dateTime">时间</param>
+        /// <param name="dateTime">时间；Unspecified 按本地时区解释</param>
         /// <returns>相对时间描述</returns>
         public static string GetRelativeTime(DateTime dateTime)
         {
-            var now = DateTime.Now;
-            var diff = now - dateTime;
+            var diff = DateTime.UtcNow - dateTime.ToUniversalTime();
 
             if (diff.TotalSeconds < 60)
                 return "刚刚";

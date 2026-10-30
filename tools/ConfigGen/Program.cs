@@ -16,7 +16,8 @@ namespace AwithGameFrame.Tools.Configuration
             if (!Directory.Exists(directory)) return;
             var expected = new HashSet<string>(names.Select(name => Path.GetFullPath(Path.Combine(directory, name))), StringComparer.Ordinal);
             foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
-                if ((Path.GetExtension(file) == ".cs" || Path.GetExtension(file) == ".json") && !expected.Contains(Path.GetFullPath(file)))
+                if ((string.Equals(Path.GetExtension(file), ".cs", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(Path.GetExtension(file), ".json", StringComparison.OrdinalIgnoreCase)) && !expected.Contains(Path.GetFullPath(file)))
                     throw new InvalidDataException("Unexpected generated file; remove the obsolete artifact explicitly: " + file);
         }
 

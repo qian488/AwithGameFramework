@@ -27,6 +27,7 @@ namespace AwithGameFrame.Test
         private Button[] testButtons;
         
         private string logContent = "";
+        private EventCenter configEvents;
         
         void Start()
         {
@@ -268,12 +269,12 @@ namespace AwithGameFrame.Test
         {
             AddLog("=== 配置系统测试开始 ===");
             
-            // 在测试开始前就订阅事件（持续监听，不取消订阅）
-            EventCenter.GetInstance().AddEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+            // 保持单个订阅，组件销毁时解除。
+            EnsureConfigSubscription();
             
             TestConfig();
             
-            // 不取消订阅，保持持续监听
+            // 组件存活期间保持监听。
             AddLog("=== 配置系统测试完成 ===");
             AddLog("💡 事件监听已保持，现在可以在运行时修改配置并看到反应");
         }
@@ -319,7 +320,7 @@ namespace AwithGameFrame.Test
             AddLog("--- 测试配置变更 ---");
             
             // 确保事件已订阅
-            EventCenter.GetInstance().AddEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+            EnsureConfigSubscription();
             
             // 触发配置变更
             AddLog("触发配置变更...");
@@ -340,7 +341,7 @@ namespace AwithGameFrame.Test
             AddLog("--- 运行时修改配置 ---");
             
             // 确保事件已订阅
-            EventCenter.GetInstance().AddEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+            EnsureConfigSubscription();
             
             // 随机修改一些配置
             int randomValue = Random.Range(1, 100);
@@ -386,6 +387,19 @@ namespace AwithGameFrame.Test
         {
             Debug.Log($"[ConfigTest] 收到配置变更事件: {eventData.key} = {eventData.value}");
             AddLog($"配置变更: {eventData.key} = {eventData.value}");
+        }
+
+        private void EnsureConfigSubscription()
+        {
+            if (configEvents != null) return;
+            configEvents = EventCenter.GetInstance();
+            configEvents.AddEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+        }
+
+        private void OnDestroy()
+        {
+            configEvents?.RemoveEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
+            configEvents = null;
         }
         
         /// <summary>

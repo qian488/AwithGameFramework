@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using AwithGameFrame.Core.Logging;
@@ -12,6 +13,15 @@ namespace AwithGameFrame.Foundation.DataPersistence
     /// </summary>
     public class PlayerPrefsStorage : IStorageProvider
     {
+        private const string IndexKeyPrefix = "__AwithGameFrame.PlayerPrefs.Keys.v1__:";
+
+        [Serializable]
+        private sealed class ManagedKeyIndex
+        {
+            public int version = 1;
+            public string[] keys;
+        }
+
         private DataPersistenceConfig _config;
         private bool _isInitialized = false;
         private readonly HashSet<string> _managedKeys = new HashSet<string>();
@@ -28,7 +38,18 @@ namespace AwithGameFrame.Foundation.DataPersistence
         {
             try
             {
-                _config = config as DataPersistenceConfig ?? new DataPersistenceConfig();
+                _isInitialized = false;
+                var source = config as DataPersistenceConfig ?? new DataPersistenceConfig();
+                _config = new DataPersistenceConfig
+                {
+                    KeyPrefix = source.KeyPrefix,
+                    PrettyPrint = source.PrettyPrint,
+                    EnableEncryption = source.EnableEncryption,
+                    EncryptionKey = source.EncryptionKey
+                };
+                if (_config.EnableEncryption && string.IsNullOrEmpty(_config.EncryptionKey))
+                    throw new ArgumentException("PlayerPrefs encryption requires a nonempty key.", nameof(config));
+                ReloadManagedKeys();
                 _isInitialized = true;
                 
                 // 记录初始化日志
@@ -38,6 +59,8 @@ namespace AwithGameFrame.Foundation.DataPersistence
             }
             catch (Exception ex)
             {
+                _isInitialized = false;
+                _managedKeys.Clear();
                 FrameworkLogger.Error($"Failed to initialize PlayerPrefsStorage: {ex.Message}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Failed);
             }
@@ -54,10 +77,12 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
                 // 将字节数组转换为Base64字符串存储
                 var base64String = Convert.ToBase64String(data);
-                PlayerPrefs.SetString(GetFullKey(key), base64String);
-                PlayerPrefs.Save();
-                
+                var fullKey = GetFullKey(key);
+                ReloadManagedKeys();
+                PlayerPrefs.SetString(fullKey, base64String);
                 _managedKeys.Add(key);
+                SaveManagedKeys();
+                PlayerPrefs.Save();
                 
                 FrameworkLogger.Debug($"PlayerPrefs保存成功: {key}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
@@ -84,6 +109,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     return Task.FromResult<(byte[], DataOperationResult)>((null, DataOperationResult.NotFound));
                 }
 
+                RememberKey(key);
                 var base64String = PlayerPrefs.GetString(fullKey);
                 var data = Convert.FromBase64String(base64String);
                 
@@ -102,24 +128,36 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (!_isInitialized)
             {
                 FrameworkLogger.Warn("PlayerPrefsStorage not initialized", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
+                return Task.FromResult(DataOperationResult.NotInitialized);
             }
 
             try
             {
                 var fullKey = GetFullKey(key);
-                var json = JsonUtility.ToJson(data, _config.PrettyPrint);
-                
-                if (_config.EnableEncryption)
+                ReloadManagedKeys();
+                if (typeof(T) == typeof(int))
                 {
-                    json = EncryptString(json);
+                    PlayerPrefs.SetInt(fullKey, (int)(object)data);
                 }
-                
-                PlayerPrefs.SetString(fullKey, json);
-                PlayerPrefs.Save();
+                else if (typeof(T) == typeof(float))
+                {
+                    PlayerPrefs.SetFloat(fullKey, (float)(object)data);
+                }
+                else if (typeof(T) == typeof(bool))
+                {
+                    PlayerPrefs.SetInt(fullKey, (bool)(object)data ? 1 : 0);
+                }
+                else
+                {
+                    var json = typeof(T) == typeof(string) ? (string)(object)data : JsonUtility.ToJson(data, _config.PrettyPrint);
+                    if (_config.EnableEncryption) json = EncryptString(json);
+                    PlayerPrefs.SetString(fullKey, json);
+                }
                 
                 // 添加到管理的键列表
                 _managedKeys.Add(key);
+                SaveManagedKeys();
+                PlayerPrefs.Save();
                 
                 FrameworkLogger.Debug($"Data saved to PlayerPrefs: {key}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
@@ -136,7 +174,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (!_isInitialized)
             {
                 FrameworkLogger.Warn("PlayerPrefsStorage not initialized", LogCategory.Core);
-                return Task.FromResult((default(T), DataOperationResult.Failed));
+                return Task.FromResult((default(T), DataOperationResult.NotInitialized));
             }
 
             try
@@ -149,6 +187,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     return Task.FromResult((default(T), DataOperationResult.NotFound));
                 }
                 
+                RememberKey(key);
                 // 对于基本类型，直接使用PlayerPrefs的Get方法
                 if (typeof(T) == typeof(string))
                 {
@@ -205,12 +244,13 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (!_isInitialized)
             {
                 FrameworkLogger.Warn("PlayerPrefsStorage not initialized", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
+                return Task.FromResult(DataOperationResult.NotInitialized);
             }
 
             try
             {
                 var fullKey = GetFullKey(key);
+                ReloadManagedKeys();
                 
                 if (!PlayerPrefs.HasKey(fullKey))
                 {
@@ -219,10 +259,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 }
                 
                 PlayerPrefs.DeleteKey(fullKey);
-                PlayerPrefs.Save();
                 
                 // 从管理的键列表中移除
                 _managedKeys.Remove(key);
+                SaveManagedKeys();
+                PlayerPrefs.Save();
                 
                 FrameworkLogger.Debug($"Data deleted from PlayerPrefs: {key}", LogCategory.Core);
                 return Task.FromResult(DataOperationResult.Success);
@@ -245,6 +286,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             {
                 var fullKey = GetFullKey(key);
                 var exists = PlayerPrefs.HasKey(fullKey);
+                if (exists) RememberKey(key);
                 FrameworkLogger.Debug($"Data exists in PlayerPrefs: {key} = {exists}", LogCategory.Core);
                 return Task.FromResult(exists);
             }
@@ -264,8 +306,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
             try
             {
-                // PlayerPrefs没有直接获取所有键的方法，这里返回管理的键列表
-                // 通过维护一个键列表来跟踪所有保存的键
+                ReloadManagedKeys();
                 var keys = _managedKeys.ToArray();
                 FrameworkLogger.Debug($"PlayerPrefs returning {keys.Length} managed keys", LogCategory.Core);
                 return Task.FromResult(keys);
@@ -282,11 +323,12 @@ namespace AwithGameFrame.Foundation.DataPersistence
             if (!_isInitialized)
             {
                 FrameworkLogger.Warn("PlayerPrefsStorage not initialized", LogCategory.Core);
-                return Task.FromResult(DataOperationResult.Failed);
+                return Task.FromResult(DataOperationResult.NotInitialized);
             }
 
             try
             {
+                ReloadManagedKeys();
                 // 清除所有管理的键
                 foreach (var key in _managedKeys)
                 {
@@ -298,6 +340,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 }
                 
                 _managedKeys.Clear();
+                SaveManagedKeys();
                 PlayerPrefs.Save();
                 
                 FrameworkLogger.Info("All data cleared from PlayerPrefs", LogCategory.Core);
@@ -319,6 +362,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
             try
             {
+                ReloadManagedKeys();
                 var stats = new StorageStatistics
                 {
                     StorageType = StorageType.PlayerPrefs,
@@ -341,7 +385,46 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         private string GetFullKey(string key)
         {
-            return string.IsNullOrEmpty(_config.KeyPrefix) ? key : $"{_config.KeyPrefix}_{key}";
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            var fullKey = string.IsNullOrEmpty(_config.KeyPrefix) ? key : $"{_config.KeyPrefix}_{key}";
+            if (fullKey.StartsWith(IndexKeyPrefix, StringComparison.Ordinal))
+                throw new ArgumentException("The PlayerPrefs key uses the reserved framework index namespace.", nameof(key));
+            return fullKey;
+        }
+
+        private string GetIndexKey()
+        {
+            return IndexKeyPrefix + Convert.ToBase64String(Encoding.UTF8.GetBytes(_config.KeyPrefix ?? string.Empty));
+        }
+
+        private void ReloadManagedKeys()
+        {
+            _managedKeys.Clear();
+            var indexKey = GetIndexKey();
+            if (!PlayerPrefs.HasKey(indexKey)) return;
+            var index = JsonUtility.FromJson<ManagedKeyIndex>(PlayerPrefs.GetString(indexKey));
+            if (index == null || index.version != 1 || index.keys == null)
+                throw new InvalidOperationException("Invalid PlayerPrefs managed key index.");
+            foreach (var key in index.keys)
+                if (PlayerPrefs.HasKey(GetFullKey(key))) _managedKeys.Add(key);
+        }
+
+        private void SaveManagedKeys()
+        {
+            var indexKey = GetIndexKey();
+            if (_managedKeys.Count == 0) PlayerPrefs.DeleteKey(indexKey);
+            else PlayerPrefs.SetString(indexKey, JsonUtility.ToJson(new ManagedKeyIndex
+            {
+                keys = _managedKeys.OrderBy(key => key, StringComparer.Ordinal).ToArray()
+            }));
+        }
+
+        private void RememberKey(string key)
+        {
+            ReloadManagedKeys();
+            if (!_managedKeys.Add(key)) return;
+            SaveManagedKeys();
+            PlayerPrefs.Save();
         }
 
         private string EncryptString(string input)
@@ -362,7 +445,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             catch (Exception ex)
             {
                 FrameworkLogger.Error($"Failed to encrypt string: {ex.Message}", LogCategory.Core);
-                return input;
+                throw;
             }
         }
 
@@ -384,7 +467,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             catch (Exception ex)
             {
                 FrameworkLogger.Error($"Failed to decrypt string: {ex.Message}", LogCategory.Core);
-                return input;
+                throw;
             }
         }
 

@@ -13,6 +13,7 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
     public class InputManager : BaseManager<InputManager>, IInputManager
     {
         private readonly HashSet<KeyCode> _registeredKeys = new HashSet<KeyCode>();
+        private KeyCode[] _keySnapshot;
         private bool _isEnabled;
         private bool _subscribed;
 
@@ -67,13 +68,19 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
         public void RegisterKey(KeyCode key)
         {
             if (_registeredKeys.Add(key))
+            {
+                _keySnapshot = null;
                 LoggingAPI.Info(LogCategory.Input, $"注册按键: {key}");
+            }
         }
 
         public void UnregisterKey(KeyCode key)
         {
             if (_registeredKeys.Remove(key))
+            {
+                _keySnapshot = null;
                 LoggingAPI.Info(LogCategory.Input, $"取消注册按键: {key}");
+            }
         }
 
         public KeyCode[] GetRegisteredKeys()
@@ -104,7 +111,9 @@ namespace AwithGameFrame.Foundation.Systems.InputSystem
         {
             if (!_isEnabled) return;
 
-            foreach (var key in _registeredKeys)
+            // Event listeners may change bindings; apply those changes on the following frame.
+            var keys = _keySnapshot ?? (_keySnapshot = GetRegisteredKeys());
+            foreach (var key in keys)
             {
                 CheckKeyCode(key);
             }

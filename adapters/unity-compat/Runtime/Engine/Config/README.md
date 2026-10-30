@@ -160,24 +160,24 @@ ConfigAPI.Remove("PlayerName");
 
 ```csharp
 // 订阅事件
-ConfigAPI.OnConfigChanged += OnConfigChanged;
+EventCenter.GetInstance().AddEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
 
 // 事件处理
-private void OnConfigChanged(string key, object value)
+private void OnConfigChanged(ConfigAPI.ConfigChangedEventData change)
 {
-    Debug.Log($"配置变更: {key} = {value}");
+    Debug.Log($"配置变更: {change.key} = {change.value}");
 }
 
 // 取消订阅
-ConfigAPI.OnConfigChanged -= OnConfigChanged;
+EventCenter.GetInstance().RemoveEventListener<ConfigAPI.ConfigChangedEventData>("ConfigChanged", OnConfigChanged);
 ```
 
 ## 测试和调试
 
-### 使用ConfigSystemTester
+### 使用 ConfigTest
 
 1. 在场景中创建一个GameObject
-2. 添加 `ConfigSystemTester` 组件
+2. 添加 `samples/Unity/Assets/Test/ConfigTest.cs` 中的 `ConfigTest` 组件
 3. 配置测试参数
 4. 运行测试或使用Context Menu
 
@@ -193,7 +193,7 @@ ConfigAPI.OnConfigChanged -= OnConfigChanged;
 ### 手动测试
 
 ```csharp
-// 在Inspector中右键点击ConfigSystemTester组件
+// 在 Inspector 中右键点击 ConfigTest 组件
 // 选择 "运行配置系统测试" 或 "重新加载配置"
 ```
 
@@ -231,11 +231,11 @@ A: 在FrameworkConfig中添加新的字段，并在ConfigAPI中添加对应的�
 
 ### Q: 如何支持热更新？
 
-A: 游戏配置使用JSON文件，支持运行时重新加载。框架配置需要重启应用。
+A: 游戏配置使用 JSON 文件，支持运行时重新加载。框架配置中的帧率、日志和现有模块参数可在运行时应用；模块开关改变后需要结束并重新启动旧会话。描述性路径字段不改变 Resources 的查找规则。
 
 ### Q: 如何调试配置问题？
 
-A: 使用ConfigSystemTester进行测试，查看Console日志输出。
+A: 使用 `ConfigTest` 交互脚本查看 Console 日志输出；这不替代真实引擎验证。
 
 ### Q: 如何优化配置性能？
 
@@ -243,7 +243,7 @@ A: 框架配置使用ScriptableObject，游戏配置使用Dictionary缓存，运
 
 ## 示例项目
 
-参考 `ConfigExample.cs` 和 `ConfigSystemTester.cs` 获取完整的使用示例。
+交互示例见 `samples/Unity/Assets/Test/ConfigTest.cs`，当前生命周期与限制见包根 README。
 
 ## 更新日志
 

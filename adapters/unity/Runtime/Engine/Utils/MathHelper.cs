@@ -15,9 +15,10 @@ namespace AwithGameFrame.Core
         /// <returns>限制后的角度</returns>
         public static float ClampAngle(float angle)
         {
-            while (angle < 0) angle += 360;
-            while (angle >= 360) angle -= 360;
-            return angle;
+            ValidateAngle(angle);
+            var result = angle % 360f;
+            if (result < 0f) result += 360f;
+            return result >= 360f ? 0f : result;
         }
 
         /// <summary>
@@ -27,9 +28,17 @@ namespace AwithGameFrame.Core
         /// <returns>限制后的角度</returns>
         public static float ClampAngle180(float angle)
         {
-            while (angle > 180) angle -= 360;
-            while (angle < -180) angle += 360;
-            return angle;
+            ValidateAngle(angle);
+            var result = angle % 360f;
+            if (result > 180f) result -= 360f;
+            else if (result < -180f) result += 360f;
+            return result;
+        }
+
+        private static void ValidateAngle(float angle)
+        {
+            if (float.IsNaN(angle) || float.IsInfinity(angle))
+                throw new System.ArgumentOutOfRangeException(nameof(angle));
         }
 
         /// <summary>

@@ -230,10 +230,10 @@ namespace Test
             // 测试文件日志配置
             if (LoggingManager.GetInstance().FileLogger != null)
             {
-                LoggingManager.GetInstance().FileLogger.MaxFileSize = 1024; // 1KB，便于测试轮转
+                LoggingManager.GetInstance().FileLogger.MaxFileSize = 1024 * 1024; // 文件日志最小支持1MB
                 LoggingManager.GetInstance().FileLogger.MaxFiles = 3;
                 
-                FrameworkLogger.Info("文件日志配置完成 - 最大文件大小: 1KB, 最大文件数: 3");
+                FrameworkLogger.Info($"文件日志配置完成 - 最大文件大小: {LoggingManager.GetInstance().FileLogger.MaxFileSize / 1024}KB, 最大文件数: 3");
             }
         }
         
@@ -251,13 +251,13 @@ namespace Test
             
             FrameworkLogger.Info("=== 测试文件日志轮转 ===");
             
-            // 生成大量日志以触发文件轮转
+            // 写入样例日志；达到当前文件上限时才会自动轮转。
             for (int i = 0; i < 50; i++)
             {
                 FrameworkLogger.Info($"轮转测试消息 {i + 1} - 这是一条很长的日志消息，用于测试文件大小限制和自动轮转功能");
             }
             
-            FrameworkLogger.Info("文件轮转测试完成");
+            FrameworkLogger.Info("样例日志写入完成；可使用手动轮转入口检查轮转");
         }
         
         /// <summary>

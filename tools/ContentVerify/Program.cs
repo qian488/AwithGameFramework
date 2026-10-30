@@ -101,7 +101,7 @@ namespace AwithGameFrame.Tools.ContentVerification
                 string relative = request.Length == 3 ? Uri.UnescapeDataString(request[1].TrimStart('/')) : "";
                 string path = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
                 if (request.Length != 3 || request[0] != "GET" ||
-                    !path.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                    !ContainsPath(root, path) ||
                     !File.Exists(path))
                 {
                     var rejected = Encoding.ASCII.GetBytes("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");

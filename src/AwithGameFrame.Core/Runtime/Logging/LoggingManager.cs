@@ -48,7 +48,11 @@ namespace AwithGameFrame.Core.Logging
         public bool EnableTimestamp
         {
             get => Config.EnableTimestamp;
-            set => Config.EnableTimestamp = value;
+            set
+            {
+                Config.EnableTimestamp = value;
+                if (_fileLogger != null) _fileLogger.EnableTimestamp = value;
+            }
         }
         
         /// <summary>
@@ -57,7 +61,11 @@ namespace AwithGameFrame.Core.Logging
         public bool EnableStackTrace
         {
             get => Config.EnableStackTrace;
-            set => Config.EnableStackTrace = value;
+            set
+            {
+                Config.EnableStackTrace = value;
+                if (_fileLogger != null) _fileLogger.EnableStackTrace = value;
+            }
         }
         
         /// <summary>
@@ -119,6 +127,7 @@ namespace AwithGameFrame.Core.Logging
         public void SetLogLevel(LogLevel level)
         {
             Config.Level = level;
+            if (_fileLogger != null) _fileLogger.MinLevel = level;
         }
         
         /// <summary>
@@ -129,6 +138,7 @@ namespace AwithGameFrame.Core.Logging
         public void SetCategoryEnabled(LogCategory category, bool enabled)
         {
             Config.CategoryEnabled[category] = enabled;
+            if (_fileLogger != null) _fileLogger.SetCategoryEnabled(category, enabled);
         }
         
         /// <summary>
@@ -327,16 +337,19 @@ namespace AwithGameFrame.Core.Logging
                 _fileLogger = FileLogger.GetInstance();
             }
             
-            _fileLogger.Initialize(logDirectory);
+            _fileLogger.ConfigureRetention(Config.FileConfig.MaxFileSize, Config.FileConfig.MaxFiles,
+                Config.FileConfig.CleanupInterval);
             _fileLogger.MinLevel = Config.Level;
             _fileLogger.EnableTimestamp = Config.EnableTimestamp;
             _fileLogger.EnableStackTrace = Config.EnableStackTrace;
             
             // 同步分类设置
-            foreach (var kvp in Config.CategoryEnabled)
+            foreach (LogCategory category in Enum.GetValues(typeof(LogCategory)))
             {
-                _fileLogger.SetCategoryEnabled(kvp.Key, kvp.Value);
+                _fileLogger.SetCategoryEnabled(category, Config.CategoryEnabled.GetValueOrDefault(category, true));
             }
+
+            _fileLogger.Initialize(logDirectory ?? Config.FileConfig.LogDirectory);
         }
         
         /// <summary>

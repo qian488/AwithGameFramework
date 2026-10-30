@@ -10,13 +10,22 @@ using AwithGameFrame.Foundation.Systems.Audio;
 
 public class InputTest : MonoBehaviour
 {
+    private EventCenter events;
     // Start is called before the first frame update
     void Start()
     {
         InputManager.GetInstance().StartOREndCheck(true);
 
-        EventCenter.GetInstance().AddEventListener<KeyCode>("KeyDown", CheckInputDown);
-        EventCenter.GetInstance().AddEventListener<KeyCode>("KeyUp", CheckInputUp);
+        events = EventCenter.GetInstance();
+        events.AddEventListener<KeyCode>("KeyDown", CheckInputDown);
+        events.AddEventListener<KeyCode>("KeyUp", CheckInputUp);
+    }
+
+    private void OnDestroy()
+    {
+        events?.RemoveEventListener<KeyCode>("KeyDown", CheckInputDown);
+        events?.RemoveEventListener<KeyCode>("KeyUp", CheckInputUp);
+        events = null;
     }
 
     private void CheckInputUp(KeyCode key)

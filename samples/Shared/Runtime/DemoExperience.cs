@@ -47,7 +47,7 @@ namespace AwithGameFrame.Samples.Shared
         private ViewHandle settingsView;
         private SceneHandle level;
         private AudioHandle tone;
-        private bool stopping;
+        private bool stopping, completingLevel;
 
         private DemoExperience(GameHost host, DemoApplication application, ViewService views, SceneService scenes,
             AudioService audio, InputService input, LocalizationService localization, UserSettingsService settings,
@@ -123,6 +123,7 @@ namespace AwithGameFrame.Samples.Shared
 
         public Task EnterLevelAsync() => ExecuteAsync(async token =>
         {
+            if (completingLevel) await CompleteLevelCoreAsync(token);
             if (Application.Phase != "Menu") return;
             level = await Scenes.LoadAsync(Assets.Level, cancellationToken: token);
             await Application.EnterLevelAsync(cancellationToken: token);
@@ -132,12 +133,32 @@ namespace AwithGameFrame.Samples.Shared
 
         public Task CompleteLevelAsync() => ExecuteAsync(async token =>
         {
-            if (Application.Phase != "Playing" || IsSettingsOpen) return;
-            await Application.CompleteLevelAsync(token);
-            await navigation.BackAsync(token);
-            if (level != null) { await level.UnloadAsync(); level = null; }
-            if (tone != null) { await tone.StopAsync(); tone = null; }
+            if ((Application.Phase != "Playing" && !completingLevel) || IsSettingsOpen) return;
+            await CompleteLevelCoreAsync(token);
         });
+
+        private async Task CompleteLevelCoreAsync(CancellationToken token)
+        {
+            completingLevel = true;
+            if (Application.Phase == "Playing") await Application.CompleteLevelAsync(token);
+            await navigation.BackAsync(token);
+            var errors = new List<Exception>();
+            if (level != null)
+            {
+                try { await level.UnloadAsync(); }
+                catch (Exception error) { errors.Add(error); }
+                finally { if (!level.IsLoaded) level = null; }
+            }
+            if (tone != null)
+            {
+                var endingTone = tone;
+                tone = null; // Audio owns and completes cleanup even when StopAsync reports errors.
+                try { await endingTone.StopAsync(); }
+                catch (Exception error) { errors.Add(error); }
+            }
+            if (errors.Count != 0) throw new AggregateException("Level completion cleanup reported errors. Retry completion before entering another level.", errors);
+            completingLevel = false;
+        }
 
         public Task OpenSettingsAsync() => ExecuteAsync(async token =>
         {

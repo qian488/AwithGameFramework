@@ -25,6 +25,8 @@ storage.Dispose();
 
 静态入口的提供者应在初始化前注册。`await DataPersistenceAPI.ShutdownAsync()` 先停止接收新操作，再等待通过该 API 发起的在途操作完成，最后释放提供者并清除配置；关闭开始后 `IsInitialized` 为 false，新操作抛出 `InvalidOperationException`。初始化和关闭彼此串行，初始化失败会释放本次提供者并清空注册，重试前需重新注册自定义提供者。通过 `GetStorageProvider` / `GetDatabaseProvider` 取出后直接调用的操作不在跟踪范围，宿主需自行等待这些操作结束。关闭前还应停止继续发起存储请求的业务任务。
 
+提供者实现 `IAsyncDisposable` 时，初始化回滚和 `ShutdownAsync` 会等待其异步释放，关闭失败返回 `Failed`。`DatabaseStorageProvider` 实现该接口；直接使用它时通过 `await using` 或 `await storage.DisposeAsync()` 确认驱动关闭完成。同步 `Dispose()` 仅发起关闭并记录错误，不阻塞等待异步驱动。数据库建表失败时不会标记初始化成功。
+
 `InitializeAsync(config)` 在会话开始时捕获配置，默认路由不会随调用方之后修改 `DefaultStorageType` 而变化。快照复制 `SerializationConfig`、`StorageConfigs` 字典以及其中框架自带的 `StorageConfig` / `SerializationConfig`；第三方选项对象由其提供者在初始化时捕获内部可变内容。会话复制本身不强制内置文件存储的能力限制，各提供者负责验证自己支持的选项。修改配置后需先关闭并重新初始化会话。
 
 JSON 保留公开字段，并支持可写属性、字典与基础类型；计算产生的只读属性不会写入存档。已有普通 JsonUtility 对象 JSON 可以继续读取，旧类型的 Unity 私有 `[SerializeField]` 字段需要迁移到公开 DTO 字段或显式 Newtonsoft 注解。文件存储的键必须是单个文件名，不能包含路径分隔符，也不能等于 `.` 或 `..`；旧代码通过目录形式组织键时，应改为不同的存储目录或扁平键名。

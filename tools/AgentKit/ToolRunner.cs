@@ -73,7 +73,7 @@ public static class ToolRunner
             throw new InvalidOperationException("Invalid tool catalog version or duplicate tool IDs.");
         foreach (var tool in catalog.Tools)
         {
-            if (!Regex.IsMatch(tool.Id, "^[a-z][a-z0-9-]*$") || tool.TimeoutSeconds < 1 || tool.TimeoutSeconds > 3600 ||
+            if (!Regex.IsMatch(tool.Id, "^[a-z][a-z0-9-]*\\z") || tool.TimeoutSeconds < 1 || tool.TimeoutSeconds > 3600 ||
                 (tool.Executable != "$powershell" && tool.Executable != "dotnet"))
                 throw new InvalidOperationException("Invalid tool recipe: " + tool.Id);
             foreach (string input in tool.Inputs) workspace.Resolve(input, true);

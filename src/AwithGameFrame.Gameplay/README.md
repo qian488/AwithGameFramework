@@ -52,6 +52,8 @@ title.Value = "Playing";
 
 `Scenes.SceneService` 通过 `ISceneBackend` 先加载、激活新场景，成功后 Single 卸载本服务拥有的旧场景，Additive 则保留它们。重复 key 复用实例；Active 卸载会激活另一个已拥有场景。服务不销毁 bootstrap 或其他宿主场景。提交前失败/取消会等待原生晚到结果并清理新实例、释放 scope，保留并恢复旧 Active；提交后会完成旧场景清理。原生卸载失败保留 handle/scope 供显式重试，不报告虚假卸载成功。`SceneModule` 默认也依赖 `resources`。
 
+加载、激活或取消的回滚若原生卸载失败，同样将实例和资源保留在 `Loaded`，通过其中的 handle 调用 `UnloadAsync()` 重试；该失败实例不会提交为 `Active`。资源在原生卸载成功后归还。
+
 Unity 后端使用独立 uGUI parent、宿主提供的 Canvas/EventSystem、Resources prefab 与原生 additive SceneManager；Godot 后端使用 PackedScene、专用 Control parent，以及持久 Node 下的子场景，不改全局 CurrentScene。两端只能在引擎主线程调用且需持续运行帧循环，Stop 等待原生释放；不可取消的原生操作必须最终完成。真实示例验收位于两端 `PresentationSmoke`，普通测试验证服务行为不能替代引擎验收。
 
 ## 导航与返回历史

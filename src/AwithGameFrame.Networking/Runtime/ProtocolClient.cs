@@ -193,11 +193,19 @@ namespace AwithGameFrame.Networking
 
         private static void Cancel(PendingRequest[] active)
         {
+            List<Exception> errors = null;
             foreach (var call in active)
             {
                 try { call.Cancellation.Cancel(); }
                 catch (ObjectDisposedException) { }
+                catch (AggregateException error)
+                {
+                    // One transport callback must not leave the other requests waiting.
+                    if (errors == null) errors = new List<Exception>();
+                    errors.Add(error);
+                }
             }
+            if (errors != null) throw new AggregateException("Request cancellation callbacks failed.", errors);
         }
 
         private sealed class PendingRequest

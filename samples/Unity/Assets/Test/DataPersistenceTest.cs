@@ -59,6 +59,8 @@ namespace AwithGameFrame.Test
 
         private bool _isDataModified = false;
         private bool _isFirstRun = true;
+        private GameObject _createdCanvas;
+        private GameObject _createdEventSystem;
 
         void Start()
         {
@@ -132,7 +134,7 @@ namespace AwithGameFrame.Test
             TestJsonFileStorage();
             TestBinaryFileStorage();
             TestDatabaseStorage();
-            LogResult("=== ✅ 所有测试完成! ===");
+            LogResult("=== 所有存储演示已启动，完成情况见各项日志 ===");
         }
 
         /// <summary>
@@ -311,7 +313,7 @@ namespace AwithGameFrame.Test
             {
                 var databasePath = Path.Combine(Application.persistentDataPath, "test_game.db");
                 var config = new StorageConfig { databasePath = databasePath };
-                var storage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
+                await using var storage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
                 
                 LogResult($"🔧 开始初始化数据库，路径: {databasePath}");
                 var initResult = await storage.InitializeAsync(config);
@@ -408,7 +410,7 @@ namespace AwithGameFrame.Test
                 var binaryConfig = new DataPersistenceConfig
                 {
                     DataRootPath = Path.Combine(Application.persistentDataPath, "Data"),
-                    BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData"), EnableCompression = false, EnableEncryption = false };
+                    BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData"), FileExtension = ".bin", EnableCompression = false, EnableEncryption = false };
                 var binaryStorage = new BinaryFileStorage();
                 await binaryStorage.InitializeAsync(binaryConfig);
                 
@@ -422,7 +424,7 @@ namespace AwithGameFrame.Test
                 LogResult("修改数据库数据...");
                 var databasePath = Path.Combine(Application.persistentDataPath, "test_game.db");
                 var dbConfig = new StorageConfig { databasePath = databasePath };
-                var dbStorage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
+                await using var dbStorage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
                 await dbStorage.InitializeAsync(dbConfig);
                 
                 await dbStorage.SaveAsync($"{testKey}_String", modifiedString);
@@ -489,7 +491,7 @@ namespace AwithGameFrame.Test
                 var binaryConfig = new DataPersistenceConfig
                 {
                     DataRootPath = Path.Combine(Application.persistentDataPath, "Data"),
-                    BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData"), EnableCompression = false, EnableEncryption = false };
+                    BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData"), FileExtension = ".bin", EnableCompression = false, EnableEncryption = false };
                 var binaryStorage = new BinaryFileStorage();
                 await binaryStorage.InitializeAsync(binaryConfig);
                 
@@ -506,7 +508,7 @@ namespace AwithGameFrame.Test
                 LogResult("加载数据库数据...");
                 var databasePath = Path.Combine(Application.persistentDataPath, "test_game.db");
                 var dbConfig = new StorageConfig { databasePath = databasePath };
-                var dbStorage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
+                await using var dbStorage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
                 await dbStorage.InitializeAsync(dbConfig);
                 
                 var (dbString, dbResult1) = await dbStorage.LoadAsync<string>($"{testKey}_String");
@@ -556,7 +558,7 @@ namespace AwithGameFrame.Test
                 var binaryConfig = new DataPersistenceConfig
                 {
                     DataRootPath = Path.Combine(Application.persistentDataPath, "Data"),
-                    BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData"), EnableCompression = false, EnableEncryption = false };
+                    BinaryDataRootPath = Path.Combine(Application.persistentDataPath, "BinaryData"), FileExtension = ".bin", EnableCompression = false, EnableEncryption = false };
                 var binaryStorage = new BinaryFileStorage();
                 await binaryStorage.InitializeAsync(binaryConfig);
                 await binaryStorage.ClearAsync();
@@ -565,9 +567,10 @@ namespace AwithGameFrame.Test
                 LogResult("清除数据库数据...");
                 var databasePath = Path.Combine(Application.persistentDataPath, "test_game.db");
                 var dbConfig = new StorageConfig { databasePath = databasePath };
-                var dbStorage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
+                await using var dbStorage = new DatabaseStorageProvider(DatabaseType.SQLite, "test_data");
                 await dbStorage.InitializeAsync(dbConfig);
                 await dbStorage.ClearAsync();
+                await dbStorage.DisposeAsync();
                 
                 // 删除文件
                 var jsonDir = Path.Combine(Application.persistentDataPath, "Data");
@@ -683,12 +686,14 @@ namespace AwithGameFrame.Test
             {
                 // 创建EventSystem
                 GameObject eventSystemGO = new GameObject("EventSystem");
+                _createdEventSystem = eventSystemGO;
                 eventSystemGO.AddComponent<UnityEngine.EventSystems.EventSystem>();
                 eventSystemGO.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
             }
             
             // 创建Canvas
             GameObject canvasGO = new GameObject("DataPersistenceTestCanvas");
+            _createdCanvas = canvasGO;
             Canvas canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
@@ -868,6 +873,12 @@ namespace AwithGameFrame.Test
                     resultScrollRect.verticalNormalizedPosition = 0f;
                 }
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (_createdCanvas != null) Destroy(_createdCanvas);
+            if (_createdEventSystem != null) Destroy(_createdEventSystem);
         }
     }
 

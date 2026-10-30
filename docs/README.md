@@ -15,7 +15,7 @@
 | 编写和维护文档 | [写作约定](guides/documentation.md) |
 | 从旧版升级 | [迁移指南](migrations/README.md) |
 | 执行检查，确认检查范围 | [验证参考](reference/verification.md) |
-| 查看实际验证过的版本与平台 | [最近验证](validation/latest.md)、[仓库重组检查](validation/2026-10-29-repository-organization.md)、[2026-10 历史记录](validation/history/2026-10.md) |
+| 查看实际验证过的版本与平台 | [最近验证](validation/latest.md)、[代码规范审查](validation/2026-10-30-code-compliance.md)、[仓库重组检查](validation/2026-10-29-repository-organization.md)、[2026-10 历史记录](validation/history/2026-10.md) |
 | 了解能力与待补范围 | [路线图](roadmap.md) |
 
 ## 决策与资料

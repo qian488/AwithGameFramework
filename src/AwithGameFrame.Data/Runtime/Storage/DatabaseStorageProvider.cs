@@ -10,11 +10,13 @@ namespace AwithGameFrame.Foundation.DataPersistence
     /// 数据库存储提供者
     /// 支持多种数据库的统一存储接口
     /// </summary>
-    public class DatabaseStorageProvider : IStorageProvider
+    public class DatabaseStorageProvider : IStorageProvider, IAsyncDisposable
     {
         private readonly IDatabaseProvider _databaseProvider;
         private readonly string _tableName;
         private bool _isInitialized = false;
+        private readonly object _closeSync = new object();
+        private Task _closeTask;
 
         public StorageType StorageType => StorageType.Database;
         public bool IsInitialized => _isInitialized;
@@ -51,6 +53,26 @@ namespace AwithGameFrame.Foundation.DataPersistence
 
         public async Task<DataOperationResult> InitializeAsync(StorageConfig config)
         {
+            Task previousClose;
+            lock (_closeSync) previousClose = _closeTask;
+            if (previousClose != null)
+            {
+                try { await previousClose; }
+                catch
+                {
+                    // One retry belongs to this explicit initialization request. Do not
+                    // open another connection while the previous one failed to close.
+                    previousClose = BeginClose();
+                    try { await previousClose; }
+                    catch (Exception error)
+                    {
+                        LogFailure("重新初始化前关闭数据库失败", error);
+                        return DataOperationResult.Failed;
+                    }
+                }
+                lock (_closeSync)
+                    if (ReferenceEquals(_closeTask, previousClose)) _closeTask = null;
+            }
             try
             {
                 if (_isInitialized)
@@ -71,20 +93,28 @@ namespace AwithGameFrame.Foundation.DataPersistence
                 var result = await _databaseProvider.InitializeAsync(connectionString);
                 if (result != DataOperationResult.Success)
                 {
+                    await CloseAfterFailedInitializationAsync();
                     FrameworkLogger.Error($"数据库初始化失败: {result}", LogCategory.Core);
                     return result;
                 }
 
                 // 创建数据表
-                await CreateDataTableAsync();
+                result = await CreateDataTableAsync();
+                if (result != DataOperationResult.Success)
+                {
+                    await CloseAfterFailedInitializationAsync();
+                    return result;
+                }
 
-                _isInitialized = true;
                 FrameworkLogger.Info($"数据库存储提供者初始化完成: {_databaseProvider.DatabaseType}", LogCategory.Core);
+                _isInitialized = true;
                 return DataOperationResult.Success;
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"数据库存储提供者初始化失败: {ex.Message}", LogCategory.Core);
+                _isInitialized = false;
+                await CloseAfterFailedInitializationAsync();
+                LogFailure("数据库存储提供者初始化失败", ex);
                 return DataOperationResult.Failed;
             }
         }
@@ -352,17 +382,59 @@ namespace AwithGameFrame.Foundation.DataPersistence
             }
         }
 
+        /// <summary>Begin nonblocking cleanup. Use DisposeAsync to await driver shutdown.</summary>
         public void Dispose()
+        {
+            // Preserve the nonblocking synchronous entry point. DisposeAsync joins the
+            // same close task when the caller needs confirmation that cleanup finished.
+            _ = ObserveCloseAsync(BeginClose());
+        }
+
+        /// <summary>Join the current driver shutdown and propagate its failure.</summary>
+        public ValueTask DisposeAsync() => new ValueTask(BeginClose());
+
+        private Task BeginClose()
+        {
+            TaskCompletionSource<bool> completion;
+            lock (_closeSync)
+            {
+                _isInitialized = false;
+                if (_closeTask != null && !_closeTask.IsFaulted && !_closeTask.IsCanceled) return _closeTask;
+                completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _closeTask = completion.Task;
+            }
+            // Publish first so synchronous driver callbacks join this close operation.
+            _ = CompleteCloseAsync(completion);
+            return completion.Task;
+        }
+
+        private async Task CompleteCloseAsync(TaskCompletionSource<bool> completion)
         {
             try
             {
-                _databaseProvider?.CloseAsync();
-                _isInitialized = false;
+                if (_databaseProvider != null)
+                {
+                    var result = await _databaseProvider.CloseAsync().ConfigureAwait(false);
+                    if (result != DataOperationResult.Success)
+                        throw new IOException($"Database provider close failed: {result}.");
+                }
+                completion.TrySetResult(true);
             }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"数据库存储提供者释放异常: {ex.Message}", LogCategory.Core);
-            }
+            catch (Exception error) { completion.TrySetException(error); }
+        }
+
+        private static async Task ObserveCloseAsync(Task closing)
+        {
+            try { await closing.ConfigureAwait(false); }
+            catch (Exception error) { LogFailure("数据库存储提供者释放异常", error); }
+        }
+
+        private Task CloseAfterFailedInitializationAsync() => ObserveCloseAsync(BeginClose());
+
+        private static void LogFailure(string operation, Exception error)
+        {
+            try { FrameworkLogger.Error($"{operation}: {error.Message}", LogCategory.Core); }
+            catch { } // Diagnostics cannot interrupt resource cleanup.
         }
 
         #region 私有方法
@@ -383,7 +455,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
             }
         }
 
-        private async Task CreateDataTableAsync()
+        private async Task<DataOperationResult> CreateDataTableAsync()
         {
             try
             {
@@ -398,13 +470,16 @@ namespace AwithGameFrame.Foundation.DataPersistence
                         ["updated_at"] = GetDateTimeColumnType()
                     };
 
-                    await _databaseProvider.CreateTableAsync(_tableName, columns);
+                    var result = await _databaseProvider.CreateTableAsync(_tableName, columns);
+                    if (result != DataOperationResult.Success) return result;
                     FrameworkLogger.Info($"数据表 {_tableName} 创建成功", LogCategory.Core);
                 }
+                return DataOperationResult.Success;
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"创建数据表失败: {ex.Message}", LogCategory.Core);
+                LogFailure("创建数据表失败", ex);
+                return DataOperationResult.Failed;
             }
         }
 

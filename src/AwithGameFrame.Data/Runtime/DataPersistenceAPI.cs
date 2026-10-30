@@ -53,7 +53,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     storageProviders.Clear();
                     config = null;
                 }
-                DisposeProviders(providers);
+                await DisposeProvidersAsync(providers);
                 LogLifecycleFailure($"Data persistence initialization failed: {ex.Message}");
                 return DataOperationResult.Failed;
             }
@@ -93,7 +93,7 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     config = null;
                     operationsDrained = null;
                 }
-                return DisposeProviders(providers);
+                return await DisposeProvidersAsync(providers);
             }
             finally
             {
@@ -431,12 +431,18 @@ namespace AwithGameFrame.Foundation.DataPersistence
             }
         }
 
-        private static DataOperationResult DisposeProviders(IEnumerable<IStorageProvider> providers)
+        private static async Task<DataOperationResult> DisposeProvidersAsync(IEnumerable<IStorageProvider> providers)
         {
             var result = DataOperationResult.Success;
             foreach (var provider in providers)
             {
-                try { provider.Dispose(); }
+                try
+                {
+                    if (provider is IAsyncDisposable asyncDisposable)
+                        await asyncDisposable.DisposeAsync();
+                    else
+                        provider.Dispose();
+                }
                 catch (Exception ex)
                 {
                     result = DataOperationResult.Failed;

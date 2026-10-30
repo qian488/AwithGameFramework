@@ -82,7 +82,11 @@ namespace AwithGameFrame.Foundation.Systems.UI
             var canvasGo = ResourcesManager.GetInstance().Load<GameObject>(GameConstants.UI_CANVAS_PATH);
             if (canvasGo == null) throw new InvalidOperationException("The UI Canvas prefab is missing from Resources.");
             Canvas = canvasGo.transform as RectTransform;
-            if (Canvas == null) throw new InvalidOperationException("The UI Canvas requires a RectTransform.");
+            if (Canvas == null)
+            {
+                Object.Destroy(canvasGo);
+                throw new InvalidOperationException("The UI Canvas requires a RectTransform.");
+            }
             Object.DontDestroyOnLoad(canvasGo);
 
             _bot = Canvas.Find("Bot");

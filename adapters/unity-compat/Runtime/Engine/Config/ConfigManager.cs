@@ -206,6 +206,7 @@ namespace AwithGameFrame.Core.Config
         {
             try
             {
+                #if UNITY_EDITOR
                 var defaultConfig = CreateDefaultFrameworkConfig();
                 
                 // 确保Resources目录存在
@@ -218,7 +219,6 @@ namespace AwithGameFrame.Core.Config
                 // 创建资源文件
                 string assetPath = "Assets/Resources/FrameworkConfig.asset";
                 
-                #if UNITY_EDITOR
                 // 编辑器模式下使用AssetDatabase
                 UnityEditor.AssetDatabase.CreateAsset(defaultConfig, assetPath);
                 UnityEditor.AssetDatabase.SaveAssets();

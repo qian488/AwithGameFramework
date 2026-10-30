@@ -105,6 +105,16 @@ namespace AwithGameFrame.Core.Logging
         #endregion
         
         #region 公共方法
+        internal void ConfigureRetention(int maxFileSize, int maxFiles, float cleanupInterval)
+        {
+            if (float.IsNaN(cleanupInterval) || float.IsInfinity(cleanupInterval) || cleanupInterval <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(cleanupInterval));
+
+            MaxFileSize = maxFileSize;
+            MaxFiles = maxFiles;
+            _cleanupInterval = cleanupInterval;
+        }
+
         /// <summary>
         /// 初始化文件日志器
         /// </summary>

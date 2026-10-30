@@ -24,6 +24,7 @@ namespace AwithGameFrame.Tests
 
         private void ShowPanelOver(TestPanel panel)
         {
+            if (panel == null || this == null) return;
             panel.InitInfo();
             Invoke("DelayHideTestPanel", GameConstants.DEFAULT_PANEL_DELAY);
         }
@@ -40,6 +41,7 @@ namespace AwithGameFrame.Tests
             {
                 PoolManagerAPI.GetGameObject(GameConstants.TEST_CUBE_PATH, (go) =>
                 {
+                    if (go == null) return;
                     go.transform.localScale = Vector3.one * GameConstants.DEFAULT_UI_SCALE;
                     UIManager.GetInstance().ShowPanel<TestPanel>(GameConstants.UI_PANEL_TEST, UILayer.Mid, ShowPanelOver);
                 });
@@ -49,6 +51,7 @@ namespace AwithGameFrame.Tests
             {
                 PoolManagerAPI.GetGameObject(GameConstants.TEST_SPHERE_PATH, (go) => 
                 { 
+                    if (go == null) return;
                     go.transform.localScale = Vector3.one * GameConstants.DEFAULT_UI_SCALE; 
                 });
             }

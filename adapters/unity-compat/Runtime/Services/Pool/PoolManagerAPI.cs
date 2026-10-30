@@ -86,11 +86,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static GameObject GetGameObject(string name, GameObject prefab = null)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                return poolManagerImpl.GetGameObject(name, prefab);
-            }
-            return null;
+            return poolManager?.GetGameObject(name, prefab);
         }
 
         /// <summary>
@@ -113,10 +109,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static void WarmupPool(string name, GameObject prefab, int count)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                poolManagerImpl.WarmupPool(name, prefab, count);
-            }
+            poolManager?.WarmupPool(name, prefab, count);
         }
 
         /// <summary>
@@ -138,11 +131,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static bool HasPool(string name)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                return poolManagerImpl.HasPool(name);
-            }
-            return false;
+            return poolManager?.HasPool(name) ?? false;
         }
 
         /// <summary>
@@ -153,11 +142,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static int GetPoolCount(string name)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                return poolManagerImpl.GetPoolCount(name);
-            }
-            return 0;
+            return poolManager?.GetPoolCount(name) ?? 0;
         }
 
         /// <summary>
@@ -167,11 +152,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static string[] GetPoolNames()
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                return poolManagerImpl.GetPoolNames();
-            }
-            return new string[0];
+            return poolManager?.GetPoolNames() ?? new string[0];
         }
 
         /// <summary>
@@ -181,10 +162,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static void ClearPool(string name)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                poolManagerImpl.ClearPool(name);
-            }
+            poolManager?.ClearPool(name);
         }
 
         /// <summary>
@@ -203,10 +181,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static void Clear(bool destroyPoolGO = true)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                poolManagerImpl.Clear(destroyPoolGO);
-            }
+            poolManager?.Clear(destroyPoolGO);
         }
 
         /// <summary>
@@ -227,11 +202,7 @@ namespace AwithGameFrame.Foundation.Pool
         public static string GetPoolStatistics(string name)
         {
             var poolManager = GetInstance();
-            if (poolManager is PoolManager poolManagerImpl)
-            {
-                return poolManagerImpl.GetPoolStatistics(name);
-            }
-            return "对象池管理器未初始化";
+            return poolManager?.GetPoolStatistics(name) ?? "对象池管理器未初始化";
         }
 
         /// <summary>

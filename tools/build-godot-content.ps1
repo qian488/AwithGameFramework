@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory = $true)][string]$SourceDirectory,
     [Parameter(Mandatory = $true)][string]$AddressMapPath,
     [Parameter(Mandatory = $true)][string]$OutputDirectory,
-    [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$Version
+    [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*\z')][string]$Version
 )
 $ErrorActionPreference = 'Stop'
 

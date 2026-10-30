@@ -12,7 +12,7 @@ namespace AwithGameFrame.Tools.Configuration
     /// <summary>Generates HTTP DTOs/endpoints from a wire contract and checks conservative JSON compatibility.</summary>
     public static class ProtocolCompiler
     {
-        private static readonly Regex Identifier = new Regex("^[A-Z][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant);
+        private static readonly Regex Identifier = new Regex("^[A-Z][a-zA-Z0-9_]*\\z", RegexOptions.CultureInvariant);
         private static readonly HashSet<string> Types = new HashSet<string> { "int", "long", "bool", "double", "string" };
 
         public static string Compile(string schemaJson, string baselineJson = null)
@@ -80,7 +80,7 @@ namespace AwithGameFrame.Tools.Configuration
                         var fieldName = field.GetProperty("name").GetString();
                         var wire = field.GetProperty("wireName").GetString();
                         if (fieldName == null || !Identifier.IsMatch(fieldName) || fieldName == name + (side == "request" ? "Request" : "Response") || !fields.Add(fieldName) ||
-                            string.IsNullOrWhiteSpace(wire) || !Regex.IsMatch(wire, "^[a-zA-Z][a-zA-Z0-9_]*$") || !wires.Add(wire) || !Types.Contains(field.GetProperty("type").GetString()))
+                            string.IsNullOrWhiteSpace(wire) || !Regex.IsMatch(wire, "^[a-zA-Z][a-zA-Z0-9_]*\\z") || !wires.Add(wire) || !Types.Contains(field.GetProperty("type").GetString()))
                             throw new InvalidDataException("Invalid field in " + name + "." + side);
                         _ = Required(field);
                     }

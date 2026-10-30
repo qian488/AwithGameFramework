@@ -176,11 +176,11 @@ namespace AwithGameFrame.Foundation.DataPersistence
             LoggingAPI.Info(LogCategory.DataPersistence, $"player_data是否存在: {exists}");
 
             // 删除特定数据
-            var deleteResult = await DataPersistenceAPI.DeleteAsync("cache_data");
+            var deleteResult = await DataPersistenceAPI.DeleteAsync("cache_data", StorageType.BinaryFile);
             LoggingAPI.Info(LogCategory.DataPersistence, $"删除cache_data结果: {deleteResult}");
 
             // 验证删除
-            var existsAfterDelete = await DataPersistenceAPI.ExistsAsync("cache_data");
+            var existsAfterDelete = await DataPersistenceAPI.ExistsAsync("cache_data", StorageType.BinaryFile);
             LoggingAPI.Info(LogCategory.DataPersistence, $"删除后cache_data是否存在: {existsAfterDelete}");
         }
     }

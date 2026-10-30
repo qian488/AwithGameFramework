@@ -60,6 +60,9 @@ namespace AwithGameFrame.Extensions.DebugConsole
             _commands.Clear();
             _logEntries.Clear();
             _commandHistory.Clear();
+            _historyIndex = -1;
+            OnLogEntryAdded = null;
+            ServiceLocator.Unregister<DebugConsole>();
             base.Shutdown();
         }
 
@@ -104,6 +107,7 @@ namespace AwithGameFrame.Extensions.DebugConsole
             _historyIndex = _commandHistory.Count;
 
             var parts = ParseCommandLine(input);
+            if (parts.Count == 0) return string.Empty;
             var cmdName = parts[0];
             var args = parts.Skip(1).ToArray();
 
@@ -191,6 +195,8 @@ namespace AwithGameFrame.Extensions.DebugConsole
 
             while (_logEntries.Count > MAX_LOG_LINES)
                 _logEntries.RemoveAt(0);
+
+            OnLogEntryAdded?.Invoke(_logEntries[_logEntries.Count - 1]);
         }
 
         #endregion

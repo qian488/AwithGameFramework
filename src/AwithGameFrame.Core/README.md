@@ -112,4 +112,6 @@ UseAsset(lease.Value);
 
 `LogMode.Console` 是宿主控制台模式；`UnityDebug` 保留为过时兼容别名。枚举数值保持兼容。`FrameworkLog` / `Both` 同时向宿主和文件输出，`None` 关闭输出。
 
+`TimeHelper.TimestampToDateTime` 与毫秒版本返回 `Kind=Utc` 的时间。转换回时间戳或计算相对时间时保留该时区信息；传入 `Unspecified` 的 `DateTime` 按本地时区解释。需要显示本地日历时间时先调用 `ToLocalTime()`。
+
 这里禁止添加引擎 SDK 和第三方运行时依赖。需要宿主能力时，先在内核声明最小接口，再由适配器实现；保留迁移文件的 `.meta` GUID。

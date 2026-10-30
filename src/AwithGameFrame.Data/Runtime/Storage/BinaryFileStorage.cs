@@ -271,7 +271,12 @@ namespace AwithGameFrame.Foundation.DataPersistence
             try
             {
                 var files = Directory.GetFiles(_dataPath, "*" + _config.FileExtension);
-                return Task.FromResult(files.Select(Path.GetFileNameWithoutExtension).ToArray());
+                // FileExtension can contain multiple dots or omit the leading dot.
+                return Task.FromResult(files.Select(file =>
+                {
+                    var name = Path.GetFileName(file);
+                    return name.Substring(0, name.Length - _config.FileExtension.Length);
+                }).ToArray());
             }
             catch (Exception ex)
             {

@@ -33,7 +33,7 @@ namespace AwithGameFrame.Tools.Configuration
             internal Dictionary<string, int> Values = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
-        private static readonly Regex Identifier = new Regex("^[A-Z][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant);
+        private static readonly Regex Identifier = new Regex("^[A-Z][a-zA-Z0-9_]*\\z", RegexOptions.CultureInvariant);
         private static readonly HashSet<string> Primitives = new HashSet<string> { "int", "long", "float", "double", "bool", "string" };
         internal string Namespace { get; }
         internal List<Definition> Tables { get; } = new List<Definition>();

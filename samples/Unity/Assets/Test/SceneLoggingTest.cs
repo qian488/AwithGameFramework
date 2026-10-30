@@ -129,10 +129,10 @@ namespace Test
             if (LoggingManager.GetInstance().FileLogger != null)
             {
                 var fileLogger = LoggingManager.GetInstance().FileLogger;
-                fileLogger.MaxFileSize = 1024; // 1KB，便于测试轮转
+                fileLogger.MaxFileSize = 1024 * 1024; // 文件日志最小支持1MB
                 fileLogger.MaxFiles = 3;
                 
-                FrameworkLogger.Info("文件日志配置完成 - 最大文件大小: 1KB, 最大文件数: 3");
+                FrameworkLogger.Info($"文件日志配置完成 - 最大文件大小: {fileLogger.MaxFileSize / 1024}KB, 最大文件数: 3");
             }
             
             // 生成一些测试日志

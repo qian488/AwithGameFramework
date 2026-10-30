@@ -67,6 +67,7 @@ namespace AwithGameFrame.Foundation.Providers
 
             var tcs = new TaskCompletionSource<bool>();
             DOTween.To(() => target.alpha, x => target.alpha = x, endValue, duration)
+                .SetTarget(target.transform)
                 .OnComplete(() => tcs.TrySetResult(true))
                 .OnKill(() => tcs.TrySetResult(false));
             return tcs.Task;

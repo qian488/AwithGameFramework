@@ -5,5 +5,6 @@
 | 指南 | 适用范围 |
 | --- | --- |
 | [框架现代化迁移](framework-modernization.md) | 旧 Unity 工程拆包、实例宿主、兼容程序集、持久化与资源行为、规则分层及文档入口调整 |
+| [规范审查修复](compliance-fixes.md) | UTC 时间、异步数据库关闭、完整文件后缀、PlayerPrefs 索引与角度输入行为 |
 
 迁移后先运行[通用验证](../reference/verification.md)，再执行受影响引擎与目标平台的实际检查。旧版本的验收记录保留在[验证历史](../validation/history/2026-10.md)，不能代替迁移后的验证。

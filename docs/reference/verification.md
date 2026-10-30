@@ -8,6 +8,8 @@
 powershell -File tools/verify.ps1
 # PowerShell 7 / CI
 pwsh -File tools/verify.ps1
+# 只检查文档、依赖边界和包元数据
+powershell -File tools/verify.ps1 -StaticOnly
 # 定位行为问题时单独运行
 dotnet test tests/AwithGameFrame.Core.Tests/AwithGameFrame.Core.Tests.csproj
 ```

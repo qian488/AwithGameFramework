@@ -134,8 +134,8 @@ public static class TaskFiles
 
     private static void ValidateId(string id)
     {
-        if (string.IsNullOrEmpty(id) || !Regex.IsMatch(id, "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$", RegexOptions.CultureInvariant) ||
-            Regex.IsMatch(id, "^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        if (string.IsNullOrEmpty(id) || !Regex.IsMatch(id, "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}\\z", RegexOptions.CultureInvariant) ||
+            Regex.IsMatch(id, "^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])\\z", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             throw new InvalidDataException("Task id must contain 1-64 ASCII letters, digits, underscores or hyphens and start with a letter or digit.");
     }
 }
