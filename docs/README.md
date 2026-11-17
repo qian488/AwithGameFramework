@@ -4,6 +4,8 @@
 
 | 任务 | 文档 |
 | --- | --- |
+| 了解产品形态、范围与框架调整依据 | [产品方向](product-direction.md) |
+| 建立自己的游戏、接入客户端和启动服务端 | [游戏工作区入门](getting-started/game-workspace.md)、[games](../games/README.md) |
 | 第一次运行，不安装引擎 | [Headless 入门](getting-started/headless.md) |
 | 运行双引擎示例 | [Unity](../samples/Unity/README.md)、[Godot](../samples/Godot/README.md) |
 | 查找模块和依赖 | [架构概览](architecture/overview.md)、[通用运行时](../src/README.md)、[引擎适配](../adapters/README.md) |
@@ -21,6 +23,7 @@
 ## 决策与资料
 
 - [引擎无关运行时的架构决定](architecture/decisions/0001-engine-independent-runtime.md)保留背景与后果。
+- [游戏工作区与外部程序集接入](architecture/decisions/0002-game-workspace-and-binary-integration.md)记录游戏、客户端、服务端和生成产物的边界。
 - [仓库组织调研](research/repository-organization.md)记录参考项目、固定版本及采纳范围。
 - [legacy](legacy/README.md)保存旧 Unity 框架资料，不作为当前开发规则。
 

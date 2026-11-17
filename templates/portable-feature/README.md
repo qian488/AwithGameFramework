@@ -28,6 +28,8 @@ feature.SetEnabled(preview.IsEnabled); // 提交，然后通知显式 sink
 
 ## 复制与改名
 
+具体游戏的功能优先使用 `tools/game.ps1 new-module` 在 `games/<游戏名>/src` 创建外部模块，再参考此模板组织规则与应用服务。以下手动复制步骤用于新增公共框架包，须同时在 `tools/verify.ps1` 注册其依赖策略；游戏模块不需要复制 UPM 或 Unity asmdef。
+
 1. 将整个目录复制到本仓库的 `src/AwithGameFrame.YourFeature`，保留 `Runtime/` 为唯一运行时源码目录。不要把模板自身加入运行时依赖。它目前没有加入根 solution，复制后按实际需求注册项目和验证入口。
 2. 重命名 `AwithGameFrame.FeatureTemplate.csproj`、`Runtime/AwithGameFrame.FeatureTemplate.asmdef`、`Tests~/AwithGameFrame.FeatureTemplate.Tests.csproj`，同时重命名对应 `.meta` 文件。将命名空间、asmdef 的 `name/rootNamespace`、测试的 `ProjectReference` 和文档中的 `AwithGameFrame.FeatureTemplate` 改为新名称。
 3. 修改 `package.json` 的 `name`（例如 `com.awithgameframe.your-feature`）、`displayName`、版本和描述。按实际领域重命名 `Feature*` 类型；新增依赖须同时维护 `.csproj`、asmdef、UPM 清单，并遵守根 `AGENTS.md` 的依赖方向。

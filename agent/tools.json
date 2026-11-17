@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "tools": [
     {
+      "id": "game-build",
+      "description": "Build a named game's external C# modules and .NET server; no engine project creation or sync.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/game.ps1", "build", "-Name", "{gameName}"],
+      "parameters": ["gameName"],
+      "inputs": ["tools/game.ps1", "templates/game-workspace/README.md"],
+      "requiresApproval": false,
+      "timeoutSeconds": 300
+    },
+    {
       "id": "agent-contracts",
       "description": "Validate module descriptors, task templates and fixed tool recipes without invoking an engine.",
       "executable": "dotnet",

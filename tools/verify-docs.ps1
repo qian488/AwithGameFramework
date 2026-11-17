@@ -21,6 +21,7 @@ try {
 $files = @(($listed -join "`n").Split([char]0) | Where-Object {
     $_ -and $_ -notmatch '(^|/)(legacy|artifacts|bin|obj|\.godot|node_modules)(/|$)' -and
     $_ -notmatch '^samples/Unity/(Library|Temp|Logs|Assets/(Plugins|Packages))/' -and
+    $_ -notmatch '^games/[^/]+/client/Unity/(Library|Temp|Logs|Assets/(Plugins|Packages))/' -and
     (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf)
 } | Sort-Object -Unique)
 if ($files.Count -eq 0) { throw 'No maintained Markdown documents found.' }

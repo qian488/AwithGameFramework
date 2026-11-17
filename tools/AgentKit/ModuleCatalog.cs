@@ -33,7 +33,7 @@ public sealed class ModuleCatalog
     public static ModuleCatalog Read(Workspace workspace)
     {
         var modules = new List<ModuleEntry>();
-        foreach (string area in new[] { "src", "adapters", "samples", "templates" })
+        foreach (string area in new[] { "src", "adapters", "samples", "templates", "games" })
         {
             string directory = workspace.Resolve(area);
             if (!Directory.Exists(directory)) continue;

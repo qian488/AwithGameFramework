@@ -2,9 +2,20 @@
 
 以纯 C# 为基础的游戏框架，提供独立于引擎的运行时，以及 Unity、Godot .NET 的适配和共享应用示例。
 
+产品目标是让开发者克隆仓库后，在框架规定的区域开发具体游戏、选定引擎的客户端和 .NET 服务端，游戏逻辑尽量在引擎工程外维护。已确认的范围、后续调整顺序及待定事项见[产品方向](docs/product-direction.md)；当前实现仍以各模块说明和验证记录为准。
+
 ## 开始使用
 
-安装 .NET 9 SDK 和 .NET 8 Runtime，在仓库根目录运行：
+安装 .NET 9 SDK 和 .NET 8 Runtime，在仓库根目录为自己的游戏生成外部代码骨架：
+
+```powershell
+powershell -File tools/game.ps1 new -Name MyGame -Engine unity
+# 使用 Godot 时将 unity 改为 godot
+```
+
+在 `games/MyGame/client/Unity` 或 `games/MyGame/client/Godot` 手动创建选定引擎的工程。游戏代码放在 `games/MyGame/src`，服务端放在 `games/MyGame/server`；外部构建与客户端接入见[游戏工作区入门](docs/getting-started/game-workspace.md)。命令不会代建引擎工程。
+
+如需先了解现有模块如何组合，可运行无引擎示例：
 
 ```powershell
 dotnet run --project samples/Headless/AwithGameFrame.Headless.csproj
@@ -18,6 +29,8 @@ Unity 打开 `samples/Unity`，运行 `Assets/SharedDemo.unity`；Godot **4.5.2 
 
 | 要做什么 | 入口 |
 | --- | --- |
+| 了解产品形态与框架调整依据 | [产品方向](docs/product-direction.md) |
+| 开发自己的游戏与服务端 | [游戏工作区](games/README.md)、[创建与接入步骤](docs/getting-started/game-workspace.md) |
 | 了解能力、依赖和限制 | [架构概览](docs/architecture/overview.md)、[路线图](docs/roadmap.md) |
 | 使用宿主、数据、游戏服务或网络能力 | [通用运行时](src/README.md) |
 | 接入 Unity 或 Godot | [引擎适配](adapters/README.md)、[示例](samples/README.md) |

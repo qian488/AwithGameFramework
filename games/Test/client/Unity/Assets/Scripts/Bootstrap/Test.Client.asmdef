@@ -1,0 +1,6 @@
+{
+  "name": "Test.Client",
+  "references": ["AwithGameFrame.Unity"],
+  "overrideReferences": true,
+  "precompiledReferences": ["AwithGameFrame.Core.dll", "Test.Application.dll"]
+}

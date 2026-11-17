@@ -2,6 +2,10 @@
 
 AgentKit 把一次人类与 AI 协作开发任务保存为可检查的任务清单、有限上下文、工具执行证据和人工评审记录。工具位于 `tools/AgentKit`，使用 .NET 8，不进入 `src`、UPM 或游戏运行时；无需模型账号或 API 凭据。代码修改仍由开发者及其现有 agent 完成，AgentKit 不自动调用模型、修改源码或提交 Git。
 
+按已确认的[产品方向](../docs/product-direction.md)，开发者继续使用自己选择的 AI 编程工具，仓库提供上下文、规范、skill、模板和命令。当前优先完善框架基座与实际游戏接入，复杂 Agent 系统留在范围之外；现有 AgentKit 命令按需使用。尚待编写的 skill 和后续工具能力以[路线图](../docs/roadmap.md)为准。
+
+开发具体游戏先读[游戏工作区入门](../docs/getting-started/game-workspace.md)和本游戏 README/AGENTS。创建、外部构建、客户端同步和服务端启动使用 `tools/game.ps1`；它与这里用于保存协作任务的 `tools/agent.ps1` 分别承担工程操作和任务记录。实际游戏路径需按本次任务显式纳入读写范围。
+
 ## 一次任务的闭环
 
 从仓库内执行，安装条件与根 README 相同。Windows 使用 `powershell`，PowerShell 7 可改用 `pwsh`。包装脚本将参数传给独立 CLI，并按仓库位置定位项目。
@@ -75,7 +79,7 @@ powershell -File tools/agent.ps1 modules
 powershell -File tools/agent.ps1 modules --id gameplay
 ```
 
-CLI 只查找 `src`、`adapters`、`samples`、`templates` 下直接子目录的 `module.json`，不递归扫描引擎工程。每个描述文件的 `schemaVersion` 为 `1`：
+CLI 只查找 `src`、`adapters`、`samples`、`templates`、`games` 下直接子目录的 `module.json`，不递归扫描引擎工程。每个描述文件的 `schemaVersion` 为 `1`：
 
 | 字段 | 含义 |
 | --- | --- |
@@ -88,6 +92,8 @@ CLI 只查找 `src`、`adapters`、`samples`、`templates` 下直接子目录的
 路径使用仓库相对路径，必须实际存在并留在各自模块目录内。`modules` 与 `contracts` 验证全部已发现模块；重复 ID、未知依赖、依赖环、无效路径和未知工具会使检查失败。
 
 在任务 JSON 中添加 `"readModules": ["gameplay"]` 即可收集其描述、README 与入口文件。依赖模块及整个源码目录需按本次需求另行选择。选择模块后，全部模块描述文件的路径和内容摘要都绑定当前上下文；描述文件增删或修改，以及选择、入口、README 的变化会使旧上下文及计划失效，需要重新执行 `context` / `plan`。未使用 `readModules` 的既有任务仍按 `readPaths` 工作，保留原有序列化与上下文摘要格式。
+
+`game.ps1 new` 为游戏生成 `game-<名称小写>` 描述，名称中的下划线转换为连字符，例如 `MyGame` 对应 `game-mygame`。它的 `sourcePaths` 仅声明游戏 `src` 和 `server`，不会递归收集客户端、引擎缓存或生成 DLL。需要具体源码时再按任务加入 `readPaths`。使用固定工具 `game-build` 时，任务须声明 `parameters.gameName` 为对应游戏名，并将该工具加入 `allowedTools`；需要构建作为交付条件时再加入 `requiredChecks`。
 
 ## 工作区基线与已有修改
 

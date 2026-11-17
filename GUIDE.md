@@ -2,10 +2,13 @@
 
 先读 [协作约定](AGENTS.md)，再按任务进入目标区域和包 README。这里提供导航和共同边界；API 条件、资源所有权及线程要求由对应模块说明维护。
 
+结构、能力范围与开发流程的调整以[产品方向](docs/product-direction.md)为依据，实施顺序见[路线图](docs/roadmap.md)。自己的游戏在 `games/<Name>` 开发，客户端由开发者在指定目录创建；当前路径、构建与接入步骤见[游戏工作区入门](docs/getting-started/game-workspace.md)。
+
 ## 定位修改范围
 
 | 内容 | 入口 | 主要验证 |
 | --- | --- | --- |
+| 具体游戏、外部代码与服务端 | [games](games/README.md)、[工作区入门](docs/getting-started/game-workspace.md) | 外部构建、服务端启动及选定真实引擎接入 |
 | 宿主、事件、时间、对象池、资源 | [Core](src/AwithGameFrame.Core/README.md) | .NET 行为测试、Headless |
 | 持久化、序列化、配置、数据库契约 | [Data](src/AwithGameFrame.Data/README.md) | 文件重开、配置/迁移测试 |
 | 导航、视图/场景、输入/音频、设置与存档 | [Gameplay](src/AwithGameFrame.Gameplay/README.md) | 规则与服务测试、受影响的引擎验证 |
@@ -31,6 +34,8 @@ graph TD
 ```
 
 `src` 的依赖只向图中方向流动。Networking 不进入 Data/Gameplay；样例可以组合多个包。引擎适配可依赖通用包，通用包不引用适配、样例或其中的 DLL。完整包关系及可选 Unity 兼容/插件包见 [架构概览](docs/architecture/overview.md)。
+
+具体游戏的 Domain 保持引擎无关；Application 组合领域和框架，客户端与服务端按需引用 Application。引擎类型留在客户端或适配层，服务端专用实现留在服务端。游戏外部项目使用 `.csproj` 构建为 DLL，不要求复制公共包的 UPM 清单与 asmdef。
 
 每个通用包的 `.csproj` 与 UPM asmdef 共用 `Runtime` 源码，输出进入根 `artifacts`。引擎接口暴露原生类型时，接口也属于该引擎适配层。
 

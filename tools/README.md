@@ -4,6 +4,7 @@
 
 | 要做的事 | 入口 | 说明 |
 | --- | --- | --- |
+| 创建游戏代码骨架、模块、外部构建、客户端接入和服务端启动 | [game.ps1](game.ps1) | 不创建引擎工程；目录与步骤见[游戏工作区](../docs/getting-started/game-workspace.md) |
 | 检查依赖、元数据、生成结果，构建、测试并运行 Headless | [verify.ps1](verify.ps1) | 标准交付检查 |
 | 检查维护中文档的本地链接 | [verify-docs.ps1](verify-docs.ps1) | 由标准验证调用；检查 Markdown/MDC 行内链接和引用定义的本地目标及仓库范围，跳过代码块；不联网，不检查锚点或 HTML |
 | 生成配置 DTO 与数据 | [generate-config.ps1](generate-config.ps1)、[ConfigGen](ConfigGen/README.md) | 源在 `samples/Shared/Configuration`；`-Check` 检查产物 |

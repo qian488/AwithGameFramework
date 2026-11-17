@@ -4,6 +4,7 @@
 
 | 模板 | 适用场景 | 边界 |
 | --- | --- | --- |
+| [game-workspace](game-workspace/README.md) | 具体游戏的外部 Domain/Application 与 .NET 服务端 | 由 `tools/game.ps1 new` 替换名称与引用；客户端由开发者在指定路径创建 |
 | [portable-feature](portable-feature/README.md) | 用纯规则计算状态，由应用服务提交状态并通知显式效果 | .NET Standard 2.1 / C# 9；无引擎依赖，不预设玩法或全局模块 |
 
 复制、改名、重建 `.meta` GUID、构建和测试步骤以模板 README 为准。移动现有资源须保留 GUID；复制模板创建新包须生成新 GUID，两者不同。

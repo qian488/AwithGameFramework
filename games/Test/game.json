@@ -1,0 +1,7 @@
+{
+    "schemaVersion":  1,
+    "name":  "Test",
+    "engine":  "unity",
+    "applicationProject":  "src/Test.Application/Test.Application.csproj",
+    "serverProject":  "server/Test.Server/Test.Server.csproj"
+}

@@ -1,0 +1,23 @@
+{
+    "schemaVersion":  1,
+    "id":  "game-test",
+    "purpose":  "Engine-independent game code and server composition for Test.",
+    "sourcePaths":  [
+                        "games/Test/src",
+                        "games/Test/server"
+                    ],
+    "entryPoints":  [
+                        "games/Test/game.json",
+                        "games/Test/src/Test.Application/Test.Application.csproj"
+                    ],
+    "readme":  "games/Test/README.md",
+    "dependencies":  [
+                         "core",
+                         "data",
+                         "gameplay",
+                         "networking"
+                     ],
+    "verificationTools":  [
+                              "game-build"
+                          ]
+}

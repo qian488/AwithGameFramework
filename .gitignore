@@ -57,3 +57,22 @@ artifacts/
 # Godot host cache and generated IDE files
 **/.godot/
 samples/Godot/*.sln
+
+# Developer-created game clients: track source/settings/assets, never editor caches.
+games/*/client/Unity/[Ll]ibrary/
+games/*/client/Unity/[Tt]emp/
+games/*/client/Unity/[Oo]bj/
+games/*/client/Unity/[Bb]uild/
+games/*/client/Unity/[Bb]uilds/
+games/*/client/Unity/[Ll]ogs/
+games/*/client/Unity/[Uu]ser[Ss]ettings/
+games/*/client/Unity/[Mm]emoryCaptures/
+games/*/client/Unity/[Rr]ecordings/
+games/*/client/Unity/*.csproj
+games/*/client/Unity/*.sln
+games/*/client/Unity/ExportedObj/
+games/*/client/Godot/*.sln
+
+# Tool-owned DLL distributions are rebuilt from external source with game.ps1.
+games/*/client/Unity/Packages/com.awithgameframe.workspace/
+games/*/client/Godot/Framework/

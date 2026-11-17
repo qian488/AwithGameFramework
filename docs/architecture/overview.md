@@ -2,6 +2,8 @@
 
 通用运行时、引擎适配、可运行示例和开发工具分别维护。Unity 与 Godot .NET 是当前实现的宿主，共享逻辑使用普通 C# 数据和 BCL API。
 
+按[产品方向](../product-direction.md)，具体游戏在 `games/<Name>` 维护外部 C# 代码、引擎工程与 .NET 服务端。默认一个游戏选择一个主引擎，多平台发布使用该引擎的构建能力。下图描述公共运行时与现有示例，游戏工作区在这些公共包之外组合依赖。
+
 ## 依赖与源码边界
 
 ```mermaid
@@ -36,9 +38,12 @@ graph TD
 | [Networking](../../src/AwithGameFrame.Networking/README.md) | 可选 HTTP/协议、内容更新和 WebSocket 会话；只依赖 Core，不进入 Data/Gameplay 依赖 |
 | [适配层](../../adapters/README.md) | 引擎对象、资源和生命周期转换；引擎类型接口也属于这里 |
 | [示例](../../samples/README.md) | 组合真实宿主和共享应用，验证模块怎样一起工作 |
+| [游戏工作区](../../games/README.md) | 游戏专属规则与应用、开发者创建的客户端、独立 .NET 服务端、配置与协议源 |
 | [开发工具](../../tools/README.md) | 生成、构建和验证；AgentKit 与模板用于开发，不进入游戏运行时 |
 
 通用包以 .NET Standard 2.1、C# 9 为基线。每包的 `Runtime/` 是唯一源码，由 `.csproj` 和 UPM asmdef 共用；asmdef 设置 `noEngineReferences=true`。`src` 不引用引擎程序集、适配包、示例或其中的第三方 DLL。编译产物统一进入忽略提交的 `artifacts/`。其他语言需要独立桥接或实现，不能直接由 C# 边界推定已支持。
+
+游戏的 `src/<Name>.Domain` 保持纯领域边界，`src/<Name>.Application` 组合领域与框架；客户端与 `server/<Name>.Server` 使用共享应用。游戏外部项目通过 `.csproj` 独立构建为 DLL，客户端由命令接入 DLL/PDB 与必要适配；公共框架不依赖具体游戏。目录、产物归属和取舍见[工作区决定](decisions/0002-game-workspace-and-binary-integration.md)，命令见[接入步骤](../getting-started/game-workspace.md)。
 
 ## 宿主与所有权
 

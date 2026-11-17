@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Runtime/**/*.cs" />
+    <ProjectReference Include="../__GAME__.Domain/__GAME__.Domain.csproj" />
+    <ProjectReference Include="__REPO__/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
+    <ProjectReference Include="__REPO__/src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
+    <ProjectReference Include="__REPO__/src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
+    <ProjectReference Include="__REPO__/src/AwithGameFrame.Networking/AwithGameFrame.Networking.csproj" />
+  </ItemGroup>
+</Project>
