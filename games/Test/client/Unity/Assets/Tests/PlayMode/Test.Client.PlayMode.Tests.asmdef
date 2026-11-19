@@ -1,0 +1,5 @@
+{
+  "name": "Test.Client.PlayMode.Tests",
+  "references": ["Test.Client", "AwithGameFrame.Unity"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

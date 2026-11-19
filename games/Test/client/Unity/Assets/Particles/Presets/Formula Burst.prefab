@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4921776480521381154
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4921776480521381155}
+  - component: {fileID: 4921776480521381156}
+  m_Layer: 0
+  m_Name: Formula Burst
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4921776480521381155
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4921776480521381154}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4921776480521381156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4921776480521381154}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3068a057b24493088e1ab2c0278853c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  material: {fileID: 2100000, guid: 387f3448a1604d509bf7c3fd4fa2436b, type: 2}
+  playOnEnable: 1
+  seed: 817
+  layers:
+  - label: Archimedean spiral
+    enabled: 1
+    shape: 6
+    launchProfile: {fileID: 11400000, guid: dba93c8807559fdf04d82f68c83166d9, type: 2}
+    offset: {x: -1.25, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+    delay: 0
+    count: 120
+    lifetime: 1.8
+    speed: 0.35
+    size: 0.21
+    gravity: 0
+    color: {r: 0.22, g: 0.88, b: 1, a: 1}
+    fadeColor: {r: 0.2, g: 0.2, b: 1, a: 0}
+  - label: Projectile fan
+    enabled: 1
+    shape: 6
+    launchProfile: {fileID: 11400000, guid: 805b4867474b9757201c91627e1a9a6e, type: 2}
+    offset: {x: 0.25, y: -1.1, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+    delay: 0.22
+    count: 54
+    lifetime: 1.75
+    speed: 3.3
+    size: 0.2
+    gravity: 0.48
+    color: {r: 1, g: 0.73, b: 0.3, a: 1}
+    fadeColor: {r: 1, g: 0.18, b: 0.05, a: 0}

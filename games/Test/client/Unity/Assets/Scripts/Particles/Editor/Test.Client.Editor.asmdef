@@ -1,0 +1,5 @@
+{
+  "name": "Test.Client.Editor",
+  "references": ["Test.Client"],
+  "includePlatforms": ["Editor"]
+}

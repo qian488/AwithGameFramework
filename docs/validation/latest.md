@@ -1,5 +1,19 @@
 # 最近验证
 
+## Test 纯公式与 Unity 资源接入（2026-11-19）
+
+`Test.Domain` 的纯 .NET 公式测试 **2/2** 通过。Test Debug 外部程序集与服务端构建均为 0 警告、0 错误，DLL/PDB 同步成功。Unity **2022.3.16f1** 隔离工程的 EditMode **3/3**、PlayMode **2/2** 通过，覆盖公式资源、旧图层内嵌参数、独立播放和宿主重播。Unity 测试报告位于本机 `artifacts/TestFormulaBoundaryValidation`。
+
+## Test 特效库与公式图层（2026-11-19）
+
+在 Unity **2022.3.16f1** 的隔离工程中，EditMode **2/2**、PlayMode **2/2** 通过。覆盖 Prefab 实例接入、螺旋分布、抛射延迟和重力、独立实例启用后自动播放，以及原场景通过宿主首播与重播。Unity 测试报告位于本机 `artifacts/TestParticleLibraryValidation`。仓库标准验证通过，包括框架 **638/638**、模板 **13/13** 和 Headless 示例。
+
+## Test 程序化粒子演示（2026-11-19）
+
+Test Debug 外部程序集和服务端构建均为 0 警告、0 错误，DLL/PDB 同步成功。使用 Unity **2022.3.16f1** 在隔离工程运行 EditMode 与 PlayMode 测试，各通过 1 项。覆盖新增或停用图层后的预览重建、分层延迟、宿主首播与重播、关闭宿主后取消重播及临时对象清理。`tools/verify.ps1 -StaticOnly` 通过。
+
+通过 Direct3D 11 读取场景相机渲染结果，确认粒子实际可见。Windows x64 Development Player 构建通过。日志、测试报告、预览图和 Player 位于本机 `artifacts/TestParticleValidation`。本次运行验收在编辑器内完成，独立 Player 运行以及调试器符号加载、源码断点待验证。
+
 ## Test Unity 实际工程接入：2026-11-03
 
 将开发者加入的 Test 工程整理到 `games/Test/client/Unity`，补齐外部 C# 骨架与最小场景接线。Debug 外部构建为 0 警告、0 错误；Unity **2022.3.16f1** 实际导入及脚本编译通过，退出码 0，导入后再次同步通过。过程、日志诊断与范围见[本次记录](2026-11-03-test-unity-integration.md)。
