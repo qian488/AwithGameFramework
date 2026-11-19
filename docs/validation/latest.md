@@ -1,5 +1,12 @@
 # 最近验证
 
+## Test 特效展示与制作流程（2026-11-19）
+
+- Unity **2022.3.16f1** 隔离工作区通过 EditMode **12/12** 和 PlayMode **3/3**。覆盖预设描述、预览和回退时间后场景与资产保持干净、模板创建、复制、重开、放置和 Undo，以及展示场景逐项切换和原场景的宿主重播。
+- D3D11 使用预览相机渲染全部九个预设，图像位于 `artifacts/TestEffectStudio/captures`。Test 外部程序集构建与同步通过，Domain **4/4** 通过。
+- 公共 `tools/unity-editor.ps1` 在隔离工程找到 `Spiral`，通过场景事务预览放置、位移及随机种子设置。预览前后场景文件哈希一致，提交后重开读到种子 `1201`。事务记录位于 `artifacts/TestEffectStudio`。
+- `tools/verify.ps1` 通过，包含框架 **640/640**、模板 **13/13**、Headless 示例和 AgentKit 契约检查。
+
 ## Unity 事务、恢复和工单交付（2026-11-19）
 
 - **P1 Unity 事务与授权。** 用 Unity **2022.3.16f1** 在独立 UPM 工程通过公共 CLI 验证依赖步骤、预览、失败后的内存和磁盘状态、已有未保存修改、一次原生 Undo 和操作记录。实时与批处理的项目白名单均验证了拒绝路径。普通场景命令和诊断脚本均通过。证据位于 `artifacts/UnityAutomationValidation/29f25a3b13364983a6e18f071282f292` 和 `artifacts/UnityAutomationValidation/e5e55790c56f44e384414bd4d19167a3`。

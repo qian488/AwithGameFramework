@@ -7,7 +7,7 @@ namespace Test.Client
 {
     public sealed class TestBootstrap : GameHostBehaviour
     {
-        [SerializeField] private ProceduralParticleEffect particleEffect;
+        [SerializeField] private TestEffectBehaviour particleEffect;
         [SerializeField, Min(0.1f)] private float repeatSeconds = 4f;
 
         protected override void ConfigureHost(GameHost host)

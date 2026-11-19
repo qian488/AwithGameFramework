@@ -7,7 +7,7 @@ using UnityApplication = UnityEngine.Application;
 namespace Test.Client
 {
     [DisallowMultipleComponent]
-    public sealed class ProceduralParticleEffect : MonoBehaviour
+    public sealed class ProceduralParticleEffect : TestEffectBehaviour
     {
         private enum EmitterShape
         {
@@ -81,7 +81,16 @@ namespace Test.Client
         private readonly List<FormulaBurst> formulaBursts = new List<FormulaBurst>();
         private GameObject generated;
 
-        public void Replay()
+#if UNITY_EDITOR
+        public void ConfigureStarter(Material particleMaterial)
+        {
+            material = particleMaterial;
+            playOnEnable = true;
+            layers = new List<Layer> { new Layer { label = "Ring", shape = EmitterShape.Ring } };
+        }
+#endif
+
+        public override void Replay()
         {
             if (!isActiveAndEnabled || !UnityApplication.isPlaying) return;
             if (generated == null) BuildEmitters();

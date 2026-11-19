@@ -26,12 +26,19 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 修改外部代码后先 `build`，再 `sync`。生成的 `Packages/com.awithgameframe.workspace` 不提交，由这两个命令重建；手写脚本放在客户端 `Assets` 中。
 
-## 场景一：星环爆发
+## 演示场景
 
-1. 在 Unity 打开 `Assets/Scenes/SampleScene.unity`。进入 Play Mode 后，Game 窗口会显示星环爆发，默认每 3 秒重播。场景已加入 Build Settings。
-2. 退出 Play Mode，打开 Unity 菜单 `Tools > Test > Particle Effect Library`。窗口可搜索工程中的特效 Prefab。`Star Ring Burst` 与 `Formula Burst` 预设位于 `Assets/Particles/Presets`。
-3. 点 `Edit` 进入 Prefab Mode，选根对象，在 Inspector 的 `Layers` 增删或停用图层，并点 `Preview in Scene View` 试播。要从零开始，回到场景后点 `New Scene Effect`，编辑选中对象，再点 `Save Selected as Prefab` 保存到 Project。Prefab 可使用 Unity Project 的重命名、移动和版本管理流程。
-4. 点 `Add to Scene`，或从 Project 把 Prefab 拖入 Hierarchy 或 Scene 窗口后保存场景。实例的 `Play On Enable` 可在运行时启用对象时自动播放一次。首场景中的星环实例关闭了该选项，由 `GameHost` 控制首播与重播。
+- `Assets/Scenes/EffectShowcase.unity` 用于比较九个预设。进入 Play Mode 后，在 Game 窗口左侧切换效果。天气、火焰和星光会持续发射，闪电与爆发结束后可点 `Replay` 重播。
+- `Assets/Scenes/SampleScene.unity` 用于验证 `GameHost`。场景中的星环实例关闭了 `Play On Enable`，由宿主控制首播和每 3 秒重播。两个场景都在 Build Settings 中。
+
+## 特效库
+
+1. 退出 Play Mode，打开 `Tools > Test > Effect Library`。在左侧按名称、标签和分类查找特效。在右侧看说明、图层和校验提示。`Play Preview` 可在独立预览中播放，支持暂停、重启、循环和拖动时间轴。
+2. 用 `Create Effect…` 从模板另存资源，或用 `Duplicate…` 复制现有 Prefab。`Custom Layered Effect` 提供一个可以直接试播的基础环形图层。`Edit Prefab` 打开 Prefab Mode，`Locate` 在 Project 窗口定位资源。列表默认显示小图标，可在根对象的 `Particle Effect Metadata` 中设置 `Thumbnail`。查看实际画面用 `Play Preview`，Unity 的 Project 网格可能把未播放的效果显示为空白缩略图。
+3. 在 Inspector 中编辑对应模块。程序化效果在根对象的 `Layers` 增删图层，原生粒子效果在子对象的 `Particle System` 调发射、速度、颜色等参数。闪电在根对象配置分段、抖动和持续时间，通过移动 `Anchor` 子对象改变传播路线。根对象上的元数据可设置说明、分类及搜索标签。
+4. 用 `Add to Scene` 放进当前场景，或从 Project 把 Prefab 拖到 Hierarchy。放置可以 Undo。保留 `Play On Enable` 时，实例进入运行时且启用后自动播放，也可由宿主或展示场景调用 `Replay`。
+
+`Assets/Particles/Presets` 下的 `Formula Burst` 是一个由青色螺旋和金色抛射扇两个图层组成的 Prefab。`Spiral` 和 `Projectile Fan` 各自保存一个图层，可单独预览、编辑和放置。两份独立 Prefab 与组合示例共享对应的公式参数资源，需独立调参时复制资源并重新绑定。新增 `Rain`、`Snow`、`Flame`、`Star Sparkle` 与 `Lightning Chain`。
 
 ### 使用公式图层
 
@@ -45,7 +52,7 @@ powershell -File tools/game.ps1 run-server -Name Test
 | --- | --- |
 | Unity 编辑器 `Assets/Scripts/Particles/Editor` | 特效库、Prefab 制作与放置、Inspector 预览 |
 | Unity 表现层 `Assets/Scripts/Particles`、`Assets/Particles` | 图层配置、公式资源、把采样结果映射为 ParticleSystem 发射参数、模拟与渲染 |
-| 外部纯计算 `src/Test.Domain/Runtime/Mathematics` | 螺旋和抛射的初始发射采样，可供 Test 的其他模块复用 |
+| 外部纯计算 `src/Test.Domain/Runtime/Mathematics` | 螺旋和抛射的初始发射采样、闪电路径采样，可供 Test 的其他模块复用 |
 | Unity 接线 `Assets/Scripts/Bootstrap/TestBootstrap.cs` | 把场景组件的播放回调和 Inspector 中的 `Repeat Seconds` 交给外部模块 |
 | 外部客户端逻辑 `src/Test.Application/Runtime/ParticleDemoModule.cs` | 使用 GameHost 的 TimerScheduler 安排首播与重播，关闭宿主时取消计时器。接口使用普通 C# 回调 |
 
@@ -68,4 +75,6 @@ $changes = @{ seed = 1234; 'layers.Array.data[0].speed' = 3.5 }
 ./tools/unity-editor.ps1 @project -Action scene.save
 ```
 
-随机种子、图层和公式资源由 Test 的表现层定义，播放结果由 Test 的编辑器和运行测试验证。通用命令见 [Unity 编辑器自动化](../../docs/reference/unity-editor-automation.md)。
+也可用 `asset.find` 查找预设，通过 `scene.transaction` 把放置、坐标和字段写入合为一组预览与提交，再用 `scene.inspect` 或 `component.inspect` 读回。通用命令见 [Unity 编辑器自动化](../../docs/reference/unity-editor-automation.md)。
+
+Test 的 Unity 项目提供模板生成、Prefab 编辑、公式资源绑定和特效预览。框架提供工作区 DLL 构建与同步、宿主生命周期和通用场景自动化。CLI 的事务范围是场景，支持已有序列化标量字段。Prefab 内容、公式资产引用和预览由 Test 的编辑器工具处理。

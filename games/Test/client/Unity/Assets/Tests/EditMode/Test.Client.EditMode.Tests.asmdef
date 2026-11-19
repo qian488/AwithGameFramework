@@ -1,6 +1,6 @@
 {
   "name": "Test.Client.EditMode.Tests",
-  "references": ["Test.Client"],
+  "references": ["Test.Client", "Test.Client.Editor"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

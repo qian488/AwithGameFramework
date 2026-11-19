@@ -32,6 +32,42 @@ namespace Test.Client.Tests
 #endif
 
         [UnityTest]
+        public IEnumerator ShowcaseSwitchesAndReplaysAllPresets()
+        {
+            yield return SceneManager.LoadSceneAsync("EffectShowcase");
+            var showcase = Object.FindObjectOfType<EffectShowcase>();
+            Assert.That(showcase, Is.Not.Null);
+            yield return WaitFor(() => showcase.Current != null);
+            var names = new[] { "Rain", "Snow", "Flame", "Star Sparkle", "Lightning Chain", "Spiral", "Projectile Fan", "Star Ring Burst", "Formula Burst" };
+            Assert.That(showcase.Count, Is.EqualTo(names.Length));
+            for (var index = 0; index < names.Length; index++)
+            {
+                var previous = showcase.Current;
+                showcase.ShowEffect(index);
+                if (previous != null) Assert.That(previous.gameObject.activeSelf, Is.False);
+                var current = showcase.Current;
+                Assert.That(current.name, Does.StartWith(names[index]));
+                if (current is LightningChainEffect lightning)
+                {
+                    var line = lightning.GetComponent<LineRenderer>();
+                    Assert.That(lightning.AnchorCount, Is.EqualTo(3));
+                    Assert.That(line.positionCount, Is.GreaterThan(3));
+                    yield return WaitFor(() => !line.enabled);
+                    lightning.Replay();
+                    Assert.That(line.enabled, Is.True);
+                }
+                else
+                {
+                    var emitters = current.GetComponentsInChildren<ParticleSystem>();
+                    Assert.That(emitters, Is.Not.Empty);
+                    yield return WaitFor(() => System.Array.Exists(emitters, emitter => emitter != null && emitter.particleCount > 0),
+                        $"{names[index]} did not emit particles.");
+                }
+                Assert.That(showcase.GetComponentsInChildren<TestEffectBehaviour>(), Has.Length.EqualTo(1));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator ScenePlaysAndReplaysThroughExternalHostModule()
         {
             yield return SceneManager.LoadSceneAsync("SampleScene");
@@ -61,11 +97,11 @@ namespace Test.Client.Tests
         private static ParticleSystem FindRing(ProceduralParticleEffect effect) =>
             System.Array.Find(effect.GetComponentsInChildren<ParticleSystem>(), emitter => emitter.name == "Cyan shock ring");
 
-        private static IEnumerator WaitFor(System.Func<bool> condition)
+        private static IEnumerator WaitFor(System.Func<bool> condition, string message = "Timed out waiting for the particle scene state.")
         {
             var deadline = Time.realtimeSinceStartup + 8f;
             while (!condition() && Time.realtimeSinceStartup < deadline) yield return null;
-            Assert.That(condition(), Is.True, "Timed out waiting for the particle scene state.");
+            Assert.That(condition(), Is.True, message);
         }
     }
 }

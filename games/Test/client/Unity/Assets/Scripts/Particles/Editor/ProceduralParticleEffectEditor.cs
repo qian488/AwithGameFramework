@@ -15,8 +15,8 @@ namespace Test.Client.Editor
             var effect = (ProceduralParticleEffect)target;
             using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
             {
-                if (GUILayout.Button("Open Particle Effect Library"))
-                    EditorApplication.ExecuteMenuItem("Tools/Test/Particle Effect Library");
+                if (GUILayout.Button("Open Effect Library"))
+                    EditorApplication.ExecuteMenuItem("Tools/Test/Effect Library");
             }
 
             if (EditorUtility.IsPersistent(effect))

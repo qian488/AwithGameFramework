@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Test.Client.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -7,6 +8,74 @@ namespace Test.Client.Tests
 {
     public sealed class ParticlePreviewTests
     {
+        [TestCase("Rain", 1)]
+        [TestCase("Snow", 1)]
+        [TestCase("Flame", 3)]
+        [TestCase("Star Sparkle", 2)]
+        [TestCase("Lightning Chain", 1)]
+        [TestCase("Spiral", 1)]
+        [TestCase("Projectile Fan", 1)]
+        [TestCase("Formula Burst", 2)]
+        public void LibraryDescribesAndPreviewsPresetsWithoutEditingAssetsOrScene(string name, int moduleCount)
+        {
+            var path = $"{EffectPresets.Folder}/{name}.prefab";
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            Assert.That(asset, Is.Not.Null);
+            Assert.That(ParticleEffectLibraryWindow.Describe(asset, out _, out var issue), Has.Length.EqualTo(moduleCount));
+            Assert.That(issue, Is.Null);
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var wasDirty = scene.isDirty;
+            var rootCount = scene.rootCount;
+            var original = System.IO.File.ReadAllBytes(path);
+            using (var preview = new EffectPreview())
+            {
+                preview.Reset(asset);
+                Assert.That(preview.Duration, Is.GreaterThan(0f));
+                preview.Advance(0.4f);
+                Assert.That(preview.Time, Is.EqualTo(0.4f));
+                preview.Reset(asset);
+                preview.Advance(0.15f);
+                Assert.That(preview.Time, Is.EqualTo(0.15f));
+            }
+            Assert.That(scene.isDirty, Is.EqualTo(wasDirty));
+            Assert.That(scene.rootCount, Is.EqualTo(rootCount));
+            Assert.That(EditorUtility.IsDirty(asset), Is.False);
+            Assert.That(System.IO.File.ReadAllBytes(path), Is.EqualTo(original));
+        }
+
+        [Test]
+        public void StarterCanBeSavedDuplicatedReopenedPlacedAndUndone()
+        {
+            var path = AssetDatabase.GenerateUniqueAssetPath("Assets/Effect Library Test.prefab");
+            var copyPath = AssetDatabase.GenerateUniqueAssetPath("Assets/Effect Library Copy Test.prefab");
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/EffectShowcase.unity", OpenSceneMode.Additive);
+            var initialRoots = scene.rootCount;
+            try
+            {
+                Assert.That(EffectPresets.Create(EffectPresets.CustomTemplate, path), Is.Not.Null);
+                Assert.That(scene.rootCount, Is.EqualTo(initialRoots));
+                Assert.That(AssetDatabase.CopyAsset(path, copyPath), Is.True);
+                Assert.That(AssetDatabase.AssetPathToGUID(copyPath), Is.Not.EqualTo(AssetDatabase.AssetPathToGUID(path)));
+                using (var prefab = new PrefabUtility.EditPrefabContentsScope(copyPath))
+                {
+                    Assert.That(prefab.prefabContentsRoot.GetComponent<ProceduralParticleEffect>(), Is.Not.Null);
+                }
+                Undo.IncrementCurrentGroup();
+                var instance = ParticleEffectLibraryWindow.PlaceEffect(AssetDatabase.LoadAssetAtPath<GameObject>(copyPath), scene);
+                Undo.FlushUndoRecordObjects();
+                Assert.That(scene.rootCount, Is.EqualTo(initialRoots + 1));
+                Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(instance), Is.EqualTo(copyPath));
+                Undo.PerformUndo();
+                Assert.That(scene.rootCount, Is.EqualTo(initialRoots));
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+                AssetDatabase.DeleteAsset(copyPath);
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+
         [Test]
         public void FormulaPrefabPlacesAndPreviewsSpiralAndProjectile()
         {
