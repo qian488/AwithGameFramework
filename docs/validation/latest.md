@@ -1,5 +1,41 @@
 # 最近验证
 
+## Unity 事务、恢复和工单交付（2026-11-19）
+
+- **P1 Unity 事务与授权。** 用 Unity **2022.3.16f1** 在独立 UPM 工程通过公共 CLI 验证依赖步骤、预览、失败后的内存和磁盘状态、已有未保存修改、一次原生 Undo 和操作记录。实时与批处理的项目白名单均验证了拒绝路径。普通场景命令和诊断脚本均通过。证据位于 `artifacts/UnityAutomationValidation/29f25a3b13364983a6e18f071282f292` 和 `artifacts/UnityAutomationValidation/e5e55790c56f44e384414bd4d19167a3`。
+- **P1 工单接手。** 从隔离 `SpecFixture` 工作区导入、分诊并启动倒计时工单。后续进程通过工单路径收集上下文、执行 `game-build` 并生成交接报告。服务端启动时观察到 0 秒就绪、1 秒等待。工单为 `ready-for-review`，依赖工单仍为 `blocked`。报告和行为日志位于 `artifacts/AgentSpecValidation/P0/artifacts/agent/tasks/ticket-e2d2b50ddf1a4ad1b069a24937b5b470`。
+- **P2 Unity 检查点。** 同一独立 UPM 工程跨编辑器进程恢复场景和 Prefab。旧哈希被拒绝，复核后恢复的文件与检查点内容一致，Prefab 的 `.meta` 不变。使用游戏工作区 `sync` 分发后，在 `DiagnosticFixture` 客户端重复验证事务预览和检查点捕获。
+- **P2 跟踪器和设计验证。** 用隔离议题快照检出远端关闭与本地待评审的状态差异。Unity 原型对照了原生粒子自动播放的两个值并确认预览未写盘。架构对照执行同一组创建对象与无效 Prefab 引用，分别记录了独立保存留下的修改和事务失败后的完整撤销。证据位于 `artifacts/AgentSpecValidation/P0/artifacts/agent/workflow-proof` 和 `artifacts/UnityWorkspaceDiagnosticValidation/P0/games/DiagnosticFixture/client/Unity/workflow-proof`。
+
+`tools/verify.ps1` 通过，框架 **640/640**、模板 **13/13**，Headless 示例与 AgentKit 契约检查通过。Unity 实测范围为 Windows 编辑器，跟踪器以本地快照对照为验收边界。覆盖清单见[项目采用与覆盖](../reference/unity-editor-automation.md#项目采用与覆盖)。
+
+## Unity 诊断与规格交付（2026-11-19）
+
+- **Unity 2022.3.16f1。** `tools/verify-unity-editor-automation.ps1 -DiagnosticsOnly` 实测警告采集与条数限制、编译中查询、真实 C# 编译错误的文件行列、修复后成功编译、脚本重载与关闭清理。关闭工程后用 CLI 定位批处理编译失败，并验证普通批处理命令显示同一源位置。证据在 `artifacts/UnityAutomationValidation/e4179d6e1c7a4b4f87babdcdd34ac5a3`。标准场景自动化烟测也通过，证据在 `artifacts/UnityAutomationValidation/f6000cce6f424f648607903f09716e03`。
+- **游戏工作区分发。** 在独立的 `DiagnosticFixture` 工作区执行 `build` 和 `sync`，再用 `-Name DiagnosticFixture -Action editor.diagnostics -EditorPath '<Unity.exe>'` 得到 `completed`。证据在 `artifacts/UnityWorkspaceDiagnosticValidation/P0` 的客户端 `Library/AwithGameFrameAutomation`。
+- **规格与交接。** 临时 `SpecFixture` 工作区用任务说明和 AgentKit 记录验收，验证服务端倒计时在 0 秒就绪、1 秒等待。用新的命令进程从清单定位游戏模块，复跑 `game-build` 和服务端行为检查，报告为 `ready-for-review`。任务说明、日志和报告在 `artifacts/AgentSpecValidation/P0/artifacts/agent/tasks/spec-fixture`。
+
+三个仓库技能的清单校验通过。`tools/verify.ps1` 通过，框架 **638/638**、模板 **13/13**，Headless 示例通过。
+
+## 独立 Unity 工程的自动化验收（2026-11-19）
+
+`tools/verify-unity-editor-automation.ps1` 使用 Unity **2022.3.16f1** 新建隔离工程，通过本地 UPM 引用导入框架并生成验证 Prefab 与组件。公共 CLI 完成资源查找、Prefab 放置、Transform、原生组件添加、嵌套字段预览与成组修改。预览和被拒绝的操作保持场景文件哈希不变，正式提交后重新打开场景读回两个字段。成功标记为 `UNITY_EDITOR_AUTOMATION_PASSED`，证据位于 `artifacts/UnityAutomationValidation/512dcacc50c349159c8cbc7adfa7dff5`。
+
+`tools/verify.ps1 -StaticOnly` 与三个技能的清单校验通过。此项验收覆盖独立 Unity 工程的自动化子集，采用范围见[项目采用与覆盖](../reference/unity-editor-automation.md#项目采用与覆盖)。
+
+## Unity 组件字段与开发工作流（2026-11-19）
+
+在 Unity **2022.3.16f1** 的 Test 工作区副本运行 `tools/verify-unity-editor-automation.ps1`。粒子组件字段可查询。预览和无效的成组修改均保持场景文件哈希不变。批处理提交后重新打开场景，读回随机种子和首层速度。证据位于 `artifacts/UnityAutomationValidation/88e67bb2a7954753a69d0a78e6ad8518`。
+
+独立 UPM 工程的实时验证覆盖 Light 组件的两个浮点字段。预览保持场景为未修改状态，提交后一次 Unity Undo 恢复两个旧值。证据位于 `artifacts/UnityAutomationValidation/upm-live-components/live-editor.log`。三个技能的清单校验及 `tools/verify.ps1` 通过，包含框架 **638/638**、模板 **13/13** 和 Headless 示例。
+
+## Unity 编辑器自动化与仓库技能（2026-11-19）
+
+以 `1e6910f` 为基线的工作区通过 `tools/verify.ps1`，Release 构建 0 警告、0 错误，框架测试 **638/638**、模板测试 **13/13**、Headless 示例和 AgentKit 契约检查通过。三个仓库技能的清单校验通过。
+
+- **Test 工作区分发**使用 `tools/game.ps1 build` 和 `sync`。在 Unity **2022.3.16f1** 隔离工程运行 `tools/verify-unity-editor-automation.ps1`，验证资产查找、对象和组件创建、粒子 Prefab 放置、Transform 落盘，以及拒绝同级重名后场景文件不变。本机证据位于 `artifacts/UnityAutomationValidation/8e2bec6d261541e88b53e63761ba5105`。
+- **现代 UPM 适配包**在独立工程通过本地 UPM 引用导入。用 Unity **2022.3.16f1** 在非批处理会话执行菜单命令，随后从外部 CLI 创建对象、确认未保存状态、调整 Transform、用 Unity Undo 恢复并显式保存。退出清除了会话标记。日志位于 `artifacts/UnityAutomationValidation/upm-live/live-editor.log`。菜单和 Undo 通过 Unity Editor API 触发。
+
 ## Test 纯公式与 Unity 资源接入（2026-11-19）
 
 `Test.Domain` 的纯 .NET 公式测试 **2/2** 通过。Test Debug 外部程序集与服务端构建均为 0 警告、0 错误，DLL/PDB 同步成功。Unity **2022.3.16f1** 隔离工程的 EditMode **3/3**、PlayMode **2/2** 通过，覆盖公式资源、旧图层内嵌参数、独立播放和宿主重播。Unity 测试报告位于本机 `artifacts/TestFormulaBoundaryValidation`。

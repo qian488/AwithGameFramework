@@ -7,7 +7,8 @@
     "adapters/unity/Editor"
   ],
   "entryPoints": [
-    "adapters/unity/Runtime/Engine/Hosting/GameHostBehaviour.cs"
+    "adapters/unity/Runtime/Engine/Hosting/GameHostBehaviour.cs",
+    "adapters/unity/Editor/Automation/EditorAutomation.cs"
   ],
   "readme": "adapters/unity/README.md",
   "dependencies": [

@@ -1,5 +1,7 @@
 # 游戏工作区约定
 
+- 游戏开发可使用仓库技能 `awith-game-development`。Unity 场景操作可使用 `awith-unity-editor`，接入方式见根 `GUIDE.md`。
+
 - `src` 保存本游戏的引擎外 C# 源码，`Runtime` 是各库项目唯一源码目录。
 - Domain 只依赖 BCL；可独立计算的规则用显式输入/输出，不修改调用方输入。
 - Application 依赖 Domain 及按需选用的公共框架，负责状态提交、流程和外部效果；不引用引擎或服务端实现。

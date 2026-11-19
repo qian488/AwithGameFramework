@@ -24,6 +24,10 @@ public static class Program
                 "approve --task <path> --plan <id> --by <human> --decision approve|deny --reason <text>\n" +
                 "run --task <path> --plan <id>\n" +
                 "review --task <path> --by <human> --decision accept|reject --reason <text>\n" +
+                "board-import --spec <repo path> | board-show --board <id>\n" +
+                "board-tracker --board <id> --snapshot <repo-relative GitHub issue export>\n" +
+                "ticket-start|ticket-handoff --board <id> --ticket <id>\n" +
+                "ticket-triage --board <id> --ticket <id> --owner <owner> --priority <0-3> --note <text>\n" +
                 "modules [--id <module id>] (list maintained package entry points)\n" +
                 "contracts (validate maintained module/tool/task/template contracts)");
             return 0;
@@ -37,6 +41,13 @@ public static class Program
         }
         string Get(string name) => options.TryGetValue(name, out string? value) ? value : throw new ArgumentException("Missing --" + name);
         var workspace = new Workspace(Workspace.FindRoot());
+        if (command == "board-import") { Print(TicketBoard.Import(workspace, Get("spec")).Spec.Id); return 0; }
+        if (command is "board-show" or "board-tracker" or "ticket-start" or "ticket-handoff" or "ticket-triage")
+        {
+            var result = TicketBoard.Execute(workspace, command, Get("board"), Get);
+            Print(result.View);
+            return result.Handoff?.Status is "failed" or "rejected" ? 1 : 0;
+        }
         if (command == "contracts") { Contracts(workspace); return 0; }
         if (command == "modules")
         {
@@ -130,7 +141,7 @@ public static class Program
             if (task.RequiredChecks.Except(task.AllowedTools, StringComparer.Ordinal).Any())
                 throw new InvalidOperationException("Required checks must be allowed by the template.");
         }
-        foreach (string path in new[] { "agent/README.md", "agent/templates/handoff.md", "agent/templates/review.md", "agent/templates/task-brief.md", "templates/portable-feature/README.md" })
+        foreach (string path in new[] { "agent/README.md", "agent/templates/handoff.md", "agent/templates/review.md", "agent/templates/task-brief.md", "agent/templates/ticket-board.json", "templates/portable-feature/README.md" })
             workspace.Resolve(path, true);
         Console.WriteLine("AGENT_CONTRACTS_PASSED");
     }

@@ -65,12 +65,17 @@ public static class TaskFiles
     public static string Create(Workspace ws, string templatePath, string id, string? objective)
     {
         ArgumentNullException.ThrowIfNull(ws);
-        ValidateId(id);
         string template = Path.IsPathRooted(templatePath) ? Path.GetRelativePath(ws.Root, templatePath) : templatePath;
         var task = Load<TaskSpec>(ws.Resolve(template, mustExist: true));
         task.Id = id;
         if (objective != null) task.Objective = objective;
+        return Create(ws, task);
+    }
+
+    internal static string Create(Workspace ws, TaskSpec task)
+    {
         Validate(ws, task);
+        string id = task.Id;
         string createLock = ws.Resolve("artifacts/agent/.create.lock");
         Directory.CreateDirectory(Path.GetDirectoryName(createLock)!);
         using var exclusiveCreate = new FileStream(createLock, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -101,7 +106,7 @@ public static class TaskFiles
         return relativeDirectory + "/task.json";
     }
 
-    private static void Validate(Workspace ws, TaskSpec task)
+    internal static void Validate(Workspace ws, TaskSpec task)
     {
         if (task.SchemaVersion != 1) throw new InvalidDataException("Unsupported task schemaVersion: " + task.SchemaVersion);
         ValidateId(task.Id);
@@ -132,7 +137,7 @@ public static class TaskFiles
         foreach (string path in paths) ws.Resolve(path);
     }
 
-    private static void ValidateId(string id)
+    internal static void ValidateId(string id)
     {
         if (string.IsNullOrEmpty(id) || !Regex.IsMatch(id, "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}\\z", RegexOptions.CultureInvariant) ||
             Regex.IsMatch(id, "^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])\\z", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))

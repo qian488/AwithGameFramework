@@ -52,3 +52,20 @@ powershell -File tools/game.ps1 run-server -Name Test
 `GameHost` 的 `Repeat Seconds` 控制重播间隔。若它比最长图层的延迟加寿命更短，重播会打断上一次效果。修改外部模块代码后重新执行 `build` 和 `sync`。运行此场景只需 Unity 客户端，服务端入口可单独验证。
 
 运行 `dotnet test games/Test/tests/Test.Domain.Tests/Test.Domain.Tests.csproj` 验证纯公式。在 Unity 的 Test Runner 中运行 EditMode 和 PlayMode 测试，验证资源接入、老图层兼容、预览重建、独立播放与宿主重播。完整工作区步骤见[游戏工作区指南](../../docs/getting-started/game-workspace.md)。
+
+### 用通用编辑器命令演示参数调整
+
+打开 Test 的 `SampleScene`，启用 Unity 菜单 `Tools > AwithGameFrame > Enable Editor Automation`，然后从仓库根执行下列命令。在确认预览结果后提交字段并按需保存场景。
+
+```powershell
+$project = @{ Name = 'Test'; Scene = 'Assets/Scenes/SampleScene.unity' }
+./tools/unity-editor.ps1 @project -Action prefab.place -Asset 'Assets/Particles/Presets/Formula Burst.prefab' -ObjectName 'Formula Preview'
+$effect = @{ Target = '/Formula Preview'; Kind = 'Test.Client.ProceduralParticleEffect' }
+./tools/unity-editor.ps1 @project @effect -Action component.inspect -Query 'layers'
+$changes = @{ seed = 1234; 'layers.Array.data[0].speed' = 3.5 }
+./tools/unity-editor.ps1 @project @effect -Action component.set -Properties $changes -Preview
+./tools/unity-editor.ps1 @project @effect -Action component.set -Properties $changes
+./tools/unity-editor.ps1 @project -Action scene.save
+```
+
+随机种子、图层和公式资源由 Test 的表现层定义，播放结果由 Test 的编辑器和运行测试验证。通用命令见 [Unity 编辑器自动化](../../docs/reference/unity-editor-automation.md)。

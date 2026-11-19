@@ -133,6 +133,8 @@ public partial class GameBootstrap : GameHostNode
 
 ## 更新、调试与服务端
 
+Unity 的游戏工作区同步也包含[编辑器自动化](../reference/unity-editor-automation.md)。仓库自带 [awith-game-development](../../.agents/skills/awith-game-development/SKILL.md)，用于定位规则、应用和引擎的职责与验证入口。
+
 修改外部代码后重复 `build`、`sync`，再让编辑器编译客户端。同步目录由工具维护，使用所有权记录识别生成物并清理过期文件；不要在生成目录中修改源码、添加手写文件或混放其他插件。客户端自己的接线与资源保留在生成目录之外。
 
 Debug 同步包含 PDB，调试器可用当前仓库源码定位外部程序集。断点、符号加载、引擎热重载和平台发布仍需在实际客户端检查；程序集更新后必要时停止运行或重启编辑器。

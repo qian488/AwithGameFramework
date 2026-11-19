@@ -41,6 +41,12 @@ graph TD
 
 ## 实现与交付
 
+仓库级技能位于 `.agents/skills`。维护框架使用 [awith-framework-development](.agents/skills/awith-framework-development/SKILL.md)，开发具体游戏使用 [awith-game-development](.agents/skills/awith-game-development/SKILL.md)，需要观察或修改 Unity 场景时使用 [awith-unity-editor](.agents/skills/awith-unity-editor/SKILL.md)。三个技能可以按任务组合。
+
+职责或契约有歧义时核对领域用词和已有决策。修复故障时先建立可复现的检查。功能已明确时按可观察的切片实现和评审。步骤与 AgentKit 模板见[开发工作流](.agents/skills/awith-framework-development/references/workflows.md)。
+
+通用编辑器命令及验证归引擎适配与开发工具。具体游戏的组件类型、资产路径、编辑流程与行为验收归对应的 `games/<Name>`。框架级验收使用独立工程和自己的验证资源。
+
 可独立计算的领域规则使用显式输入和输出，应用服务负责采集事实、提交状态及执行效果。用户设置和视图布局已有这种分工，边界与成本见 [函数式核心指南](docs/guides/functional-core.md)。生命周期、资源租约和原生后端仍按各自所有权建模。
 
 新增功能按 [开发步骤](docs/guides/add-feature.md) 操作；需要独立包时可复制 [portable-feature](templates/portable-feature/README.md)。公共 API、程序集或目录迁移同步更新 [迁移指南](docs/migrations/README.md)。

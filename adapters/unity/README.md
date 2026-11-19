@@ -1,5 +1,7 @@
 # Unity 适配包
 
+`Editor/Automation` 提供项目内的场景和资产操作。使用现代包或通过游戏工作区同步生成的程序集接入，命令与范围见 [Unity 编辑器自动化](../../docs/reference/unity-editor-automation.md)。
+
 Unity 需要的代码集中在本包，通用能力来自 src 下的 Core、Data、Gameplay。
 
 | 目录 | 职责 / 程序集 |

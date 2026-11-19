@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "editor-adoption",
+  "brief": "docs/reference/unity-editor-automation.md",
+  "decisionSource": "记录本次实际确认的来源",
+  "tickets": [
+    {
+      "id": "command-reference",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "objective": "说明项目怎样发现并执行受支持的 Unity 编辑器命令",
+        "writePaths": ["docs/reference/unity-editor-automation.md"],
+        "allowedTools": ["docs-verify"],
+        "requiredChecks": ["docs-verify"],
+        "acceptance": ["A1. 项目维护者能从文档找到命令、参数和预期结果。"]
+      }
+    }
+  ]
+}

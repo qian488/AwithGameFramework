@@ -1,5 +1,7 @@
 # 开发期 AgentKit
 
+仓库技能涵盖[框架开发](../.agents/skills/awith-framework-development/SKILL.md)、[具体游戏开发](../.agents/skills/awith-game-development/SKILL.md)和 [Unity 编辑器操作](../.agents/skills/awith-unity-editor/SKILL.md)。需要留存任务范围和验证证据时，可配合 AgentKit 使用。
+
 AgentKit 把一次人类与 AI 协作开发任务保存为可检查的任务清单、有限上下文、工具执行证据和人工评审记录。工具位于 `tools/AgentKit`，使用 .NET 8，不进入 `src`、UPM 或游戏运行时；无需模型账号或 API 凭据。代码修改仍由开发者及其现有 agent 完成，AgentKit 不自动调用模型、修改源码或提交 Git。
 
 按已确认的[产品方向](../docs/product-direction.md)，开发者继续使用自己选择的 AI 编程工具，仓库提供上下文、规范、skill、模板和命令。当前优先完善框架基座与实际游戏接入，复杂 Agent 系统留在范围之外；现有 AgentKit 命令按需使用。尚待编写的 skill 和后续工具能力以[路线图](../docs/roadmap.md)为准。
@@ -7,6 +9,8 @@ AgentKit 把一次人类与 AI 协作开发任务保存为可检查的任务清�
 开发具体游戏先读[游戏工作区入门](../docs/getting-started/game-workspace.md)和本游戏 README/AGENTS。创建、外部构建、客户端同步和服务端启动使用 `tools/game.ps1`；它与这里用于保存协作任务的 `tools/agent.ps1` 分别承担工程操作和任务记录。实际游戏路径需按本次任务显式纳入读写范围。
 
 ## 一次任务的闭环
+
+需要交接或跨模块验收时，先用[任务说明模板](templates/task-brief.md)写明影响的模块、可观察行为与验证方式。每项验收使用同一编号关联 `task.json` 的 `acceptance`、实际检查和评审证据。机器检查写入 `requiredChecks`，现场演示或其他人工检查记录在任务说明。交接者提供任务说明、任务清单、报告和相关证据路径。
 
 从仓库内执行，安装条件与根 README 相同。Windows 使用 `powershell`，PowerShell 7 可改用 `pwsh`。包装脚本将参数传给独立 CLI，并按仓库位置定位项目。
 
@@ -47,6 +51,23 @@ powershell -File tools/agent.ps1 report --task $task
 ```
 
 拒绝时使用 `--decision reject`。通过的人类评审才将状态变为 `accepted`；机器成功不会自动接受任务。任务、上下文、工作区或检查证据变化后，旧评审不能继续证明新结果，需要重新验证与评审。交接时使用 [交接表](templates/handoff.md)，保留任务目录及证据路径。
+
+## 工单、分诊与接手
+
+规格确认后，按 [工单清单示例](templates/ticket-board.json) 定义切片。`brief` 指向可收集到上下文的仓库规格文件，`decisionSource` 记录确认来源。每张工单的 `scope` 沿用任务清单字段，列出独立验收条件和至少一项必需检查。`dependsOn` 表示必须验收的前置工单。`priority` 的 `0` 最优先，`3` 最低。`externalRef` 可填跟踪器工单的 URL。
+
+```powershell
+powershell -File tools/agent.ps1 board-import --spec '<仓库相对路径>/ticket-board.json'
+powershell -File tools/agent.ps1 board-show --board editor-adoption
+powershell -File tools/agent.ps1 ticket-triage --board editor-adoption --ticket command-reference --owner '<实际负责人>' --priority 1 --note '<分诊依据>'
+$slice = powershell -File tools/agent.ps1 ticket-start --board editor-adoption --ticket command-reference | ConvertFrom-Json
+$task = $slice.task
+powershell -File tools/agent.ps1 context --task $task
+```
+
+工作看板保存在 `artifacts/agent/boards`。`ticket-start` 返回可在新进程接手的任务路径，重复调用返回同一任务。规格文件变更后，把修订的规格切片导入新的看板。按常规流程生成计划并执行必需检查，再运行 `ticket-handoff --board editor-adoption --ticket command-reference`。交接重新检查当前证据，输出状态、摘要和报告路径。机器检查通过的工单进入 `ready-for-review`。实际评审通过后重新交接，`accepted` 状态解锁依赖工单。
+
+跟踪器对照接受 GitHub CLI `gh issue list --state all --json url,title,state` 输出的本地快照。`board-tracker --board editor-adoption --snapshot '<仓库相对快照路径>'` 按 `externalRef` 对照工单，输出未关联、缺失、状态一致或需复核。以实际评审决定是否更新远端议题。命令只读取快照。
 
 ## 清单与上下文
 

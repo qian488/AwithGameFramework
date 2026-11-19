@@ -71,6 +71,68 @@ namespace AwithGameFrame.Core.Tests
         }
 
         [Test]
+        public async Task TicketHandoffDistinguishesChecksFromAcceptanceAndUnlocksDependentsAfterReview()
+        {
+            var spec = new BoardSpec { Id = "sample", Version = 1, Brief = "README.md", DecisionSource = "Synthetic test specification" };
+            var first = new TicketSpec { Id = "first", Scope = task, Priority = 0, ExternalRef = "https://github.com/example/fixture/issues/19" };
+            var nextScope = TaskFiles.Load<TaskSpec>(Path.Combine(root, "template.json"));
+            spec.Tickets = new[] { first, new TicketSpec { Id = "next", Owner = "Fixture owner", Scope = nextScope, DependsOn = new[] { "first" } } };
+            string specPath = "artifacts/ticket-spec.json";
+            TaskFiles.Save(workspace.Resolve(specPath), spec);
+            var board = TicketBoard.Import(workspace, specPath);
+            TicketResult Run(string command, string id) => TicketBoard.Execute(new Workspace(root), command, board.Spec.Id, option => option switch
+            {
+                "ticket" => id, "owner" => "Fixture owner", "priority" => "1", "note" => "Synthetic triage", "snapshot" => "artifacts/tracker.json",
+                _ => throw new ArgumentException(option)
+            });
+            Assert.Throws<InvalidOperationException>(() => Run("ticket-start", "first"));
+            Run("ticket-triage", "first");
+            Run("ticket-start", "first");
+            Run("ticket-start", "first");
+            Assert.Throws<InvalidOperationException>(() => Run("ticket-start", "next"));
+            Assert.That(Run("ticket-handoff", "first").Handoff!.Status, Is.EqualTo("failed"));
+
+            string slicePath = workspace.Resolve("artifacts/agent/tasks/" + board.State["first"].TaskId + "/task.json", true);
+            string sliceDirectory = Path.GetDirectoryName(slicePath)!;
+            var slice = TaskFiles.ReadTask(workspace, slicePath);
+            ContextBundle.Build(workspace, slice, sliceDirectory);
+            var plan = ToolRunner.Plan(workspace, slice, sliceDirectory, "probe");
+            await ToolRunner.RunAsync(workspace, slice, sliceDirectory, plan, CancellationToken.None);
+            var handoff = Run("ticket-handoff", "first").Handoff!;
+            Assert.That(handoff.Status, Is.EqualTo("ready-for-review"));
+            Assert.That(File.Exists(workspace.Resolve(handoff.Report)), Is.True);
+            Assert.Throws<InvalidOperationException>(() => Run("ticket-start", "next"));
+
+            string trackerPath = workspace.Resolve("artifacts/tracker.json");
+            TaskFiles.Save(trackerPath, new[] { new { url = first.ExternalRef, title = "Fixture issue", state = "CLOSED" } });
+            string trackerHash = Workspace.HashFile(trackerPath);
+            string diff = System.Text.Json.JsonSerializer.Serialize(Run("board-tracker", "").View);
+            Assert.That(diff, Does.Contain("review-state-difference").And.Contain("unlinked"));
+            Assert.That(Workspace.HashFile(trackerPath), Is.EqualTo(trackerHash));
+
+            Evaluation.Review(sliceDirectory, Evaluation.Evaluate(workspace, slice, sliceDirectory), "fixture reviewer", "accept", "Synthetic review fixture");
+            Assert.That(Run("ticket-handoff", "first").Handoff!.Status, Is.EqualTo("accepted"));
+            Assert.That(System.Text.Json.JsonSerializer.Serialize(Run("board-tracker", "").View), Does.Contain("aligned"));
+            Run("ticket-start", "next");
+        }
+
+        [Test]
+        public void TicketBoardRejectsCyclesAndPreventsPickupAfterTheBriefChanges()
+        {
+            var ticket = new TicketSpec { Id = "first", Owner = "Fixture owner", Scope = task, DependsOn = new[] { "first" } };
+            var spec = new BoardSpec { Id = "sample", Version = 1, Brief = "README.md", DecisionSource = "Synthetic test specification", Tickets = new[] { ticket } };
+            string specPath = "artifacts/ticket-spec.json";
+            TaskFiles.Save(workspace.Resolve(specPath), spec);
+            Assert.That(() => TicketBoard.Import(workspace, specPath), Throws.TypeOf<InvalidDataException>().With.Message.Contains("cycle"));
+            ticket.DependsOn = Array.Empty<string>();
+            TaskFiles.Save(workspace.Resolve(specPath), spec);
+            TicketBoard.Import(workspace, specPath);
+            File.WriteAllText(workspace.Resolve("README.md"), "changed specification");
+            Assert.That(() => TicketBoard.Execute(workspace, "ticket-start", spec.Id, _ => ticket.Id),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("brief changed"));
+        }
+
+        [Test]
         public void MissingChecksAndScopeViolationsCannotBeReportedAsPassed()
         {
             var missing = Evaluation.Evaluate(workspace, task, directory);
