@@ -38,6 +38,23 @@ namespace Test.Client.Combat
             Build(Mathf.Clamp(density, 0, 120));
         }
 
+        private PassWorld(GameObject prefab, Transform parent, Shader surface, int seed)
+        {
+            if (prefab == null) throw new ArgumentNullException(nameof(prefab));
+            if (surface == null) throw new ArgumentNullException(nameof(surface));
+            this.surface = surface;
+            random = new Random(seed);
+            Root = UnityEngine.Object.Instantiate(prefab, parent, false);
+            Root.name = prefab.name;
+            ResolveGateReferences();
+            RefreshLayoutDigest();
+        }
+
+        internal static PassWorld FromBakedPrefab(GameObject prefab, Transform parent, Shader surface, int seed)
+        {
+            return new PassWorld(prefab, parent, surface, seed);
+        }
+
         public GameObject Root { get; }
         public string LayoutDigest { get; private set; }
         public int ArchitectureCount { get; private set; }
@@ -107,6 +124,21 @@ namespace Test.Client.Combat
                 cliff.localRotation = Quaternion.Euler(Range(-20, 20), Range(0, 180), Range(-25, 25));
             }
 
+            RefreshLayoutDigest();
+        }
+
+        private void ResolveGateReferences()
+        {
+            var transforms = Root.GetComponentsInChildren<Transform>(true);
+            for (int index = 0; index < transforms.Length; index++)
+            {
+                if (transforms[index].name == "Practice gate") PracticeGate = transforms[index];
+                if (transforms[index].name == "Court gate") CourtGate = transforms[index];
+            }
+        }
+
+        private void RefreshLayoutDigest()
+        {
             var layout = new StringBuilder();
             var nodes = Root.GetComponentsInChildren<Transform>(true);
             ArchitectureCount = nodes.Length - 1;

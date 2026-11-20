@@ -1,0 +1,26 @@
+{
+    "generatorId": "test.rain-pass.environment",
+    "generatorVersion": "1",
+    "inputHash": "95bfcfae5219b1f05bd786c57b594ed9b2f307d0560127bcff6ed41d4bed9f68",
+    "seed": 27041,
+    "detailDensity": 65,
+    "outputs": [
+        "Assets/Content/RainPass/Generated/RainPass_Basalt generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Basalt.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Wet slate generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Wet slate.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Blue clay generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Blue clay.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Red cedar generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Red cedar.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Grille generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Grille.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Lamp paper generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Lamp paper.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Lamp core.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Rainwater.mat",
+        "Assets/Content/RainPass/Generated/RainPass_Black reed generated grain.asset",
+        "Assets/Content/RainPass/Generated/RainPass_Black reed.mat",
+        "Assets/Content/RainPass/Generated/RainPassEnvironment.prefab"
+    ]
+}

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a7f5c2e3d1b4f8aa9c0d6e5b7f10234, type: 3}
+  m_Name: RainPassEnvironment
+  m_EditorClassIdentifier: 
+  parameters:
+    seed: 27041
+    detailDensity: 65
+    moonlight: {r: 0.66, g: 0.79, b: 0.94, a: 1}
+    fogColor: {r: 0.115, g: 0.15, b: 0.187, a: 1}
+  bakedPrefab: {fileID: 1174590342511745214, guid: acd25d36d1c1e824e853d5d2cdc874c6, type: 3}
+  bakedInputHash: 95bfcfae5219b1f05bd786c57b594ed9b2f307d0560127bcff6ed41d4bed9f68
+  bakedGeneratorVersion: 1
+  manifestPath: Assets/Content/RainPass/Generated/RainPassEnvironment.manifest.json
+  generatedAssetPaths:
+  - Assets/Content/RainPass/Generated/RainPass_Basalt generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Basalt.mat
+  - Assets/Content/RainPass/Generated/RainPass_Wet slate generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Wet slate.mat
+  - Assets/Content/RainPass/Generated/RainPass_Blue clay generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Blue clay.mat
+  - Assets/Content/RainPass/Generated/RainPass_Red cedar generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Red cedar.mat
+  - Assets/Content/RainPass/Generated/RainPass_Grille generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Grille.mat
+  - Assets/Content/RainPass/Generated/RainPass_Lamp paper generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Lamp paper.mat
+  - Assets/Content/RainPass/Generated/RainPass_Lamp core.mat
+  - Assets/Content/RainPass/Generated/RainPass_Rainwater.mat
+  - Assets/Content/RainPass/Generated/RainPass_Black reed generated grain.asset
+  - Assets/Content/RainPass/Generated/RainPass_Black reed.mat
+  - Assets/Content/RainPass/Generated/RainPassEnvironment.prefab
+  - Assets/Content/RainPass/Generated/RainPassEnvironment.manifest.json

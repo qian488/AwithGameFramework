@@ -18,6 +18,8 @@ namespace Test.Client.Combat
         private const double StepSeconds = 1.0 / CombatRun.StepsPerSecond;
         [SerializeField] private Shader surfaceShader;
         [SerializeField] private Shader effectsShader;
+        [SerializeField] private RainPassEnvironmentProfile environmentProfile;
+        [SerializeField] private RainPassEnvironmentMode environmentMode = RainPassEnvironmentMode.RuntimeGenerated;
         [SerializeField] private int seed = 27041;
         [SerializeField, Range(0, 120)] private int detailDensity = 65;
         [SerializeField, Range(0, 1200)] private int rainDensity = 485;
@@ -42,9 +44,27 @@ namespace Test.Client.Combat
         private double accumulator;
         private RenderState previousRender;
 
+        public RainPassEnvironmentProfile EnvironmentProfile => environmentProfile;
+        public RainPassEnvironmentMode EnvironmentMode => environmentMode;
+        public RainPassEnvironmentParameters GetEnvironmentParameters()
+        {
+            return environmentProfile != null ? environmentProfile.Parameters.Clone() : new RainPassEnvironmentParameters
+            {
+                seed = seed,
+                detailDensity = detailDensity,
+                moonlight = moonlight,
+                fogColor = fogColor
+            };
+        }
+
+        public PassWorld GenerateEnvironmentForBake()
+        {
+            return BuildWorld(false, true);
+        }
+
         public PassWorld GeneratePreview()
         {
-            var preview = BuildWorld(true);
+            var preview = BuildWorld(true, false);
             try
             {
                 var previewSpace = new PassSpace(preview, characterScale);
@@ -100,12 +120,12 @@ namespace Test.Client.Combat
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogDensity = .018f;
-            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogColor = EffectiveEnvironmentParameters.fogColor;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(.55f, .65f, .77f);
             RenderSettings.ambientEquatorColor = new Color(.31f, .36f, .42f);
             RenderSettings.ambientGroundColor = new Color(.18f, .20f, .23f);
-            world = BuildWorld(false);
+            world = BuildWorld(false, false);
             space = new PassSpace(world, characterScale);
             run = new CombatRun(space);
             var cameraNode = PassWorld.Group("Shoulder camera", world.Root.transform);
@@ -126,15 +146,37 @@ namespace Test.Client.Combat
             return Task.CompletedTask;
         }
 
-        private PassWorld BuildWorld(bool preview)
+        private RainPassEnvironmentParameters EffectiveEnvironmentParameters
         {
-            var built = new PassWorld(transform, surfaceShader, seed, detailDensity, preview);
+            get
+            {
+                return environmentProfile != null ? environmentProfile.Parameters : new RainPassEnvironmentParameters
+                {
+                    seed = seed,
+                    detailDensity = detailDensity,
+                    moonlight = moonlight,
+                    fogColor = fogColor
+                };
+            }
+        }
+
+        private PassWorld BuildWorld(bool preview, bool forceRuntime)
+        {
+            var parameters = EffectiveEnvironmentParameters;
+            if (!preview && !forceRuntime && environmentMode == RainPassEnvironmentMode.BakedAsset)
+            {
+                if (environmentProfile == null || !environmentProfile.HasCurrentBakedAsset)
+                    throw new InvalidOperationException("Rain Pass BakedAsset mode requires a current baked environment profile.");
+                return PassWorld.FromBakedPrefab(environmentProfile.BakedPrefab, transform, surfaceShader, parameters.seed);
+            }
+
+            var built = new PassWorld(transform, surfaceShader, parameters.seed, parameters.detailDensity, preview);
             var moon = PassWorld.Group("Moon key", built.Root.transform);
             moon.localRotation = Quaternion.Euler(43, -126, 0);
             var key = moon.gameObject.AddComponent<Light>();
             key.type = LightType.Directional;
             key.intensity = 1.15f;
-            key.color = moonlight;
+            key.color = parameters.moonlight;
             key.shadows = LightShadows.Soft;
             var bounce = PassWorld.Group("Sky rim", built.Root.transform);
             bounce.localRotation = Quaternion.Euler(25, 92, 0);
@@ -284,7 +326,7 @@ namespace Test.Client.Combat
         private void OnGUI()
         {
             if (hud == null || run == null) return;
-            hud.Draw(run, space, lens, debug, seed, world.LayoutDigest, Time.unscaledTime < noticeUntil ? notice : "", noticeColor);
+            hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest, Time.unscaledTime < noticeUntil ? notice : "", noticeColor);
         }
 
         private static void LockCursor(bool locked)

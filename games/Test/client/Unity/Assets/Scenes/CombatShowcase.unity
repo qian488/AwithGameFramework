@@ -166,6 +166,8 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   surfaceShader: {fileID: 4800000, guid: 05ad4bd60ecfa8df5780cd8bafffa8a8, type: 3}
   effectsShader: {fileID: 4800000, guid: 332be190cae45725049b635137643f5e, type: 3}
+  environmentProfile: {fileID: 11400000, guid: 83c2f3d4e5f66a778899aabbccddeeff, type: 2}
+  environmentMode: 1
   seed: 27041
   detailDensity: 65
   rainDensity: 485

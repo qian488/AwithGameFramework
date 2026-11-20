@@ -1,3 +1,4 @@
+using System.IO;
 using NUnit.Framework;
 using Test.Client.Combat;
 using UnityEditor;
@@ -38,6 +39,45 @@ namespace Test.Client.Tests
                 Assert.That(level.transform.childCount, Is.Zero);
             }
             finally { EditorSceneManager.ClosePreviewScene(previewScene); }
+        }
+
+        [Test]
+        public void BakedEnvironmentProfileReferencesCurrentGeneratedAssets()
+        {
+            const string profilePath = "Assets/Content/RainPass/RainPassEnvironment.asset";
+            var profile = AssetDatabase.LoadAssetAtPath<RainPassEnvironmentProfile>(profilePath);
+            Assert.That(profile, Is.Not.Null, "The checked-in Rain Pass environment profile is missing.");
+            Assert.That(profile.BakedPrefab, Is.Not.Null);
+            Assert.That(profile.CurrentInputHash, Has.Length.EqualTo(64));
+            Assert.That(profile.HasCurrentBakedAsset, Is.True);
+            Assert.That(profile.ManifestPath, Is.Not.Empty);
+            Assert.That(AssetDatabase.LoadAssetAtPath<TextAsset>(profile.ManifestPath), Is.Not.Null);
+
+            foreach (var path in profile.GeneratedAssetPaths)
+            {
+                if (path.EndsWith(".json", System.StringComparison.OrdinalIgnoreCase))
+                    Assert.That(File.Exists(Path.GetFullPath(path)), Is.True, path);
+                else
+                    Assert.That(AssetDatabase.LoadMainAssetAtPath(path), Is.Not.Null, path);
+            }
+
+            var marker = profile.BakedPrefab.GetComponentInChildren<RainPassGeneratedAssetMarker>(true);
+            Assert.That(marker, Is.Not.Null);
+            Assert.That(marker.GeneratorId, Is.EqualTo(RainPassEnvironmentProfile.GeneratorId));
+            Assert.That(marker.GeneratorVersion, Is.EqualTo(RainPassEnvironmentProfile.GeneratorVersion));
+            Assert.That(marker.InputHash, Is.EqualTo(profile.CurrentInputHash));
+        }
+
+        [Test]
+        public void BakedEnvironmentContainsLightingAndCombatGates()
+        {
+            const string prefabPath = "Assets/Content/RainPass/Generated/RainPassEnvironment.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(prefab.transform.Find("Moon key"), Is.Not.Null);
+            Assert.That(prefab.transform.Find("Sky rim"), Is.Not.Null);
+            Assert.That(prefab.transform.Find("Practice gate"), Is.Not.Null);
+            Assert.That(prefab.transform.Find("Court gate"), Is.Not.Null);
         }
     }
 }
