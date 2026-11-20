@@ -4,11 +4,15 @@ param(
     [string]$EditorPath,
     [switch]$RunSmoke,
     [switch]$BuildPlayer,
+    [switch]$RunPlayerSmoke,
     [ValidateSet('Mono', 'IL2CPP')][string]$ScriptingBackend = 'Mono',
     [ValidateSet('Windows64', 'Android', 'WebGL')][string]$PlayerTarget = 'Windows64'
 )
 
 $ErrorActionPreference = 'Stop'
+if ($RunPlayerSmoke -and (-not $BuildPlayer -or $PlayerTarget -ne 'Windows64')) {
+    throw '-RunPlayerSmoke requires -BuildPlayer and Windows64.'
+}
 if ($RunSmoke -and $PlayerTarget -ne 'Windows64') {
     throw 'PlayMode assertions load Windows bundles. Run -RunSmoke with Windows64 separately from Android/WebGL builds.'
 }
@@ -78,7 +82,7 @@ function Invoke-UnityStep {
 }
 
 $contentArguments = @()
-if ($RunSmoke -or ($BuildPlayer -and $PlayerTarget -eq 'Windows64')) {
+if ($RunSmoke -or $RunPlayerSmoke) {
     $null = Invoke-UnityStep -Name 'Content-prepare' -Method 'AwithGameFrame.Samples.Editor.ContentSmokeAssets.Prepare' -Quit
     $contentOutput = Join-Path $validationRoot 'Content'
     & (Join-Path $PSScriptRoot 'build-unity-content.ps1') -EditorPath $editor.FullName -ProjectPath $validationRoot -SpecificationPath (Join-Path $validationRoot 'content-build.json') -OutputDirectory $contentOutput -BuildTarget 'Win64'
@@ -109,25 +113,31 @@ if ($BuildPlayer) {
     $playerPath = Join-Path $validationRoot $playerRelative
     $buildLog = Invoke-UnityStep -Name 'Player-build' -Method 'AwithGameFrame.Samples.Editor.SharedHostSmoke.BuildPlayer' -ExtraArguments @('-buildTarget', $editorTarget, '-awith-player-output', ('"' + $playerPath + '"'), '-awith-build-target', $nativeTarget, '-awith-scripting-backend', $nativeBackend) -Quit
     if (-not (Test-Path -LiteralPath $playerPath)) { throw "Unity did not produce the Player. See $buildLog" }
-    if ($PlayerTarget -eq 'Windows64') {
-    $playerLog = Join-Path $validationRoot 'Player-runtime.log'
-    $playerOptions = @{ FilePath = $playerPath; ArgumentList = (@('-batchmode', '-nographics', '-awith-shared-smoke', '-logFile', ('"' + $playerLog + '"')) + $contentArguments); PassThru = $true }
-    if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $playerOptions.WindowStyle = 'Hidden' }
-    $playerProcess = Start-Process @playerOptions
-    if (-not $playerProcess.WaitForExit(120000)) { $playerProcess.Kill(); throw "Unity Player timed out. See $playerLog" }
-    $playerProcess.Refresh()
-    if ($playerProcess.ExitCode -ne 0 -or -not (Select-String -LiteralPath $playerLog -SimpleMatch 'UNITY_SHARED_HOST_PASSED' -Quiet)) {
-        throw "Unity Player assertions failed. See $playerLog"
+    Write-Host "Unity $PlayerTarget build passed. Output: $playerPath"
+    $playerLog = $null
+    if ($RunPlayerSmoke) {
+        $playerLog = Join-Path $validationRoot 'Player-runtime.log'
+        $playerOptions = @{ FilePath = $playerPath; ArgumentList = (@('-batchmode', '-nographics', '-awith-shared-smoke', '-logFile', ('"' + $playerLog + '"')) + $contentArguments); PassThru = $true }
+        if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $playerOptions.WindowStyle = 'Hidden' }
+        $playerProcess = Start-Process @playerOptions
+        if (-not $playerProcess.WaitForExit(120000)) { $playerProcess.Kill(); throw "Unity Player timed out. See $playerLog" }
+        $playerProcess.Refresh()
+        if ($playerProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $playerLog) -or
+            -not (Select-String -LiteralPath $playerLog -SimpleMatch 'UNITY_SHARED_HOST_PASSED' -Quiet)) {
+            throw "Unity Player assertions failed. See $playerLog"
+        }
+        foreach ($marker in @('FOUNDATION_CORE_PASSED', 'UNITY_PRESENTATION_SCENES_PASSED', 'UNITY_INPUT_AUDIO_PASSED', 'COMPOSED_APPLICATION_PASSED', 'UNITY_ASSET_BUNDLE_PASSED', 'UNITY_OPTIONAL_PROVIDERS_PASSED')) {
+            if (-not (Select-String -LiteralPath $playerLog -SimpleMatch $marker -Quiet)) { throw "Unity Player marker $marker missing. See $playerLog" }
+        }
+        Write-Host "Unity standalone Player headless runtime passed. Log: $playerLog"
     }
-    foreach ($marker in @('FOUNDATION_CORE_PASSED', 'UNITY_PRESENTATION_SCENES_PASSED', 'UNITY_INPUT_AUDIO_PASSED', 'COMPOSED_APPLICATION_PASSED', 'UNITY_ASSET_BUNDLE_PASSED', 'UNITY_OPTIONAL_PROVIDERS_PASSED')) {
-        if (-not (Select-String -LiteralPath $playerLog -SimpleMatch $marker -Quiet)) { throw "Unity Player marker $marker missing. See $playerLog" }
-    }
-    Write-Host "Unity standalone Player build and runtime passed. Log: $playerLog"
-    } else { Write-Host "Unity $PlayerTarget build passed; runtime/device validation was not performed. Log: $buildLog" }
     $playerDirectory = Join-Path $validationRoot 'Player'
     [ordered]@{
         engine = 'Unity'; version = $editorVersion; target = "$PlayerTarget $ScriptingBackend development";
-        runtimeVerified = ($PlayerTarget -eq 'Windows64');
+        importVerified = $true; editorSmokeVerified = [bool]$RunSmoke;
+        buildVerified = $true; buildLog = $buildLog;
+        runtimeVerified = [bool]$RunPlayerSmoke; runtimeLog = $playerLog;
+        manualReview = 'not-run';
         commit = (& git -C $repositoryRoot rev-parse HEAD | Out-String).Trim();
         workingTreeModified = [bool](& git -C $repositoryRoot status --porcelain | Out-String).Trim();
         files = @(Get-ChildItem -LiteralPath $playerDirectory -Recurse -File | ForEach-Object {

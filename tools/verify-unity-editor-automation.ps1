@@ -1,7 +1,10 @@
 [CmdletBinding()]
-param([Parameter(Mandatory = $true)][string]$EditorPath, [switch]$DiagnosticsOnly)
+param([Parameter(Mandatory = $true)][string]$EditorPath, [switch]$DiagnosticsOnly, [switch]$RunLiveEditor)
 
 $ErrorActionPreference = 'Stop'
+if ($DiagnosticsOnly -and -not $RunLiveEditor) {
+    throw '-DiagnosticsOnly requires -RunLiveEditor because it opens an interactive editor session.'
+}
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $editor = Get-Item -LiteralPath $EditorPath
 $isolatedProject = Join-Path $repository ('artifacts/UnityAutomationValidation/' + [Guid]::NewGuid().ToString('N'))
@@ -353,88 +356,91 @@ try {
 catch { if ($_.Exception.Message -notlike '*policy denies action: prefab.place*') { throw } }
 if ((Get-FileHash -LiteralPath $savedFile).Hash -cne $before) { throw 'Denied transaction wrote the scene.' }
 
-$liveOptions = @{ FilePath = $editor.FullName; PassThru = $true; ArgumentList = @('-automated', '-projectPath', ('"' + $isolatedProject + '"'),
-    '-executeMethod', 'AutomationValidation.FixtureValues.StartLive', '-logFile', ('"' + (Join-Path $isolatedProject 'LiveTransaction.log') + '"')) }
-$live = @{ ProjectPath = $isolatedProject; TimeoutSeconds = 30 }
 $policy = @{ version = 1; live = @('project.info', 'scene.inspect', 'component.inspect', 'scene.transaction', 'object.create', 'object.transform', 'prefab.place', 'component.set', 'component.add');
     batch = @('scene.inspect', 'scene.transaction', 'object.create', 'object.transform', 'prefab.place', 'component.set', 'component.add', 'component.inspect',
         'checkpoint.capture', 'checkpoint.list', 'checkpoint.inspect', 'checkpoint.restore') }
 $policy | ConvertTo-Json | Set-Content -LiteralPath $policyFile -Encoding UTF8
-if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $liveOptions.WindowStyle = 'Hidden' }
-try {
-    if (!$previousProfile -and $liveOptions.WindowStyle) { $env:ALLUSERSPROFILE = [Environment]::GetFolderPath('CommonApplicationData') }
-    $liveEditor = Start-Process @liveOptions
-}
-finally { [Environment]::SetEnvironmentVariable('ALLUSERSPROFILE', $previousProfile) }
 
-function Invoke-LiveProbe([string]$Command) {
-    $probe = Join-Path $isolatedProject 'fixture-command'
-    [IO.File]::WriteAllText($probe + '.tmp', $Command)
-    [IO.File]::Move($probe + '.tmp', $probe)
-    $probeDeadline = [DateTimeOffset]::UtcNow.AddSeconds(15)
-    while (!$liveEditor.HasExited -and [DateTimeOffset]::UtcNow -lt $probeDeadline) {
-        if ((Test-Path -LiteralPath ($probe + '.done')) -and (Get-Content -LiteralPath ($probe + '.done') -Raw) -eq $Command) { return }
-        Start-Sleep -Milliseconds 150
-    }
-    if ($Command -ne 'quit' -or !$liveEditor.HasExited) { throw "Live fixture did not complete $Command." }
-}
-
-function Assert-Reverted([bool]$Dirty) {
-    $state = & $commandPath @live -Action scene.inspect -Scene $scene | ConvertFrom-Json
-    $field = & $commandPath @live @component -Action component.inspect -Query revision | ConvertFrom-Json
-    if ($state.dirty -ne $Dirty -or $state.objects.path -contains '/Rig' -or ($state.objects | Where-Object path -eq '/Anchor').localPosition.x -ne 1 -or
-        $field.properties[0].value -ne '42' -or (Get-FileHash -LiteralPath $savedFile).Hash -cne $before) { throw 'Reverted scene contents, dirty flag or saved file did not match.' }
-}
-
-try {
-    $deadline = [DateTimeOffset]::UtcNow.AddSeconds(120)
-    do {
-        if ($liveEditor.HasExited -or [DateTimeOffset]::UtcNow -ge $deadline) { throw 'Live transaction fixture failed to start. See LiveTransaction.log.' }
-        $status = & $commandPath @live -Action editor.diagnostics | ConvertFrom-Json
-        if ($status.state -eq 'editor-unavailable') { Start-Sleep -Milliseconds 250 }
-    } while ($status.state -eq 'editor-unavailable')
-
-    $simulation = & $commandPath @live @batchTransaction -Preview | ConvertFrom-Json
-    if ($simulation.outcome -ne 'previewed' -or $simulation.steps.Count -ne 6 -or $simulation.steps[1].objects[0].path -ne '/Rig/Marker' -or
-        $simulation.steps[3].properties[0].previousValue -ne '42' -or !(Test-Path -LiteralPath (Join-Path $isolatedProject ('Library/AwithGameFrameAutomation/' + $simulation.id + '.result')))) {
-        throw 'The preview omitted expected operation records.'
-    }
-    Assert-Reverted $false
+if ($RunLiveEditor) {
+    $liveOptions = @{ FilePath = $editor.FullName; PassThru = $true; ArgumentList = @('-automated', '-projectPath', ('"' + $isolatedProject + '"'),
+        '-executeMethod', 'AutomationValidation.FixtureValues.StartLive', '-logFile', ('"' + (Join-Path $isolatedProject 'LiveTransaction.log') + '"')) }
+    $live = @{ ProjectPath = $isolatedProject; TimeoutSeconds = 30 }
+    if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $liveOptions.WindowStyle = 'Hidden' }
     try {
-        $null = & $commandPath @live -Action scene.transaction -Scene $scene -StepsFile $failurePath
-        throw 'The broken transaction unexpectedly succeeded.'
+        if (!$previousProfile -and $liveOptions.WindowStyle) { $env:ALLUSERSPROFILE = [Environment]::GetFolderPath('CommonApplicationData') }
+        $liveEditor = Start-Process @liveOptions
     }
-    catch {
-        if ($_.Exception.Message -notmatch 'Transaction stopped after 6 completed step.* Record: (.+\.result)$') { throw }
-        $audit = Get-Content -LiteralPath $Matches[1] -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($audit.ok -or $audit.outcome -ne 'reverted' -or $audit.steps[0].outcome -ne 'reverted' -or $audit.steps[6].outcome -ne 'failed') {
-            throw 'The failure audit did not record reverted and failed steps.'
+    finally { [Environment]::SetEnvironmentVariable('ALLUSERSPROFILE', $previousProfile) }
+
+    function Invoke-LiveProbe([string]$Command) {
+        $probe = Join-Path $isolatedProject 'fixture-command'
+        [IO.File]::WriteAllText($probe + '.tmp', $Command)
+        [IO.File]::Move($probe + '.tmp', $probe)
+        $probeDeadline = [DateTimeOffset]::UtcNow.AddSeconds(15)
+        while (!$liveEditor.HasExited -and [DateTimeOffset]::UtcNow -lt $probeDeadline) {
+            if ((Test-Path -LiteralPath ($probe + '.done')) -and (Get-Content -LiteralPath ($probe + '.done') -Raw) -eq $Command) { return }
+            Start-Sleep -Milliseconds 150
         }
+        if ($Command -ne 'quit' -or !$liveEditor.HasExited) { throw "Live fixture did not complete $Command." }
     }
-    Assert-Reverted $false
 
-    $null = & $commandPath @live -Action object.create -Scene $scene -ObjectName KeepUnsaved
-    $null = & $commandPath @live @batchTransaction -Preview
-    Assert-Reverted $true
-    $applied = & $commandPath @live @batchTransaction | ConvertFrom-Json
-    if ($applied.outcome -ne 'applied' -or !$applied.dirty) { throw 'Live transaction did not leave a pending scene edit.' }
-    Invoke-LiveProbe 'undo'
-    Assert-Reverted $true
-    $unrelated = & $commandPath @live -Action scene.inspect -Scene $scene -Target '/KeepUnsaved' | ConvertFrom-Json
-    if ($unrelated.objects[0].path -ne '/KeepUnsaved') { throw 'Undo lost prior unsaved work.' }
-    try {
-        $null = & $commandPath @live -Action asset.find -Query 't:Prefab'
-        throw 'An excluded live read unexpectedly succeeded.'
+    function Assert-Reverted([bool]$Dirty) {
+        $state = & $commandPath @live -Action scene.inspect -Scene $scene | ConvertFrom-Json
+        $field = & $commandPath @live @component -Action component.inspect -Query revision | ConvertFrom-Json
+        if ($state.dirty -ne $Dirty -or $state.objects.path -contains '/Rig' -or ($state.objects | Where-Object path -eq '/Anchor').localPosition.x -ne 1 -or
+            $field.properties[0].value -ne '42' -or (Get-FileHash -LiteralPath $savedFile).Hash -cne $before) { throw 'Reverted scene contents, dirty flag or saved file did not match.' }
     }
-    catch { if ($_.Exception.Message -notlike '*policy denies action: asset.find*') { throw } }
-}
-finally {
+
     try {
-        if (!$liveEditor.HasExited) { Invoke-LiveProbe 'quit' }
+        $deadline = [DateTimeOffset]::UtcNow.AddSeconds(120)
+        do {
+            if ($liveEditor.HasExited -or [DateTimeOffset]::UtcNow -ge $deadline) { throw 'Live transaction fixture failed to start. See LiveTransaction.log.' }
+            $status = & $commandPath @live -Action editor.diagnostics | ConvertFrom-Json
+            if ($status.state -eq 'editor-unavailable') { Start-Sleep -Milliseconds 250 }
+        } while ($status.state -eq 'editor-unavailable')
+
+        $simulation = & $commandPath @live @batchTransaction -Preview | ConvertFrom-Json
+        if ($simulation.outcome -ne 'previewed' -or $simulation.steps.Count -ne 6 -or $simulation.steps[1].objects[0].path -ne '/Rig/Marker' -or
+            $simulation.steps[3].properties[0].previousValue -ne '42' -or !(Test-Path -LiteralPath (Join-Path $isolatedProject ('Library/AwithGameFrameAutomation/' + $simulation.id + '.result')))) {
+            throw 'The preview omitted expected operation records.'
+        }
+        Assert-Reverted $false
+        try {
+            $null = & $commandPath @live -Action scene.transaction -Scene $scene -StepsFile $failurePath
+            throw 'The broken transaction unexpectedly succeeded.'
+        }
+        catch {
+            if ($_.Exception.Message -notmatch 'Transaction stopped after 6 completed step.* Record: (.+\.result)$') { throw }
+            $audit = Get-Content -LiteralPath $Matches[1] -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($audit.ok -or $audit.outcome -ne 'reverted' -or $audit.steps[0].outcome -ne 'reverted' -or $audit.steps[6].outcome -ne 'failed') {
+                throw 'The failure audit did not record reverted and failed steps.'
+            }
+        }
+        Assert-Reverted $false
+
+        $null = & $commandPath @live -Action object.create -Scene $scene -ObjectName KeepUnsaved
+        $null = & $commandPath @live @batchTransaction -Preview
+        Assert-Reverted $true
+        $applied = & $commandPath @live @batchTransaction | ConvertFrom-Json
+        if ($applied.outcome -ne 'applied' -or !$applied.dirty) { throw 'Live transaction did not leave a pending scene edit.' }
+        Invoke-LiveProbe 'undo'
+        Assert-Reverted $true
+        $unrelated = & $commandPath @live -Action scene.inspect -Scene $scene -Target '/KeepUnsaved' | ConvertFrom-Json
+        if ($unrelated.objects[0].path -ne '/KeepUnsaved') { throw 'Undo lost prior unsaved work.' }
+        try {
+            $null = & $commandPath @live -Action asset.find -Query 't:Prefab'
+            throw 'An excluded live read unexpectedly succeeded.'
+        }
+        catch { if ($_.Exception.Message -notlike '*policy denies action: asset.find*') { throw } }
     }
     finally {
-        if (!$liveEditor.WaitForExit(12000)) { $liveEditor.Kill(); $liveEditor.WaitForExit() }
-        $liveEditor.Dispose()
+        try {
+            if (!$liveEditor.HasExited) { Invoke-LiveProbe 'quit' }
+        }
+        finally {
+            if (!$liveEditor.WaitForExit(12000)) { $liveEditor.Kill(); $liveEditor.WaitForExit() }
+            $liveEditor.Dispose()
+        }
     }
 }
 
@@ -468,4 +474,5 @@ $null = & $commandPath @defaults -Action checkpoint.restore -Checkpoint $seenPre
 if ((Get-FileHash -LiteralPath (Join-Path $isolatedProject $prefab)).Hash -ne $seenPrefab.savedHash -or
     (Get-FileHash -LiteralPath (Join-Path $isolatedProject ($prefab + '.meta'))).Hash -cne $metaBefore) { throw 'Prefab restore changed its identity or failed to restore it.' }
 
-Write-Host 'UNITY_EDITOR_AUTOMATION_PASSED'
+Write-Host 'UNITY_EDITOR_AUTOMATION_BATCH_PASSED'
+if ($RunLiveEditor) { Write-Host 'UNITY_EDITOR_AUTOMATION_PASSED' }

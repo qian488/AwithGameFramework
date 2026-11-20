@@ -30,25 +30,32 @@ powershell -File tools/verify-docs.ps1
 
 ```powershell
 powershell -File tools/verify-unity.ps1 -EditorPath '<Unity.exe>' -RunSmoke -BuildPlayer
+powershell -File tools/verify-unity.ps1 -EditorPath '<Unity.exe>' -BuildPlayer -RunPlayerSmoke
 powershell -File tools/verify-unity.ps1 -EditorPath '<Unity.exe>' -BuildPlayer -ScriptingBackend IL2CPP
 powershell -File tools/verify-unity-minimal.ps1 -EditorPath '<Unity.exe>'
 powershell -File tools/verify-unity-editor-automation.ps1 -EditorPath '<Unity.exe>'
-powershell -File tools/verify-unity-editor-automation.ps1 -EditorPath '<Unity.exe>' -DiagnosticsOnly
+powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests -BuildScene Assets/Scenes/CombatShowcase.unity
 ```
 
 编辑器、许可证、目标平台构建模块与原生工具链须在本机可用。示例记录版本为 **2022.3.40f1c1**，最近历史验收实际使用 **2022.3.16f1**；不要将这两个版本混为同一实测版本。
 
-完整脚本复制隔离工程，不修改样例版本，执行导入、AssetBundle 构建/发布/HTTP 安装、真实 PlayMode 与共享应用，再按参数构建运行 Windows x86_64 Player。默认 Mono，IL2CPP 单独指定。报告保存实际编辑器版本、后端、是否运行、源码 commit、工作区修改状态与产物 SHA-256。
+完整脚本在隔离工程导入样例。`-RunSmoke` 启用 PlayMode 冒烟测试，以及测试所需的 AssetBundle 构建、发布和 HTTP 安装。`-BuildPlayer` 生成 Player 产物。追加 `-RunPlayerSmoke` 可用 `-batchmode -nographics` 运行 Windows x86_64 Player 冒烟测试。默认 Mono，IL2CPP 通过 `-ScriptingBackend IL2CPP` 选择。构建报告保存实际编辑器版本、后端、是否运行、源码 commit、工作区修改状态与产物 SHA-256。
 
 必需标记包括 `FOUNDATION_CORE_PASSED`、`SHARED_SCENARIO_PASSED`、`COMPOSED_APPLICATION_PASSED`、`UNITY_PRESENTATION_SCENES_PASSED`、`UNITY_INPUT_AUDIO_PASSED`、`UNITY_ASSET_BUNDLE_PASSED`、`UNITY_SHARED_HOST_PASSED`、`UNITY_OPTIONAL_PROVIDERS_PASSED`，运行以 0 退出。可选提供者断言覆盖 DOTween 注册和 SQLite 原生内存数据库；Player 也再次检查注册。
 
 最小脚本创建仅安装现代通用包与 Unity 包的新工程，不复制 Plugins 或兼容服务，验证真实模块生命周期、可选程序集没有编译/加载，要求 `UNITY_MINIMAL_ADAPTER_PASSED`。
 
-编辑器自动化脚本在独立工程导入现代 UPM 包，生成验证 Prefab 和序列化组件。它通过公共 CLI 验证查找与放置、字段读写与预览、事务回滚和 Undo、白名单、原生粒子字段落盘，以及场景与 Prefab 的重启恢复。成功标记为 `UNITY_EDITOR_AUTOMATION_PASSED`。
+编辑器自动化脚本在独立工程导入现代 UPM 包，生成验证 Prefab 和序列化组件。默认用批处理通过公共 CLI 验证查找与放置、字段读写与预览、白名单、原生粒子字段落盘，以及场景与 Prefab 的重启恢复。成功标记为 `UNITY_EDITOR_AUTOMATION_BATCH_PASSED`。
 
-`-DiagnosticsOnly` 在独立工程触发警告和真实编译错误，验证编译期间查询、错误源位置、成功重编译、脚本重载、会话退出和批处理初始编译失败。要求 `UNITY_EDITOR_DIAGNOSTICS_PASSED`。
+指定游戏的脚本在隔离工作区后台导入、运行 EditMode 和 PlayMode 测试，并按参数构建单场景 Windows Player。`summary.json` 记录导入、测试与构建结果，附 XML、日志和 Player 路径。项目可提供自己的后台 Player 冒烟入口，例如 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)。
 
 `-PlayerTarget Android` / `WebGL` 提供构建入口，WebGL 要求 IL2CPP。这些目标只构建并报告 `runtimeVerified:false`，需另行设备/浏览器运行；PlayMode 使用的 Windows bundles 不能代替目标平台资源。Windows IL2CPP 样例只证明所执行代码的 AOT 路径。
+
+### 桌面会话与人工验收
+
+需要桌面会话的自动化检查在约定好时段后执行。`-RunLiveEditor` 启用实时事务回滚、Undo 和未保存状态检查，完整流程通过后输出 `UNITY_EDITOR_AUTOMATION_PASSED`。组合 `-RunLiveEditor -DiagnosticsOnly` 验证实时日志、编译状态、脚本重载与会话清理，成功标记为 `UNITY_EDITOR_DIAGNOSTICS_PASSED`。两种调用都启动非批处理 Unity 编辑器，可能占用桌面。
+
+人工验收由体验者选择时段，从报告记录的 Player 路径或项目场景入口启动。交接时写明启动方式、要观察的现象和预期结果，保留 `manualReview: not-run` 直到获得实际体验反馈。
 
 ## Godot .NET
 

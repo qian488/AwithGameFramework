@@ -1,13 +1,13 @@
 # Test 游戏工作区
 
-Test 是用来检验框架开发流程的演示工程。第一个场景展示程序化粒子特效，并用外部 C# 模块验证框架宿主、计时器和 DLL 同步。框架包在仓库根 `src`。
+Test 是用来检验框架开发流程的演示工程。粒子演示验证公式、宿主和 DLL 同步。近战关卡 Rain Pass 验证外部玩法、Unity 程序化表现和工作区交付。框架包在仓库根 `src`。
 
 | 区域 | 职责 |
 | --- | --- |
-| [Domain](src/Test.Domain/README.md) | 游戏内可复用的纯数学和领域计算，包括粒子的发射位置与初速度 |
-| [Application](src/Test.Application/README.md) | 用例编排与框架服务组合，包括粒子演示的播放时机 |
+| [Domain](src/Test.Domain/README.md) | 纯数学与领域计算，包括粒子发射、近战时序、生命与架势 |
+| [Application](src/Test.Application/README.md) | 粒子播放、近战关卡编排和框架服务组合 |
 | [Server](server/Test.Server/README.md) | .NET 进程配置、日志、生命周期及专属基础设施接线 |
-| `client/Unity` | Unity 2022.3.16f1 工程，负责粒子制作、预览、渲染和宿主接线 |
+| `client/Unity` | Unity 2022.3.16f1 工程，负责内容生成、编辑器预览、渲染和宿主接线 |
 
 `game.json` 记录游戏名称、引擎和构建入口，生成的项目通过相对路径引用本克隆的框架。客户端位置和接入命令见仓库的游戏工作区指南，Spine、TMP 等组件在实际引擎工程内安装。
 
@@ -29,7 +29,44 @@ powershell -File tools/game.ps1 run-server -Name Test
 ## 演示场景
 
 - `Assets/Scenes/EffectShowcase.unity` 用于比较九个预设。进入 Play Mode 后，在 Game 窗口左侧切换效果。天气、火焰和星光会持续发射，闪电与爆发结束后可点 `Replay` 重播。
-- `Assets/Scenes/SampleScene.unity` 用于验证 `GameHost`。场景中的星环实例关闭了 `Play On Enable`，由宿主控制首播和每 3 秒重播。两个场景都在 Build Settings 中。
+- `Assets/Scenes/SampleScene.unity` 用于验证 `GameHost`。场景中的星环实例关闭了 `Play On Enable`，由宿主控制首播和每 3 秒重播。
+- `Assets/Scenes/CombatShowcase.unity` 是独立近战关卡 Rain Pass。打开后点击 Play，或使用 `Tools > Test > Rain Pass > Open and Play`。三个场景都在 Build Settings 中。
+
+## Rain Pass 近战演示
+
+依次通过练习台、三人庭院与守门精英。靠近敌人后观察举剑和刀身变亮的预警，在挥击命中前按下右键弹反。敌方架势积满后，可走近按 `E` 终结。练习区和庭院的铁门会在敌人清空后升起。
+
+| 操作 | 键鼠 |
+| --- | --- |
+| 移动、视角、锁定 | `WASD`、鼠标、`Tab` |
+| 挥击、弹反与格挡、闪避 | 左键、右键按下与按住、`Space` |
+| 终结、暂停、重试、整关重开 | `E`、`Esc`、`R`（暂停或失败时）、`Enter`（暂停、失败或通关时） |
+| 调试与取景 | `F2` 显示种子、阶段、弹反窗口和帧时间，`F3` 切换固定取景 |
+
+选中场景中的 `Rain Pass` 根节点，在 Inspector 调整种子、环境密度、雨量、雾色、月光、角色比例和音量。点击 `Generate Preview` 后在 Scene View 看布局与练习角色，`Clear Preview` 清掉临时对象，`Restore Default Parameters` 恢复初始值。运行时用同一个生成器创建环境，并启用天气、程序动作、剑光、合成声音和规则。固定种子复现布局，路线和出生点由关卡设计确定。
+
+`Test.Domain` 负责命中结果、弹反窗口和架势规则。 `Test.Application` 管理固定步进、输入缓冲、进攻轮转和检查点，通过 `ICombatSpace` 请求空间事实。Unity 负责实际扫掠查询、镜头以及几何、材质、贴花、动作、音频、特效和 HUD 的程序化生成。改变招式时序和数值时更新外部代码并重新构建、同步。
+
+### 后台验证
+
+从仓库根目录执行以下命令。第一条验证导入、运行 Unity 测试并构建，第二条运行已经构建的 Windows Player，使用 `summary.json` 中的 `player` 路径。
+
+~~~powershell
+powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests -BuildScene Assets/Scenes/CombatShowcase.unity
+powershell -File games/Test/verify-rain-pass.ps1 -PlayerPath '<Player/Test.exe>'
+~~~
+
+构建报告记录实际 Unity 版本、导入与构建日志、EditMode 和 PlayMode XML。后台 Player 直接驱动应用指令，验证受击重试、弹反、终结和三段遭遇通关。结果写入 `result.json`，`graphicsEvidence: false` 表示该次使用无图形模式。
+
+### 待人工验收
+
+准备好试玩时，双击构建报告里的 Player，或在 Unity 打开 `CombatShowcase` 并点击 Play。
+
+- 用实体键鼠检查移动、锁定、弹反、闪避和终结的响应，以及暂停后恢复时的鼠标焦点。
+- 检查雨雾中的线路、HUD 和举剑预警是否易读，确认弹反特效和声音提示是否清楚。
+- 记录首次游玩从练习台到守门精英通关的用时，并注明难以理解或卡住的位置。
+
+需要图形和性能证据时，在有图形的 Windows Player 上传入 `-rain-pass-evidence <证据目录>`，保存截图和帧时间摘要。
 
 ## 特效库
 

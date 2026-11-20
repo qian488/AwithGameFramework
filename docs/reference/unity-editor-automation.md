@@ -115,9 +115,9 @@ $saved = (./tools/unity-editor.ps1 @project -Action checkpoint.capture -Asset $s
 
 ## 验证
 
-运行 `./tools/verify-unity-editor-automation.ps1 -EditorPath '<Unity.exe>'`。脚本在 `artifacts/UnityAutomationValidation` 下创建独立 Unity 工程，通过 UPM 导入框架包，并生成验证组件与 Prefab。检查覆盖单条操作、字段预览、事务步骤依赖和失败回滚、实时 Undo、权限拒绝、原生粒子字段落盘，以及场景与 Prefab 的重启恢复和过期哈希拒绝。成功日志包含 `UNITY_EDITOR_AUTOMATION_PASSED`。
+运行 `./tools/verify-unity-editor-automation.ps1 -EditorPath '<Unity.exe>'`。脚本在 `artifacts/UnityAutomationValidation` 下创建独立 Unity 工程，通过 UPM 导入框架包，并生成验证组件与 Prefab。后台检查覆盖单条操作、字段预览、事务步骤依赖、权限拒绝、原生粒子字段落盘，以及场景与 Prefab 的重启恢复和过期哈希拒绝。成功日志包含 `UNITY_EDITOR_AUTOMATION_BATCH_PASSED`。
 
-追加 `-DiagnosticsOnly` 验证实时日志和编译、关闭工程后的批处理错误定位。成功日志包含 `UNITY_EDITOR_DIAGNOSTICS_PASSED`。
+在桌面可用的时段追加 `-RunLiveEditor`，检查实时事务回滚、Undo 和未保存状态，成功日志包含 `UNITY_EDITOR_AUTOMATION_PASSED`。组合 `-RunLiveEditor -DiagnosticsOnly` 验证实时日志和编译、关闭工程后的批处理错误定位，成功日志包含 `UNITY_EDITOR_DIAGNOSTICS_PASSED`。
 
 ## 项目采用与覆盖
 

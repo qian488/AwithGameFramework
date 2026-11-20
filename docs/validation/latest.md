@@ -1,5 +1,12 @@
 # 最近验证
 
+## Unity 后台验证（2026-11-19）
+
+- Unity **2022.3.16f1** 的 Windows Mono 样例通过仅构建与后台 Player 冒烟两条路径。`Build-report.json` 分别记录 `runtimeVerified: false` 和 `runtimeVerified: true`。证据在 `artifacts/UnityValidation/082d6a2424cb43fbab3d3fc652a04b9e` 与 `artifacts/UnityValidation/cd7aeabe78bf4d8888542bf3a288acf1`。
+- 编辑器自动化默认路径输出 `UNITY_EDITOR_AUTOMATION_BATCH_PASSED`。证据在 `artifacts/UnityAutomationValidation/990315cb9061448cac2a5308c2cc1a8c`。
+- Test 完成隔离导入、EditMode **13/13**、PlayMode **4/4** 和 Windows 构建。Rain Pass Player 在无图形模式完成受击重试、弹反、五次终结与通关，随后以退出码 0 结束。构建报告在 `artifacts/game-unity/Test/20261119-181333-ca582e5c`，运行报告在 `artifacts/game-unity/Test/PlayerSmoke-090e909d6460400a8e11ce8b8a071a4e`。实时编辑器检查和实体键鼠、画面、声音体验仍待验收。
+- `tools/verify.ps1` 通过，含框架 **640/640**、模板 **13/13**、Headless 示例和 AgentKit 契约。
+
 ## Test 特效展示与制作流程（2026-11-19）
 
 - Unity **2022.3.16f1** 隔离工作区通过 EditMode **12/12** 和 PlayMode **3/3**。覆盖预设描述、预览和回退时间后场景与资产保持干净、模板创建、复制、重开、放置和 Undo，以及展示场景逐项切换和原场景的宿主重播。

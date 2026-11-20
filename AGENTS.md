@@ -32,7 +32,8 @@
 - 游戏构建/接入入口为 `tools/game.ps1`，步骤见 `docs/getting-started/game-workspace.md`；客户端内的 `Packages/com.awithgameframe.workspace` 或 `Framework` 是工具拥有的生成目录，不手改、不混放插件，不同时接入同名源码程序集与 DLL。
 - 为行为变化编写有意义的测试；文档与简单移动使用相应静态检查。
 - 配置/协议源在 samples/Shared/Configuration 与 samples/Protocol；生成命令 tools/generate-config.ps1、tools/generate-protocol.ps1。不要手改 Generated；verify 自动检查产物和兼容性基线。
-- 引擎验证：tools/verify-unity.ps1 -RunSmoke -BuildPlayer；tools/verify-godot.ps1（-Export 可测试 Windows .NET 导出）。编辑器/模板路径由本机显式提供，命令见 docs/reference/verification.md，实测证据见 docs/validation/latest.md。
+- 引擎验证：tools/verify-unity.ps1 -RunSmoke -BuildPlayer（追加 -RunPlayerSmoke 可后台运行 Windows Player）、tools/verify-godot.ps1（-Export 可测试 Windows .NET 导出）。编辑器/模板路径由本机显式提供，命令见 docs/reference/verification.md，实测证据见 docs/validation/latest.md。
+- 自动验证默认使用无图形批处理。需要桌面图形会话的自动化验证在用户明确要求后执行。将需用户亲自操作或观察的项目列为待人工验收，附启动入口、结果位置与检查项。
 - 完成后说明实际变化、验证结果与剩余限制，不把架构可扩展描述成已支持所有引擎。
 
 ## 可维护的 Agent 任务
