@@ -30,20 +30,51 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 - `Assets/Scenes/EffectShowcase.unity` 用于比较九个预设。进入 Play Mode 后，在 Game 窗口左侧切换效果。天气、火焰和星光会持续发射，闪电与爆发结束后可点 `Replay` 重播。
 - `Assets/Scenes/SampleScene.unity` 用于验证 `GameHost`。场景中的星环实例关闭了 `Play On Enable`，由宿主控制首播和每 3 秒重播。
-- `Assets/Scenes/CombatShowcase.unity` 是独立近战关卡 Rain Pass。打开后点击 Play，或使用 `Tools > Test > Rain Pass > Open and Play`。三个场景都在 Build Settings 中。
+- `Assets/Scenes/CombatShowcase.unity` 包含雨夜试炼和原版 Rain Pass。打开后点击 Play，或使用 `Tools > Test > Rain Pass > Open and Play`。三个场景都在 Build Settings 中。
 
 ## Rain Pass 近战演示
 
-依次通过练习台、三人庭院与守门精英。靠近敌人后观察举剑和刀身变亮的预警，在挥击命中前按下右键弹反。敌方架势积满后，可走近按 `E` 终结。练习区和庭院的铁门会在敌人清空后升起。
+### 雨夜试炼
+
+进入场景后选守关者（Gatekeeper）或巡山者（Patrol Blade）。守关者出招慢、单次伤害高，巡山者出招快、反击空档短。胜利时显示本局时间和该对手的历史最佳。时间按 60 Hz 战斗步进累计，暂停和结算期间停止。胜利且刷新纪录后自动写入，本机存档位于 Unity `Application.persistentDataPath` 下的 `RainPassTrials` 目录。
+
+结算时按 `R` 或点 `Retry` 立即重试。按 `Enter` 或点 `Choose opponent` 返回选择。选关页可用 `Play original Rain Pass` 进入原版三段关卡。
+
+在 [对手配置](configuration/rain-pass-opponents.json) 的 `rows` 中复制一条记录，提供新的正整数 `id`，然后调整名称和数值。执行 `tools/game.ps1 build -Name Test` 和 `tools/game.ps1 sync -Name Test` 后重新进入 Play。已有纪录按 `id` 保留。若数值改动需要开启新的成绩榜，给该对手分配新 ID。
+
+### 新路线
+
+在 `CombatShowcase` 的选关页选择地图。先清掉巡逻队，再穿过打开的闸门进入 Boss 区。`R` 重试当前检查点，`Enter` 在暂停、失败或通关时从本图入口重开。暂停和结算界面都可返回选关页。
+
+| 地图 | 小怪 | Boss | 场地与打法 |
+| --- | --- | --- | --- |
+| Cedar Grove（杉林） | 3 名短剑斥候，快速贴身 | 双刃守林人，交替使用延迟斩和双连斩，半血后使用三连斩 | 林道两侧有石障，留意近身后的连续出刀 |
+| Salt Causeway（盐风堤） | 2 名长枪兵，窄角远刺 | 破浪统领，使用突刺接横扫和延迟横扫 | 海堤较窄，注意横向走位，石障会挡箭 |
+| Ember Foundry（余烬铸造厂） | 2 名盾锤卫兵，正面举盾 | 炉心铁匠，使用慢起手重砸与两段重击 | 炉柱之间有开阔侧翼，绕盾或抓攻击后的空档 |
+
+`CombatMap.cs` 维护路线、巡逻队配置和招式参数。`CombatRun` 推进战斗与检查点，Unity 生成地形、掩体、角色、武器和灯光。新路线使用运行时生成。环境预览和烘焙入口适用于原版 Rain Pass。新路线的通关状态随本局保留，单场试炼记录最佳时间。
+
+### 原版 Rain Pass
+
+依次通过练习台、三人庭院与守门精英。靠近敌人后观察举剑和刀身变亮的预警，在挥击命中前按下右键弹反。敌方破势后，持剑靠近并长按左键 0.35 秒处决。看到处决提示时，提前松开左键会普通挥剑。练习区和庭院的铁门会在敌人清空后升起。
 
 | 操作 | 键鼠 |
 | --- | --- |
-| 移动、视角、锁定 | `WASD`、鼠标、`Tab` |
+| 移动、视角、锁定 | `WASD`、鼠标、按下鼠标滚轮（中键），再按一次解除锁定 |
 | 挥击、弹反与格挡、闪避 | 左键、右键按下与按住、`Space` |
-| 终结、暂停、重试、整关重开 | `E`、`Esc`、`R`（暂停或失败时）、`Enter`（暂停、失败或通关时） |
+| 切换剑、弓和射击 | `1` 装剑，`2` 装弓。装弓时用左键拉弓射击，用准星瞄准或按鼠标中键锁定 |
+| 处决、暂停、重试、整关重开 | 长按左键、`Esc`、`R`（暂停或失败时）、`Enter`（暂停、失败或通关时） |
 | 调试与取景 | `F2` 显示种子、阶段、弹反窗口和帧时间，`F3` 切换固定取景 |
 
 选中场景中的 `Rain Pass` 根节点，在 Inspector 调整雨量、角色比例和音量。环境种子、密度、雾色和月光保存在 `RainPassEnvironment` 参数资源中。点击 `Generate Preview` 后在 Scene View 看布局与练习角色，`Clear Preview` 清掉临时对象，`Restore Default Parameters` 恢复初始值。运行时用同一个生成器创建环境，并启用天气、程序动作、剑光、合成声音和规则。固定种子复现布局，路线和出生点由关卡设计确定。
+
+试炼和原版关卡均可用弓。每次开局、重试或进入检查点时，从剑和六支箭开始。箭有飞行时间，会被场景遮挡。装弓时可闪避，格挡、弹反和终结需要切回剑。弓身、弓弦和箭都是程序生成的模型。
+
+### 程序化音频
+
+原版 Rain Pass、杉林、盐风堤和余烬铸造厂各有一首循环配乐，分别使用弹拨、长笛、钟音和较低沉的金属音色。每张图都有自己的环境声和脚步音色。敌人出招时鼓点逐渐进入，Boss 区保留底鼓，胜负结算播放独立短曲。切换地图时停止上一张图的音乐和环境声。
+
+战斗音效覆盖剑、长柄和重武器挥动、格挡、弹反、破势、倒地、处决、闪避、开闸、拉弓、放箭和命中。常用音效在三个合成版本之间轮换。在 `Rain Pass` 根节点的 Inspector 用 `Sound Volume` 调整总音量，用 `Music Volume` 单独调整配乐和胜负短曲。旋律与编排位于 [PassScore.cs](client/Unity/Assets/Scripts/Combat/PassScore.cs)，音效合成位于 [PassSound.cs](client/Unity/Assets/Scripts/Combat/PassSound.cs)。
 
 ### 环境资产工作流
 
@@ -64,7 +95,7 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 powershell -File games/Test/verify-rain-pass.ps1 -PlayerPath '<Player/Test.exe>'
 ~~~
 
-构建报告记录实际 Unity 版本、导入与构建日志、EditMode 和 PlayMode XML。后台 Player 直接驱动应用指令，验证受击重试、弹反、终结和三段遭遇通关。结果写入 `result.json`，`graphicsEvidence: false` 表示该次使用无图形模式。
+构建报告记录实际 Unity 版本、导入与构建日志、EditMode 和 PlayMode XML。PlayMode 覆盖试炼启动、重试、换对手和原关卡入口。`dotnet test games/Test/tests/Test.Application.Tests/Test.Application.Tests.csproj` 覆盖试炼配置、胜负、重开、实际文件存档重读及弓箭结算。后台 Player 冒烟验证箭命中真实角色、场景碰撞体能挡箭，以及原关卡的受击重试、弹反、终结和三段通关，结果写入 `result.json`。
 
 ### 待人工验收
 
@@ -72,6 +103,7 @@ powershell -File games/Test/verify-rain-pass.ps1 -PlayerPath '<Player/Test.exe>'
 
 - 用实体键鼠检查移动、锁定、弹反、闪避和终结的响应，以及暂停后恢复时的鼠标焦点。
 - 检查雨雾中的线路、HUD 和举剑预警是否易读，确认弹反特效和声音提示是否清楚。
+- 试玩雨夜试炼的两个对手，检查节奏区别、结算提示和连续重试体验。
 - 记录首次游玩从练习台到守门精英通关的用时，并注明难以理解或卡住的位置。
 
 需要图形和性能证据时，在有图形的 Windows Player 上传入 `-rain-pass-evidence <证据目录>`，保存截图和帧时间摘要。

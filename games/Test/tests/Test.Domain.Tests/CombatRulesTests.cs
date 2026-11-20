@@ -1,3 +1,4 @@
+using System.Numerics;
 using NUnit.Framework;
 using Test.Domain.Combat;
 
@@ -6,6 +7,19 @@ namespace Test.Domain.Tests
     public sealed class CombatRulesTests
     {
         private static readonly Strike TestStrike = new Strike(30, 4, 20, 18, 17, 2, 90);
+
+        [Test]
+        public void BowFlightArcsTowardTheAimPoint()
+        {
+            var origin = new Vector3(0, 1.34f, 0);
+            var target = origin + Vector3.UnitZ * 12;
+            var arrow = BowRules.Launch(origin, target, Vector3.UnitZ);
+            float travelTime = (target.Z - origin.Z) / arrow.Velocity.Z;
+            var apex = BowRules.Advance(arrow, travelTime / 2);
+            var arrival = BowRules.Advance(apex, travelTime / 2);
+            Assert.That(apex.Position.Y, Is.GreaterThan(target.Y));
+            Assert.That(Vector3.Distance(arrival.Position, target), Is.LessThan(.0001f));
+        }
 
         [TestCase(0, ContactResult.Deflect)]
         [TestCase(7, ContactResult.Deflect)]

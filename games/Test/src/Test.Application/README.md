@@ -7,3 +7,7 @@
 `TestModule` 是客户端与服务端可组合的基础模块入口。`ParticleDemoModule` 由 Unity 客户端注册，使用宿主计时器在首帧请求播放，并按指定间隔重播。它只接收间隔与普通 C# 回调。粒子图层、生成和渲染位于 Unity 工程。
 
 `CombatRun` 在 60 Hz 下消费输入、处理进攻名额并推进关卡和检查点。`ICombatSpace` 接收移动与扫掠请求，通过 `System.Numerics.Vector3` 和参与者编号返回空间事实。`FighterView` 提供快照，`CombatCue` 提供一次性表现事件。
+
+`CombatRun` 持有当前武器、剩余箭数与飞行中的箭。`ICombatSpace.TraceArrow` 返回最先遇到的角色或场景遮挡，命中角色时沿用同一套战斗结算。`AirborneArrows` 提供当前步的只读视图供客户端渲染。
+
+`TrialCatalog` 读取试炼对手配置并映射成 Domain 数据。`TrialSession` 启动和结算单场试炼，使用框架版本化存档按对手 ID 保存最佳步进数。Unity 提供存档目录，应用层等待写入成功后发布纪录。

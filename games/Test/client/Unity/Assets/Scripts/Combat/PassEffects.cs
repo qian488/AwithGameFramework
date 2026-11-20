@@ -15,18 +15,13 @@ namespace Test.Client.Combat
         private readonly Vector3[] rain;
         private readonly ParticleSystem sparks;
         private readonly Light pop;
-        private readonly AudioSource ambient, foley;
-        private readonly AudioClip deflect, impact, swing, step, finish;
         private readonly LineRenderer[] ribbons = new LineRenderer[4];
         private readonly float[] trailLife = new float[4];
         private readonly Vector3[] oldTip = new Vector3[4];
-        private readonly AttackPhase[] lastPhase = new AttackPhase[4];
-        private float pulse, nextFootstep;
-        private readonly float volume;
+        private float pulse;
 
-        internal PassEffects(PassWorld world, Shader shader, int raindrops, float volume)
+        internal PassEffects(PassWorld world, Shader shader, int raindrops)
         {
-            this.volume = volume;
             var effects = PassWorld.Group("Generated rain and combat feedback", world.Root.transform);
             ink = new Material(shader) { name = "Transient effects" };
             world.Own(ink);
@@ -92,35 +87,19 @@ namespace Test.Client.Combat
                 ribbon.receiveShadows = false;
                 ribbons[index] = ribbon;
             }
-            ambient = effects.gameObject.AddComponent<AudioSource>();
-            foley = effects.gameObject.AddComponent<AudioSource>();
-            ambient.playOnAwake = foley.playOnAwake = false;
-            ambient.loop = true;
-            ambient.volume = volume * .32f;
-            foley.volume = volume;
-            ambient.clip = Synthesize(world, "Rain and distant wind", 4f, 0, 0, .0f);
-            deflect = Synthesize(world, "Metal deflect", .44f, 783, .32f, 9);
-            impact = Synthesize(world, "Impact", .28f, 118, .52f, 14);
-            swing = Synthesize(world, "Sword pass", .22f, 266, .69f, 20);
-            step = Synthesize(world, "Wet foothold", .11f, 76, .86f, 30);
-            finish = Synthesize(world, "Finish", .75f, 168, .22f, 6);
-            ambient.Play();
         }
 
         internal void Pause(bool paused)
         {
-            if (paused) { sparks.Pause(); ambient.Pause(); foley.Pause(); }
-            else { sparks.Play(); ambient.UnPause(); foley.UnPause(); }
+            if (paused) sparks.Pause();
+            else sparks.Play();
         }
 
         internal void Reset()
         {
             sparks.Clear();
-            foley.Stop();
             pulse = 0;
             pop.intensity = 0;
-            nextFootstep = 0;
-            Array.Clear(lastPhase, 0, lastPhase.Length);
             Array.Clear(trailLife, 0, trailLife.Length);
             foreach (var ribbon in ribbons) ribbon.enabled = false;
         }
@@ -145,7 +124,6 @@ namespace Test.Client.Combat
             }
             pop.transform.position = center;
             pulse = bright ? 1 : .4f;
-            if (volume > 0) foley.PlayOneShot(cue.Result == ContactResult.Finish ? finish : bright || cue.Result == ContactResult.Guard ? deflect : impact);
         }
 
         internal void Advance(CombatRun run, PassSpace space, float delta)
@@ -164,15 +142,15 @@ namespace Test.Client.Combat
             lines.bounds = new Bounds(Vector3.zero, Vector3.one * 420);
             pulse = Mathf.MoveTowards(pulse, 0, delta * 5.1f);
             pop.intensity = pulse * 5f;
-            float now = (float)run.Tick / CombatRun.StepsPerSecond;
             for (int index = 0; index < run.Count; index++)
             {
                 var phase = run.View(index).Phase;
                 var tip = space.Fighter(index).SwordTip;
                 var trail = ribbons[index];
-                if (phase == AttackPhase.Active)
+                bool bow = index == 0 && run.Weapon == PlayerWeapon.Bow;
+                if (bow) trailLife[index] = 0;
+                else if (phase == AttackPhase.Active)
                 {
-                    if (lastPhase[index] != phase && volume > 0) foley.PlayOneShot(swing, .43f);
                     trail.SetPosition(0, space.Fighter(index).SwordHeel);
                     trail.SetPosition(1, tip);
                     trail.SetPosition(2, oldTip[index]);
@@ -186,39 +164,7 @@ namespace Test.Client.Combat
                 trail.endColor = tint;
                 trail.enabled = trailLife[index] > 0;
                 oldTip[index] = tip;
-                lastPhase[index] = phase;
             }
-            if (run.View(0).Moving && now >= nextFootstep)
-            {
-                nextFootstep = now + .32f;
-                if (volume > 0) foley.PlayOneShot(step, .46f);
-            }
-        }
-
-        private static AudioClip Synthesize(PassWorld world, string name, float seconds, float tone, float grit, float decay)
-        {
-            const int sampleRate = 22050;
-            var samples = new float[Mathf.RoundToInt(sampleRate * seconds)];
-            var noise = new System.Random(name.Length * 13);
-            float filtered = 0;
-            for (int index = 0; index < samples.Length; index++)
-            {
-                float time = (float)index / sampleRate;
-                float random = (float)noise.NextDouble() * 2 - 1;
-                filtered = Mathf.Lerp(filtered, random, tone == 0 ? .06f : .21f);
-                float fade = Mathf.Min(1, time * 280, (seconds - time) * 280);
-                if (tone == 0)
-                    samples[index] = fade * (.39f * filtered + .075f * random) * (.85f + .15f * Mathf.Sin(time * Mathf.PI));
-                else
-                {
-                    float wave = Mathf.Sin(time * tone * 6.28318f) + .48f * Mathf.Sin(time * tone * 14.1f) + .21f * Mathf.Sin(time * tone * 23.78f);
-                    samples[index] = .31f * fade * Mathf.Exp(-time * decay) * (wave * (1 - grit) + filtered * grit * 2.25f);
-                }
-            }
-            var clip = AudioClip.Create(name, samples.Length, 1, sampleRate, false);
-            clip.SetData(samples, 0);
-            world.Own(clip);
-            return clip;
         }
     }
 }

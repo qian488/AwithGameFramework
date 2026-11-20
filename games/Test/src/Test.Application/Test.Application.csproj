@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Runtime/**/*.cs" />
+    <EmbeddedResource Include="../../configuration/rain-pass-opponents.json" LogicalName="Test.RainPass.Opponents.json" />
     <ProjectReference Include="../Test.Domain/Test.Domain.csproj" />
     <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
     <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />

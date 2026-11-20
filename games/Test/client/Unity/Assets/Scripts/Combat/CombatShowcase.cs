@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Gameplay.Input;
@@ -24,6 +26,7 @@ namespace Test.Client.Combat
         [SerializeField, Range(0, 120)] private int detailDensity = 65;
         [SerializeField, Range(0, 1200)] private int rainDensity = 485;
         [SerializeField, Range(0, 1)] private float soundVolume = .62f;
+        [SerializeField, Range(0, 1)] private float musicVolume = .65f;
         [SerializeField] private Color moonlight = new Color(.66f, .79f, .94f);
         [SerializeField] private Color fogColor = new Color(.115f, .15f, .187f);
         [SerializeField, Range(.7f, 1.3f)] private float characterScale = 1;
@@ -31,7 +34,14 @@ namespace Test.Client.Combat
         private PassSpace space;
         private CombatRun run;
         private PassEffects effects;
+        private PassAudio audio;
+        private (PassWorld World, PassSpace Space, CombatRun Run, PassEffects Effects, PassAudio Audio) original;
         private PassHud hud;
+        private IReadOnlyList<TrialOpponent> opponents;
+        private TrialSession trials;
+        private string trialCatalogError;
+        private bool expedition;
+        private Vector2 opponentScroll;
         private Camera lens;
         private InputService input;
         private UnityInputBackend backend;
@@ -79,19 +89,94 @@ namespace Test.Client.Combat
         public int ArchitectureCount => world?.ArchitectureCount ?? 0;
         public string CurrentArea => run?.Encounter.ToString();
         public int SimulationTick => run?.Tick ?? 0;
-        public void RestartRun() => run?.Restart();
-        public void RetryEncounter() => run?.Retry();
+        public bool IsTrialSelection => run != null && !expedition && run.TrialOpponent == null;
+        public bool TrialsReady => opponents != null;
+        public int? ActiveTrialId => run?.TrialOpponent?.Id;
+        public CombatMapId? ActiveMapId => run?.Map?.Id;
+
+        public void RestartRun()
+        {
+            if (run == null || trials?.IsSaving == true) return;
+            expedition = true;
+            run.Restart();
+        }
+
+        public void RetryEncounter()
+        {
+            if (trials?.IsSaving == true) return;
+            if (run?.TrialOpponent != null) trials.Start(run.TrialOpponent);
+            else run?.Retry();
+        }
+
+        public void ShowTrialSelection()
+        {
+            if (run == null || trials?.IsSaving == true) return;
+            expedition = false;
+            if (original.World != null)
+            {
+                audio.Sleep();
+                world.Root.SetActive(false);
+                world.Dispose();
+                (world, space, run, effects, audio) = original;
+                original = default;
+                world.Root.SetActive(true);
+                ApplyEnvironment(null);
+            }
+            run.Restart();
+        }
+
+        public bool StartMap(CombatMapId id)
+        {
+            if (!IsTrialSelection || trials?.IsSaving == true) return false;
+            foreach (var map in CombatMap.Routes)
+            {
+                if (map.Id != id) continue;
+                var nextWorld = BuildWorld(false, false, map);
+                var nextSpace = new PassSpace(nextWorld, characterScale);
+                var nextRun = new CombatRun(nextSpace, map);
+                var nextEffects = new PassEffects(nextWorld, effectsShader, id == CombatMapId.CedarGrove ? rainDensity / 3 : 0);
+                var nextAudio = new PassAudio(nextWorld, soundVolume, musicVolume);
+                original = (world, space, run, effects, audio);
+                audio.Sleep();
+                world.Root.SetActive(false);
+                (world, space, run, effects, audio) = (nextWorld, nextSpace, nextRun, nextEffects, nextAudio);
+                Physics.SyncTransforms();
+                run.Cue += ReceiveCue;
+                run.Rebuilt += ResetPresentation;
+                expedition = true;
+                ApplyEnvironment(map);
+                ResetPresentation();
+                return true;
+            }
+            Debug.LogWarning($"Rain Pass could not open route '{id}'.", this);
+            return false;
+        }
+
+        public bool StartTrial(int opponentId)
+        {
+            if (opponents == null || !IsTrialSelection) return false;
+            foreach (var opponent in opponents)
+            {
+                if (opponent.Id != opponentId) continue;
+                trials.Start(opponent);
+                return true;
+            }
+            Debug.LogWarning($"Rain Pass could not start trial for unknown opponent ID {opponentId}.", this);
+            return false;
+        }
         internal CombatRun Run => run;
         internal PassSpace Space => space;
         internal void SetEvidenceCamera(bool enabled) => fixedCamera = enabled;
+        internal void RetryTrialSave() => _ = ObserveTrialSave(trials.SaveRecordAsync());
 
         protected override void ConfigureHost(GameHost host)
         {
             input = new InputService(host.Events);
             backend = new UnityInputBackend();
-            backend.MapKey("keyboard/tab", KeyCode.Tab);
-            backend.MapKey("keyboard/e", KeyCode.E);
+            backend.MapMouse("mouse/middle", 2);
             backend.MapKey("keyboard/r", KeyCode.R);
+            backend.MapKey("keyboard/1", KeyCode.Alpha1);
+            backend.MapKey("keyboard/2", KeyCode.Alpha2);
             backend.MapKey("keyboard/f2", KeyCode.F2);
             backend.MapKey("keyboard/f3", KeyCode.F3);
             var context = input.CreateContext("rain-pass");
@@ -101,9 +186,10 @@ namespace Test.Client.Combat
             context.Bind("right", "keyboard/d");
             context.Bind("attack", "mouse/left");
             context.Bind("guard", "mouse/right");
+            context.Bind("sword", "keyboard/1");
+            context.Bind("bow", "keyboard/2");
             context.Bind("dodge", "keyboard/space");
-            context.Bind("lock", "keyboard/tab");
-            context.Bind("finish", "keyboard/e");
+            context.Bind("lock", "mouse/middle");
             context.Bind("pause", "keyboard/escape");
             context.Bind("retry", "keyboard/r");
             context.Bind("restart", "keyboard/enter");
@@ -113,7 +199,7 @@ namespace Test.Client.Combat
             host.AddModule(new InputModule(input, backend));
         }
 
-        protected override Task OnStartedAsync()
+        protected override async Task OnStartedAsync()
         {
             previousRender = new RenderState();
             previousRender.Capture();
@@ -128,22 +214,40 @@ namespace Test.Client.Combat
             world = BuildWorld(false, false);
             space = new PassSpace(world, characterScale);
             run = new CombatRun(space);
-            var cameraNode = PassWorld.Group("Shoulder camera", world.Root.transform);
+            var cameraNode = PassWorld.Group("Shoulder camera", transform);
             lens = cameraNode.gameObject.AddComponent<Camera>();
             lens.clearFlags = CameraClearFlags.SolidColor;
-            lens.backgroundColor = fogColor;
+            ApplyEnvironment(null);
             lens.fieldOfView = 58;
             lens.nearClipPlane = .075f;
             lens.farClipPlane = 155;
             cameraNode.gameObject.AddComponent<AudioListener>();
-            effects = new PassEffects(world, effectsShader, rainDensity, soundVolume);
+            effects = new PassEffects(world, effectsShader, rainDensity);
+            audio = new PassAudio(world, soundVolume, musicVolume);
             hud = new PassHud();
             run.Cue += ReceiveCue;
             run.Rebuilt += ResetPresentation;
+            expedition = PassEvidence.Requested;
             ResetPresentation();
-            if (PassEvidence.Requested) gameObject.AddComponent<PassEvidence>().Initialize(this);
-            else LockCursor(true);
-            return Task.CompletedTask;
+            if (expedition)
+            {
+                gameObject.AddComponent<PassEvidence>().Initialize(this);
+                return;
+            }
+
+            IReadOnlyList<TrialOpponent> catalog;
+            try { catalog = await TrialCatalog.LoadAsync(); }
+            catch (Exception error)
+            {
+                trialCatalogError = "Opponent configuration could not be loaded. See the log for details.";
+                Debug.LogError($"Rain Pass configuration (rain-pass-opponents.json) failed. {error}", this);
+                return;
+            }
+            var saveDirectory = Path.Combine(UnityEngine.Application.persistentDataPath, "RainPassTrials");
+            trials = new TrialSession(run, saveDirectory);
+            try { await trials.OpenAsync(); }
+            catch (Exception error) { Debug.LogError($"Rain Pass could not read records from '{saveDirectory}'. {error}", this); }
+            if (this != null) opponents = catalog;
         }
 
         private RainPassEnvironmentParameters EffectiveEnvironmentParameters
@@ -160,23 +264,30 @@ namespace Test.Client.Combat
             }
         }
 
-        private PassWorld BuildWorld(bool preview, bool forceRuntime)
+        private void ApplyEnvironment(CombatMap map)
+        {
+            RenderSettings.fogDensity = map?.Id == CombatMapId.CedarGrove ? .031f : .018f;
+            RenderSettings.fogColor = map != null ? PassWorld.RoutePalette.For(map.Id).Sky : EffectiveEnvironmentParameters.fogColor;
+            lens.backgroundColor = RenderSettings.fogColor;
+        }
+
+        private PassWorld BuildWorld(bool preview, bool forceRuntime, CombatMap map = null)
         {
             var parameters = EffectiveEnvironmentParameters;
-            if (!preview && !forceRuntime && environmentMode == RainPassEnvironmentMode.BakedAsset)
+            if (map == null && !preview && !forceRuntime && environmentMode == RainPassEnvironmentMode.BakedAsset)
             {
                 if (environmentProfile == null || !environmentProfile.HasCurrentBakedAsset)
                     throw new InvalidOperationException("Rain Pass BakedAsset mode requires a current baked environment profile.");
                 return PassWorld.FromBakedPrefab(environmentProfile.BakedPrefab, transform, surfaceShader, parameters.seed);
             }
 
-            var built = new PassWorld(transform, surfaceShader, parameters.seed, parameters.detailDensity, preview);
+            var built = new PassWorld(transform, surfaceShader, parameters.seed, parameters.detailDensity, preview, map);
             var moon = PassWorld.Group("Moon key", built.Root.transform);
             moon.localRotation = Quaternion.Euler(43, -126, 0);
             var key = moon.gameObject.AddComponent<Light>();
             key.type = LightType.Directional;
             key.intensity = 1.15f;
-            key.color = parameters.moonlight;
+            key.color = map != null ? PassWorld.RoutePalette.For(map.Id).Key : parameters.moonlight;
             key.shadows = LightShadows.Soft;
             var bounce = PassWorld.Group("Sky rim", built.Root.transform);
             bounce.localRotation = Quaternion.Euler(25, 92, 0);
@@ -217,12 +328,24 @@ namespace Test.Client.Combat
                 var desired = Vector2.ClampMagnitude(new Vector2((rightHeld ? 1 : 0) - (leftHeld ? 1 : 0),
                     (forwardHeld ? 1 : 0) - (backHeld ? 1 : 0)), 1);
                 var direction = forward * desired.y + right * desired.x;
+                Numerics.Vector3? arrowAim = run.Weapon == PlayerWeapon.Bow && run.Locked == 0
+                    ? space.AimPoint(lens.ViewportPointToRay(new Vector3(.5f, .5f))) : (Numerics.Vector3?)null;
                 for (int steps = 0; accumulator >= StepSeconds && steps < 6; steps++)
                 {
                     accumulator -= StepSeconds;
-                    run.Step(new Numerics.Vector3(direction.x, 0, direction.z), new Numerics.Vector3(forward.x, 0, forward.z), guard);
+                    var movement = new Numerics.Vector3(direction.x, 0, direction.z);
+                    var facing = new Numerics.Vector3(forward.x, 0, forward.z);
+                    if (run.TrialOpponent == null) run.Step(movement, facing, guard, arrowAim);
+                    else
+                    {
+                        Task save = trials.Step(movement, facing, guard, arrowAim);
+                        if (save != null) _ = ObserveTrialSave(save);
+                    }
+                    audio.Step(run);
+                    if (!Playing) break;
                 }
             }
+            audio.Advance(run, IsTrialSelection, delta);
             if (!paused)
             {
                 for (int actor = 0; actor < run.Count; actor++)
@@ -230,8 +353,9 @@ namespace Test.Client.Combat
                     var view = run.View(actor);
                     var fighter = space.Fighter(actor);
                     fighter.Controller.enabled = view.Vitality.Alive;
-                    fighter.Pose(view, (float)run.Tick / CombatRun.StepsPerSecond, 1 - Mathf.Exp(-22 * delta));
+                    fighter.Pose(view, (float)run.Tick / CombatRun.StepsPerSecond, 1 - Mathf.Exp(-22 * delta), actor == 0 && run.Weapon == PlayerWeapon.Bow);
                 }
+                space.DrawArrows(run.AirborneArrows);
                 space.Gates(run.Status == RunStatus.Proceed, 1 - Mathf.Exp(-7 * delta));
                 effects.Advance(run, space, delta);
                 shake = Mathf.MoveTowards(shake, 0, delta * 1.9f);
@@ -239,7 +363,13 @@ namespace Test.Client.Combat
             }
         }
 
-        private bool Playing => run.Status == RunStatus.Fighting || run.Status == RunStatus.Proceed;
+        private bool Playing => !IsTrialSelection && (run.Status == RunStatus.Fighting || run.Status == RunStatus.Proceed);
+
+        private async Task ObserveTrialSave(Task save)
+        {
+            try { await save; }
+            catch (Exception error) { Debug.LogError($"Rain Pass could not save the trial record. {error}", this); }
+        }
 
         private void CameraPosition(float delta)
         {
@@ -272,11 +402,14 @@ namespace Test.Client.Combat
             yaw = 0;
             pitch = 17;
             guard = false;
+            forwardHeld = backHeld = leftHeld = rightHeld = false;
+            accumulator = 0;
             shake = 0;
             noticeUntil = 0;
             effects.Reset();
+            audio.Reset(run);
             CameraPosition(0);
-            LockCursor(!PassEvidence.Requested);
+            LockCursor(Playing && !PassEvidence.Requested);
         }
 
         private void ReceiveCue(CombatCue cue)
@@ -284,6 +417,7 @@ namespace Test.Client.Combat
             if (cue.Result == ContactResult.Fall || cue.Result == ContactResult.Finish)
                 space.Fighter(cue.Target).Controller.enabled = false;
             effects.Cue(cue, space);
+            audio.Cue(cue, run);
             bool deflect = cue.Result == ContactResult.Deflect;
             bool playerTarget = cue.Target == 0;
             notice = deflect ? (run.View(cue.Attacker).Broken ? "POSTURE BROKEN" : "DEFLECT")
@@ -301,7 +435,7 @@ namespace Test.Client.Combat
 
         private void Receive(InputActionEvent message)
         {
-            if (run == null || PassEvidence.Requested) return;
+            if (run == null || IsTrialSelection || PassEvidence.Requested) return;
             bool pressed = message.Phase == InputActionPhase.Pressed;
             bool held = message.Phase != InputActionPhase.Released;
             switch (message.Action)
@@ -311,13 +445,23 @@ namespace Test.Client.Combat
                 case "right": rightHeld = held; break;
                 case "left": leftHeld = held; break;
                 case "guard": guard = held; if (pressed) run.Queue(CombatButtons.Guard); break;
-                case "attack": if (pressed) run.Queue(CombatButtons.Attack); break;
+                case "attack":
+                    if (pressed) run.Queue(CombatButtons.AttackPressed);
+                    else if (!held) run.Queue(CombatButtons.AttackReleased);
+                    break;
+                case "sword": if (pressed) run.Queue(CombatButtons.EquipSword); break;
+                case "bow": if (pressed) run.Queue(CombatButtons.EquipBow); break;
                 case "lock": if (pressed) run.Queue(CombatButtons.Lock); break;
                 case "dodge": if (pressed) run.Queue(CombatButtons.Dodge); break;
-                case "finish": if (pressed) run.Queue(CombatButtons.Finish); break;
                 case "pause": if (pressed) run.TogglePause(); break;
-                case "retry": if (pressed && (run.Status == RunStatus.Paused || run.Status == RunStatus.Defeated)) run.Retry(); break;
-                case "restart": if (pressed && !Playing) run.Restart(); break;
+                case "retry": if (pressed && !Playing && (run.TrialOpponent != null || run.Status != RunStatus.Victory)) RetryEncounter(); break;
+                case "restart":
+                    if (pressed && !Playing)
+                    {
+                        if (run.TrialOpponent != null) ShowTrialSelection();
+                        else RestartRun();
+                    }
+                    break;
                 case "debug": if (pressed) debug = !debug; break;
                 case "fixed": if (pressed) fixedCamera = !fixedCamera; break;
             }
@@ -326,7 +470,15 @@ namespace Test.Client.Combat
         private void OnGUI()
         {
             if (hud == null || run == null) return;
+            if (IsTrialSelection)
+            {
+                hud.DrawTrialSelection(this, opponents, trials, trialCatalogError, ref opponentScroll);
+                return;
+            }
             hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest, Time.unscaledTime < noticeUntil ? notice : "", noticeColor);
+            if (run.TrialOpponent != null && !Playing) hud.DrawTrialResult(this, trials);
+            else if (!PassEvidence.Requested && !Playing && GUI.Button(new Rect(Screen.width / 2f - 90f, Screen.height * .67f, 180f, 30f), "Route and trial selection"))
+                ShowTrialSelection();
         }
 
         private static void LockCursor(bool locked)
@@ -339,6 +491,7 @@ namespace Test.Client.Combat
         {
             inputEvents?.Dispose();
             world?.Dispose();
+            original.World?.Dispose();
             if (previousRender != null && gameObject.scene == UnityEngine.SceneManagement.SceneManager.GetActiveScene())
                 previousRender.Restore();
             if (run != null) LockCursor(false);

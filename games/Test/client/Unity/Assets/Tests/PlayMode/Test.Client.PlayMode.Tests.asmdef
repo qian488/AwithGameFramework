@@ -1,5 +1,7 @@
 {
   "name": "Test.Client.PlayMode.Tests",
   "references": ["Test.Client", "AwithGameFrame.Unity"],
+  "overrideReferences": true,
+  "precompiledReferences": ["nunit.framework.dll", "Test.Application.dll"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

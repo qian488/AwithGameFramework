@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Test.Application.Combat;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Random = System.Random;
@@ -9,7 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Test.Client.Combat
 {
-    public sealed class PassWorld : IDisposable
+    public sealed partial class PassWorld : IDisposable
     {
         private readonly List<Object> owned = new List<Object>();
         private readonly Dictionary<PrimitiveType, Mesh> meshes = new Dictionary<PrimitiveType, Mesh>();
@@ -18,11 +19,12 @@ namespace Test.Client.Combat
         private readonly Material stone, paver, wood, roof, grass, water, iron, paper, flame;
         private Transform geometry;
 
-        internal PassWorld(Transform parent, Shader surface, int seed, int density, bool preview)
+        internal PassWorld(Transform parent, Shader surface, int seed, int density, bool preview, CombatMap map = null)
         {
             this.surface = surface != null ? surface : throw new ArgumentNullException(nameof(surface));
             random = new Random(seed);
-            Root = new GameObject(preview ? "Rain Pass Preview" : "Rain Pass Generated");
+            Map = map;
+            Root = new GameObject(map?.Name ?? (preview ? "Rain Pass Preview" : "Rain Pass Generated"));
             if (preview) Root.hideFlags = HideFlags.DontSave;
             Root.transform.SetParent(parent, false);
             geometry = Group("Pass architecture", Root.transform);
@@ -35,7 +37,8 @@ namespace Test.Client.Combat
             iron = Material("Grille", new Color(.24f, .30f, .32f), 22, .55f, default, .48f);
             paper = Material("Lamp paper", new Color(.9f, .38f, .12f), 8, .35f, new Color(.48f, .11f, .022f));
             flame = Material("Lamp core", Color.white, 0, .3f, new Color(2.8f, .95f, .27f));
-            Build(Mathf.Clamp(density, 0, 120));
+            if (map == null) Build(Mathf.Clamp(density, 0, 120));
+            else BuildRoute(map);
         }
 
         private PassWorld(GameObject prefab, Transform parent, Shader surface, int seed)
@@ -56,6 +59,7 @@ namespace Test.Client.Combat
         }
 
         public GameObject Root { get; }
+        internal CombatMap Map { get; }
         public string LayoutDigest { get; private set; }
         public int ArchitectureCount { get; private set; }
         internal Transform PracticeGate { get; private set; }

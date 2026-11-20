@@ -1,0 +1,7 @@
+{
+  "schemaHash": "b614cdd5c458e0e1d6e93fa6aab9170f435b525814343db25fd226b39bee9c36",
+  "rows": [
+    { "id": 1, "name": "Gatekeeper", "description": "Slow windup, heavy strikes. Practice timing your deflect.", "health": 112, "posture": 96, "windupTicks": 54, "recoveryTicks": 42, "attackIntervalTicks": 78, "damage": 32, "pressure": 28 },
+    { "id": 2, "name": "Patrol Blade", "description": "Quick strikes, short openings. Practice staying on guard.", "health": 84, "posture": 68, "windupTicks": 24, "recoveryTicks": 17, "attackIntervalTicks": 28, "damage": 15, "pressure": 17 }
+  ]
+}

@@ -48,6 +48,10 @@ namespace Test.Client.Combat
             QualitySettings.vSyncCount = 0;
             UnityEngine.Application.targetFrameRate = -1;
             var run = showcase.Run;
+            yield return new WaitForFixedUpdate();
+            failure = VerifyBow(run);
+            report.bowVerified = failure == null;
+            run.Restart();
             var areas = new[] { new Samples(), new Samples(), new Samples() };
             int lastArea = -1;
             int lastDeflect = 0;
@@ -111,7 +115,7 @@ namespace Test.Client.Combat
             report.finishes = finishes;
             report.defeatAndRetry = reset;
             report.result = run.Status.ToString();
-            report.passed = reset && deflects > 0 && (PracticeOnly ? run.Status == RunStatus.Proceed && finishes == 1
+            report.passed = report.bowVerified && reset && deflects > 0 && (PracticeOnly ? run.Status == RunStatus.Proceed && finishes == 1
                 : run.Status == RunStatus.Victory && finishes == 5);
             report.error = failure ?? (report.passed ? "" : "Evidence run did not reach its expected outcome.");
             report.areas = new[] { areas[0].Report("Practice"), areas[1].Report("Courtyard"), areas[2].Report("Gate") };
@@ -121,6 +125,12 @@ namespace Test.Client.Combat
                 ScreenCapture.CaptureScreenshot(Path.Combine(Output, "result.png"));
                 yield return null;
                 yield return new WaitForSecondsRealtime(.25f);
+            }
+            if (report.passed && !PracticeOnly)
+            {
+                yield return VerifyRoutes(report);
+                report.passed = failure == null;
+                if (failure != null) report.error = failure;
             }
 #if !UNITY_EDITOR
             var shutdown = showcase.ShutdownAsync();
@@ -138,6 +148,90 @@ namespace Test.Client.Combat
 #else
             UnityEngine.Application.Quit(report.passed ? 0 : 1);
 #endif
+        }
+
+        private IEnumerator VerifyRoutes(EvidenceReport report)
+        {
+            var results = new List<RouteReport>();
+            foreach (var map in CombatMap.Routes)
+            {
+                showcase.ShowTrialSelection();
+                if (!showcase.StartMap(map.Id))
+                {
+                    failure = $"Could not start {map.Name}.";
+                    break;
+                }
+                var run = showcase.Run;
+                int initialFinishes = finishes;
+                int initialDeflects = deflects;
+                guarded = false;
+                lastOwner = 0;
+                lastSegment = -1;
+                run.Cue += Record;
+                const int maximumSteps = 9000;
+                int steps = 0;
+                int bossEntries = 0;
+                while (steps < maximumSteps && (run.Status == RunStatus.Fighting || run.Status == RunStatus.Proceed) && failure == null)
+                {
+                    var area = run.Encounter;
+                    showcase.Space.Gates(run.Status == RunStatus.Proceed, 1);
+                    Drive(run);
+                    steps++;
+                    if (area == Encounter.Courtyard && run.Encounter == Encounter.Gate)
+                    {
+                        bossEntries++;
+                        run.Retry();
+                        if (run.Encounter != Encounter.Gate || run.Tick != 0 || run.View(0).Vitality.Health != 100)
+                            failure = $"{map.Name} did not restore the boss checkpoint.";
+                    }
+                    if (steps % 60 == 0) yield return null;
+                }
+                run.Cue -= Record;
+                int routeFinishes = finishes - initialFinishes;
+                results.Add(new RouteReport { name = map.Name, digest = showcase.LayoutDigest, result = run.Status.ToString(),
+                    steps = steps, deflects = deflects - initialDeflects, finishes = routeFinishes });
+                if (failure == null && (run.Status != RunStatus.Victory || routeFinishes != map.Guards + 1 || bossEntries != 1))
+                    failure = $"{map.Name} stopped at {run.Encounter}/{run.Status} after {steps} steps with {routeFinishes} finishes. " +
+                        $"Player at {showcase.Space.Position(0)}, health {run.View(0).Vitality.Health}, owner {run.AttackOwner}.";
+                if (failure != null) break;
+            }
+            report.routes = results.ToArray();
+        }
+
+        private string VerifyBow(CombatRun run)
+        {
+            var space = showcase.Space;
+            var shooter = space.Position(0) + Numerics.Vector3.UnitY * 1.34f;
+            var opponent = space.Position(1) + Numerics.Vector3.UnitY * 1.34f;
+            if (!space.TraceArrow(shooter, opponent, out int target) || target != 1)
+            {
+                var fighter = space.Fighter(1);
+                var origin = space.Fighter(0).Focus;
+                var offset = fighter.Focus - origin;
+                var hits = Physics.RaycastAll(origin, offset.normalized, offset.magnitude, ~0, QueryTriggerInteraction.Ignore);
+                var names = Array.ConvertAll(hits, hit => $"{hit.collider.name} at {hit.distance:0.00} m (layer {hit.collider.gameObject.layer})");
+                return $"Bow check failed from {shooter} to {opponent}. Opponent bounds {fighter.Controller.bounds}, enabled {fighter.Controller.enabled}. Ray hits [{string.Join(", ", names)}].";
+            }
+
+            var blocker = new GameObject("Bow verification cover");
+            blocker.transform.position = Vector3.Lerp(space.Fighter(0).Focus, space.Fighter(1).Focus, .5f);
+            blocker.AddComponent<BoxCollider>();
+            Physics.SyncTransforms();
+            bool stoppedAtCover = space.TraceArrow(shooter, opponent, out target) && target == 0;
+            blocker.SetActive(false);
+            Destroy(blocker);
+            Physics.SyncTransforms();
+            if (!stoppedAtCover) return "Bow check did not report the nearest obstruction as cover.";
+
+            int health = run.View(1).Vitality.Health;
+            run.Queue(CombatButtons.EquipBow | CombatButtons.Lock | CombatButtons.AttackPressed);
+            for (int step = 0; step < BowRules.Shot.Duration; step++)
+                run.Step(Numerics.Vector3.Zero, Numerics.Vector3.UnitZ, false);
+            if (run.Weapon != PlayerWeapon.Bow || run.ArrowsRemaining != BowRules.QuiverCapacity - 1)
+                return "Bow check did not launch exactly one arrow.";
+            if (run.View(1).Vitality.Health != health - BowRules.Shot.Damage || run.AirborneArrows.Count != 0)
+                return "Bow check did not damage the locked opponent exactly once.";
+            return null;
         }
 
         private void Drive(CombatRun run)
@@ -167,10 +261,10 @@ namespace Test.Client.Combat
             var direction = range > .001f ? toward / range : Numerics.Vector3.UnitZ;
             if (reset)
             {
-                if (run.CanFinish) run.Queue(CombatButtons.Finish);
+                if (run.CanFinish && !run.IsHoldingFinish) run.Queue(CombatButtons.AttackPressed);
                 var view = run.View(actor);
                 if (run.AttackOwner == 0 || lastOwner != run.AttackOwner || lastSegment != view.Segment || view.Phase == AttackPhase.Ready) guarded = false;
-                if (!guarded && run.AttackOwner == actor && view.Phase == AttackPhase.Windup && view.PhaseProgress >= .88f)
+                if (!guarded && run.AttackOwner == actor && view.Phase == AttackPhase.Windup && view.PhaseProgress >= (run.Map == null ? .88f : .92f))
                 {
                     run.Queue(CombatButtons.Guard);
                     guarded = true;
@@ -212,8 +306,16 @@ namespace Test.Client.Combat
         {
             public string unity, platform, gpu, cpu, digest, result, error;
             public int width, height, deflects, finishes;
-            public bool passed, defeatAndRetry, gcCounterAvailable, graphicsEvidence;
+            public bool passed, defeatAndRetry, gcCounterAvailable, graphicsEvidence, bowVerified;
             public AreaReport[] areas;
+            public RouteReport[] routes;
+        }
+
+        [Serializable]
+        private sealed class RouteReport
+        {
+            public string name, digest, result;
+            public int steps, deflects, finishes;
         }
 
         [Serializable]

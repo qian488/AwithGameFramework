@@ -41,6 +41,7 @@ namespace Test.Client.Combat.Editor
                     serializedObject.FindProperty("detailDensity").intValue = 65;
                     serializedObject.FindProperty("rainDensity").intValue = 485;
                     serializedObject.FindProperty("soundVolume").floatValue = .62f;
+                    serializedObject.FindProperty("musicVolume").floatValue = .65f;
                     serializedObject.FindProperty("moonlight").colorValue = new Color(.66f, .79f, .94f);
                     serializedObject.FindProperty("fogColor").colorValue = new Color(.115f, .15f, .187f);
                     serializedObject.FindProperty("characterScale").floatValue = 1;

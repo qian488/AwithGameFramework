@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Test.Application.Combat;
+using Test.Domain.Combat;
 using UnityEngine;
 
 namespace Test.Client.Combat
@@ -11,19 +13,12 @@ namespace Test.Client.Combat
         private static readonly Color Panel = new Color(.027f, .048f, .06f, .87f);
         private static readonly Color Teal = new Color(.28f, .75f, .76f);
         private static readonly Color Red = new Color(.96f, .38f, .27f);
-        private GUIStyle title, small, middle, centered, headline;
+        private GUIStyle title, small, wrappedSmall, middle, centered, headline;
         private float smoothed;
 
         public void Draw(CombatRun run, PassSpace space, Camera lens, bool diagnostics, int seed, string digest, string cue, Color cueColor)
         {
-            if (title == null)
-            {
-                title = Style(37, FontStyle.Bold, TextAnchor.MiddleLeft);
-                small = Style(14, FontStyle.Normal, TextAnchor.MiddleLeft);
-                middle = Style(19, FontStyle.Bold, TextAnchor.MiddleLeft);
-                centered = Style(19, FontStyle.Bold, TextAnchor.MiddleCenter);
-                headline = Style(43, FontStyle.Bold, TextAnchor.MiddleCenter);
-            }
+            PrepareStyles();
             var matrix = GUI.matrix;
             float scale = Mathf.Clamp(Mathf.Min(Screen.height / 810f, Screen.width / 870f), .4f, 1.6f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
@@ -31,10 +26,13 @@ namespace Test.Client.Combat
             float height = Screen.height / scale;
             Fill(new Rect(29, 28, 329, 110), Panel);
             Fill(new Rect(29, 28, 3, 110), Amber);
-            Label(new Rect(47, 34, 280, 49), "RAIN PASS", title, Ivory);
+            Label(new Rect(47, 34, 294, 49), run.Map?.Name ?? "RAIN PASS", title, Ivory);
             string area = run.Encounter == Encounter.Practice ? "PRACTICE TERRACE" : run.Encounter == Encounter.Courtyard ? "LANTERN COURTYARD" : "WARDEN'S GATE";
+            if (run.TrialOpponent != null) area = run.TrialOpponent.Name;
+            if (run.Map != null) area = run.Encounter == Encounter.Courtyard ? run.Map.Patrol.Name : run.Map.Boss.Name;
             Label(new Rect(48, 83, 290, 22), area, middle, Amber);
-            Label(new Rect(48, 109, 290, 20), Objective(run), small, Slate);
+            string objective = run.TrialOpponent == null ? Objective(run) : $"TRIAL TIME   {FormatTime(run.Tick)}";
+            Label(new Rect(48, 106, 295, 29), objective, wrappedSmall, Slate);
 
             var player = run.View(0);
             float bottom = height - 103;
@@ -43,10 +41,20 @@ namespace Test.Client.Combat
             Bar(new Rect(112, bottom + 11, 176, 11), (float)player.Vitality.Health / player.HealthLimit, Teal);
             Label(new Rect(44, bottom + 31, 74, 20), "POSTURE", small, Slate);
             Bar(new Rect(120, bottom + 36, 168, 10), (float)player.Vitality.Posture / player.PostureLimit, player.Broken ? Red : Amber);
-            Label(new Rect(44, bottom + 51, 242, 17), player.Broken ? "Guard broken" : run.Locked > 0 ? "Target locked" : "TAB   Lock target", small, player.Broken ? Red : Slate);
+            Label(new Rect(44, bottom + 51, 242, 17), player.Broken ? "Guard broken" : run.Locked > 0 ? "MMB   Unlock target" : "MMB   Lock target", small, player.Broken ? Red : Slate);
 
             if (run.Status == RunStatus.Fighting || run.Status == RunStatus.Proceed)
             {
+                bool bow = run.Weapon == PlayerWeapon.Bow;
+                Fill(new Rect(29, bottom - 36, 278, 30), Panel);
+                string weapon = bow ? $"BOW   {run.ArrowsRemaining}/{BowRules.QuiverCapacity} arrows" : "SWORD";
+                if (bow && run.ArrowsRemaining == 0 && player.Phase == AttackPhase.Ready) weapon = "QUIVER EMPTY   1  Equip sword";
+                Label(new Rect(44, bottom - 34, 242, 26), weapon, small, bow && run.ArrowsRemaining == 0 ? Amber : Ivory);
+                if (bow && run.Locked == 0)
+                {
+                    Fill(new Rect(width / 2 - 6, height / 2 - 1, 12, 2), Amber);
+                    Fill(new Rect(width / 2 - 1, height / 2 - 6, 2, 12), Amber);
+                }
                 for (int actor = 1; actor < run.Count; actor++)
                 {
                     var enemy = run.View(actor);
@@ -62,17 +70,22 @@ namespace Test.Client.Combat
                     if (run.Locked == actor) Label(new Rect(center - 20, top - 22, 40, 21), "<> ", centered, Ivory);
                 }
                 if (!string.IsNullOrEmpty(cue)) Label(new Rect(width / 2 - 182, height * .30f, 364, 33), cue, centered, cueColor);
-                if (run.CanFinish) Label(new Rect(width / 2 - 182, height * .71f, 364, 38), "E   FINISH", centered, Amber);
+                if (run.CanFinish)
+                {
+                    float promptTop = height * .71f;
+                    Label(new Rect(width / 2 - 182, promptTop, 364, 38), "HOLD LMB   FINISH", centered, Amber);
+                    Bar(new Rect(width / 2 - 78, promptTop + 34, 156, 4), run.FinishHoldProgress, Amber);
+                }
                 float left = Mathf.Max(29, width - 335);
                 if (left > 320)
                 {
                     Fill(new Rect(left, bottom, 304, 72), Panel);
-                    Label(new Rect(left + 14, bottom + 4, 286, 24), "LMB   Strike       RMB   Deflect / Guard", small, Ivory);
+                    Label(new Rect(left + 14, bottom + 4, 286, 24), bow ? "LMB   Draw and shoot   MMB   Lock target" : "LMB   Strike       RMB   Deflect / Guard", small, Ivory);
                     Label(new Rect(left + 14, bottom + 29, 286, 19), "WASD  Move   SPACE  Dodge   ESC  Pause", small, Slate);
-                    Label(new Rect(left + 14, bottom + 48, 286, 18), "F2  Debug   F3  Fixed camera", small, Slate);
+                    Label(new Rect(left + 14, bottom + 48, 286, 18), "1   Sword       2   Bow", small, Slate);
                 }
             }
-            else
+            else if (run.TrialOpponent == null)
             {
                 Fill(new Rect(0, 0, width, height), new Color(.012f, .029f, .038f, .68f));
                 float left = width / 2 - 248;
@@ -99,9 +112,121 @@ namespace Test.Client.Combat
             GUI.matrix = matrix;
         }
 
+        public void DrawTrialSelection(CombatShowcase showcase, IReadOnlyList<TrialOpponent> opponents, TrialSession trials,
+            string configurationError, ref Vector2 scroll)
+        {
+            PrepareStyles();
+            var matrix = BeginTrialOverlay(out float width, out float height);
+            const float panelWidth = 620;
+            float panelHeight = Mathf.Min(height - 64, 580);
+            float left = (width - panelWidth) / 2;
+            float top = (height - panelHeight) / 2;
+            Fill(new Rect(left, top, panelWidth, panelHeight), Panel);
+            Fill(new Rect(left, top, panelWidth, 2), Amber);
+            Label(new Rect(left + 24, top + 12, 560, 56), "RAIN PASS", title, Ivory);
+            bool expedition = GUI.Button(new Rect(left + 406, top + 25, 190, 32), "Play original Rain Pass");
+            CombatMapId? route = null;
+            for (int index = 0; index < CombatMap.Routes.Count; index++)
+            {
+                var map = CombatMap.Routes[index];
+                if (GUI.Button(new Rect(left + 24 + index * 194, top + 72, 184, 41), map.Name)) route = map.Id;
+            }
+            string prompt = configurationError ?? (opponents == null ? "Loading opponents and records..."
+                : trials.RecordsUnavailable ? "Records unavailable. Check the log for details."
+                : "Duel trials   /   Personal bests");
+            Label(new Rect(left + 25, top + 124, 570, 24), prompt, small, configurationError == null ? Slate : Red);
+
+            int? selected = null;
+            if (opponents != null)
+            {
+                const float rowHeight = 92;
+                const float rowWidth = 552;
+                var viewport = new Rect(left + 24, top + 154, panelWidth - 48, panelHeight - 178);
+                scroll = GUI.BeginScrollView(viewport, scroll, new Rect(0, 0, rowWidth, opponents.Count * rowHeight));
+                for (int index = 0; index < opponents.Count; index++)
+                {
+                    var opponent = opponents[index];
+                    float rowTop = index * rowHeight;
+                    Fill(new Rect(0, rowTop, rowWidth, rowHeight - 8), new Color(.065f, .10f, .13f));
+                    Label(new Rect(12, rowTop + 7, 325, 25), opponent.Name, middle, Ivory);
+                    Label(new Rect(354, rowTop + 7, 184, 25), $"Best   {FormatTime(trials.BestTicks(opponent.Id))}", small, Amber);
+                    GUI.Label(new Rect(12, rowTop + 34, 410, 43), opponent.Description, new GUIStyle(small) { wordWrap = true });
+                    if (GUI.Button(new Rect(432, rowTop + 36, 106, 33), "Challenge")) selected = opponent.Id;
+                }
+                GUI.EndScrollView();
+            }
+            GUI.matrix = matrix;
+            if (selected.HasValue) showcase.StartTrial(selected.Value);
+            if (expedition) showcase.RestartRun();
+            if (route.HasValue) showcase.StartMap(route.Value);
+        }
+
+        public void DrawTrialResult(CombatShowcase showcase, TrialSession trials)
+        {
+            var matrix = BeginTrialOverlay(out float width, out float height);
+            const float panelWidth = 528;
+            const float panelHeight = 244;
+            float left = (width - panelWidth) / 2;
+            float top = (height - panelHeight) / 2;
+            Fill(new Rect(left, top, panelWidth, panelHeight), Panel);
+            Fill(new Rect(left, top, panelWidth, 2), Amber);
+            bool paused = trials.Status == RunStatus.Paused;
+            bool victory = trials.Status == RunStatus.Victory;
+            string heading = paused ? "TRIAL PAUSED" : victory ? "TRIAL CLEARED" : "FALLEN";
+            Label(new Rect(left, top + 12, panelWidth, 55), heading, headline, Ivory);
+            Label(new Rect(left, top + 66, panelWidth, 29), trials.Opponent.Name, centered, Slate);
+            string best = FormatTime(trials.BestTicks(trials.Opponent.Id));
+            Label(new Rect(left, top + 100, panelWidth, 30), $"Time   {FormatTime(trials.ElapsedTicks)}      Best   {best}", centered, Ivory);
+            string status = trials.IsSaving ? "Saving record..." : trials.SaveFailed ? "Record could not be saved."
+                : trials.RecordsUnavailable ? "Records unavailable for this session." : trials.NewRecord ? "NEW BEST" : "";
+            Label(new Rect(left, top + 135, panelWidth, 28), status, centered, trials.SaveFailed ? Red : Amber);
+            bool enabled = GUI.enabled;
+            GUI.enabled = enabled && !trials.IsSaving;
+            bool retry = GUI.Button(new Rect(left + 24, top + 187, 142, 34), "Retry  [R]");
+            bool choose = GUI.Button(new Rect(left + 175, top + 187, 174, 34), "Choose opponent");
+            bool resume = paused && GUI.Button(new Rect(left + 358, top + 187, 146, 34), "Resume  [Esc]");
+            bool save = trials.SaveFailed && GUI.Button(new Rect(left + 358, top + 187, 146, 34), "Retry saving");
+            GUI.enabled = enabled;
+            GUI.matrix = matrix;
+            if (retry) showcase.RetryEncounter();
+            if (choose) showcase.ShowTrialSelection();
+            if (resume) showcase.Run.TogglePause();
+            if (save) showcase.RetryTrialSave();
+        }
+
+        private void PrepareStyles()
+        {
+            if (title != null) return;
+            title = Style(37, FontStyle.Bold, TextAnchor.MiddleLeft);
+            small = Style(14, FontStyle.Normal, TextAnchor.MiddleLeft);
+            wrappedSmall = new GUIStyle(small) { wordWrap = true };
+            middle = Style(19, FontStyle.Bold, TextAnchor.MiddleLeft);
+            centered = Style(19, FontStyle.Bold, TextAnchor.MiddleCenter);
+            headline = Style(43, FontStyle.Bold, TextAnchor.MiddleCenter);
+        }
+
+        private static Matrix4x4 BeginTrialOverlay(out float width, out float height)
+        {
+            var previous = GUI.matrix;
+            float scale = Mathf.Min(1.4f, Mathf.Min(Screen.height / 690f, Screen.width / 730f));
+            GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
+            width = Screen.width / scale;
+            height = Screen.height / scale;
+            Fill(new Rect(0, 0, width, height), new Color(.012f, .029f, .038f, .70f));
+            return previous;
+        }
+
+        private static string FormatTime(int? ticks)
+        {
+            if (!ticks.HasValue) return "--:--.--";
+            long hundredths = (long)ticks.Value * 100 / CombatRun.StepsPerSecond;
+            return $"{hundredths / 6000:00}:{hundredths / 100 % 60:00}.{hundredths % 100:00}";
+        }
+
         private static string Objective(CombatRun run)
         {
-            if (run.Status == RunStatus.Proceed) return "Gate open. Follow the lantern path.";
+            if (run.Status == RunStatus.Proceed) return run.Map == null ? "Gate open. Follow the lantern path." : "Gate open. Enter the boss arena.";
+            if (run.Map != null) return run.Encounter == Encounter.Courtyard ? run.Map.Advice : run.Map.BossAdvice;
             if (run.Encounter == Encounter.Practice) return "Meet the blade as it comes down.";
             if (run.Encounter == Encounter.Courtyard) return "Read the fighter who steps forward.";
             return "Watch for the delay and second strike.";
