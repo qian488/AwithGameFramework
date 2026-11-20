@@ -26,6 +26,8 @@ Godot 宿主实现每树退出协调和启动期暂停回放。持久化会话�
 
 ## 开发期工具与模板
 
+Unity 工作区提供[画面自动验收](reference/unity-visual-verification.md)。项目可定义控件布局断言、画面异常阈值和基准图，后台输出实际画面、差异图和报告。
+
 已有 [AgentKit](../agent/README.md)：任务读写范围与脏工作区基线、模块发现与按模块选择的有限上下文/预算、固定工具目录、具体计划与真实确认、执行日志/耗时、机器检查与人工评审分离、本地事件监看。提供任务/评审/交接模板及可编译的[Domain/Application 功能模板](../templates/portable-feature/README.md)，标准验证包含工具契约、文档本地链接、行为回归和模板。
 
 仓库级技能覆盖框架维护、具体游戏开发和 Unity 编辑器操作。开发工作流包含设计澄清、规格、可复现诊断、工单分诊、限范围原型、架构改进和评审。AgentKit 保存工单依赖、执行证据与交接记录，并对照本地议题快照。Unity 工作区附带本地诊断与编辑命令，支持同场景事务、项目白名单和场景与 Prefab 检查点。工作流覆盖和边界见[编辑器自动化](reference/unity-editor-automation.md)，实测结果见[最近验证](validation/latest.md)。

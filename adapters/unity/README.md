@@ -8,7 +8,7 @@ Unity 需要的代码集中在本包，通用能力来自 src 下的 Core、Data
 | --- | --- |
 | Runtime/Engine | 实例宿主、资源后端、时间/日志接入、Unity 动画契约与数学工具；AwithGameFrame.Unity |
 | Runtime/Features | 实例 UI/场景/输入/音频后端、本地化 ScriptableObject/Resources 数据源；AwithGameFrame.Extensions |
-| Editor | AssetBundle 构建与地址/依赖目录；AwithGameFrame.Unity.Editor，仅编辑器 |
+| Editor | AssetBundle 构建与地址/依赖目录、[离屏画面与布局验收](../../docs/reference/unity-visual-verification.md)，由 AwithGameFrame.Unity.Editor 提供 |
 
 UnityPlatform 自动安装日志、目录和时间源，实例 GameHostBehaviour 自行驱动宿主。旧静态帧驱动、UnityDataPersistence 与 FrameworkEntry 位于独立 [兼容包](../unity-compat/README.md)。
 

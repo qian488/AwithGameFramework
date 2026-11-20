@@ -6,7 +6,8 @@ param(
     [switch]$BuildPlayer,
     [switch]$RunPlayerSmoke,
     [ValidateSet('Mono', 'IL2CPP')][string]$ScriptingBackend = 'Mono',
-    [ValidateSet('Windows64', 'Android', 'WebGL')][string]$PlayerTarget = 'Windows64'
+    [ValidateSet('Windows64', 'Android', 'WebGL')][string]$PlayerTarget = 'Windows64',
+    [switch]$RunVisualSmoke
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,9 +66,10 @@ foreach ($assembly in @('Core', 'Data', 'Gameplay', 'Networking', 'Unity', 'Unit
 Write-Host "Unity import and compilation passed. Log: $logPath"
 
 function Invoke-UnityStep {
-    param([string]$Name, [string]$Method, [string[]]$ExtraArguments, [switch]$Quit)
+    param([string]$Name, [string]$Method, [string[]]$ExtraArguments, [switch]$Quit, [switch]$WithGraphics)
     $stepLog = Join-Path $validationRoot ($Name + '.log')
-    $stepArguments = @('-batchmode', '-nographics', '-projectPath', ('"' + $validationRoot + '"'), '-logFile', ('"' + $stepLog + '"'), '-executeMethod', $Method)
+    $stepArguments = @('-batchmode', '-projectPath', ('"' + $validationRoot + '"'), '-logFile', ('"' + $stepLog + '"'), '-executeMethod', $Method)
+    if (-not $WithGraphics) { $stepArguments += '-nographics' }
     if ($Quit) { $stepArguments += '-quit' }
     if ($ExtraArguments) { $stepArguments += $ExtraArguments }
     $stepOptions = @{ FilePath = $editor.FullName; ArgumentList = $stepArguments; PassThru = $true }
@@ -79,6 +81,14 @@ function Invoke-UnityStep {
         throw "Unity $Name failed ($($stepProcess.ExitCode)). See $stepLog"
     }
     return $stepLog
+}
+
+if ($RunVisualSmoke) {
+    $visualLog = Invoke-UnityStep -Name 'Visual-smoke' -Method 'AwithGameFrame.Samples.Editor.UnityVisualSmoke.Run' -Quit -WithGraphics
+    if (-not (Select-String -LiteralPath $visualLog -SimpleMatch 'UNITY_VISUAL_SMOKE_PASSED' -Quiet)) {
+        throw "Unity visual assertions missing. See $visualLog"
+    }
+    Write-Host "Unity offscreen visual assertions passed. Log: $visualLog"
 }
 
 $contentArguments = @()

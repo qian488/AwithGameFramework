@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory = $true)][string]$EditorPath,
     [string]$BuildScene,
     [switch]$RunTests,
-    [ValidateRange(60, 3600)][int]$TimeoutSeconds = 600
+    [ValidateRange(60, 3600)][int]$TimeoutSeconds = 600,
+    [string]$VisualSpec
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,6 +24,14 @@ Assert-GameUnityMetadata -AssetsPath $assets
 $versionText = [IO.File]::ReadAllText((Join-Path $project 'ProjectSettings/ProjectVersion.txt'))
 if ($versionText -notmatch '(?m)^m_EditorVersion: (\S+)') { throw "No Unity version recorded in $project" }
 $expectedVersion = $Matches[1]
+$visualWithGraphics = $false
+if ($VisualSpec) {
+    $specification = Get-Item -LiteralPath $VisualSpec
+    if ($specification.PSIsContainer) { throw "Expected a visual verification JSON file: $VisualSpec" }
+    $VisualSpec = $specification.FullName
+    $visualCases = ([IO.File]::ReadAllText($VisualSpec) | ConvertFrom-Json).cases
+    $visualWithGraphics = @($visualCases | Where-Object { $_ -and $_.PSObject.Properties['scene'] -and $_.scene }).Count -gt 0
+}
 if ($BuildScene -and ($BuildScene -notmatch '^Assets/[A-Za-z0-9 /_.-]+\.unity$' -or $BuildScene -match '(^|/)\.\.(/|$)' -or
     -not (Test-Path -LiteralPath (Join-Path $project $BuildScene) -PathType Leaf))) { throw "Expected a scene under Assets: $BuildScene" }
 
@@ -118,9 +127,11 @@ internal static class AwithGameWorkspaceProbe
 }
 '@)
 
-function Invoke-Unity([string]$Step, [string[]]$Extra) {
+function Invoke-Unity {
+    param([string]$Step, [string[]]$Extra, [switch]$WithGraphics)
     $log = Join-Path $evidence ($Step + '.log')
-    $arguments = @('-batchmode', '-nographics', '-projectPath', $isolated, '-logFile', $log) + $Extra
+    $arguments = @('-batchmode', '-projectPath', $isolated, '-logFile', $log) + $Extra
+    if (-not $WithGraphics) { $arguments += '-nographics' }
     $quoted = $arguments | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
     $processOptions = @{ FilePath = $editor.FullName; ArgumentList = $quoted; PassThru = $true }
     $restoreProfile = $false
@@ -172,11 +183,30 @@ if ($BuildScene) {
     if (-not (Test-Path -LiteralPath $player -PathType Leaf)) { throw "Unity did not produce the Player. Inspect $buildLog" }
     Write-Host "Windows Player built: $player"
 }
-[ordered]@{
+$summary = [ordered]@{
     game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
     mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log')
     testsRun = [bool]$RunTests; tests = $testReports
     buildScene = $BuildScene; buildVerified = [bool]$BuildScene; buildLog = $buildLog; player = $player
     runtimeVerified = $false; manualReview = 'not-run'
-} |
-    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding UTF8
+    visual = @{ status = 'not-run' }
+}
+try {
+    if ($VisualSpec) {
+        $visualOutput = Join-Path $evidence 'Visual'
+        $visualReport = Join-Path $visualOutput 'visual-report.json'
+        $visualMode = if ($visualWithGraphics) { 'offscreen' } else { 'image-only' }
+        $summary.visual = @{ status = 'failed'; mode = $visualMode; report = $visualReport; log = (Join-Path $evidence 'visual.log') }
+        Invoke-Unity -Step 'visual' -WithGraphics:$visualWithGraphics -Extra @('-quit', '-executeMethod',
+            'AwithGameFrame.Unity.Editor.UnityVisualVerification.RunBatch', '-awith-visual-spec', $VisualSpec, '-awith-visual-output', $visualOutput)
+        if (-not (Test-Path -LiteralPath $visualReport -PathType Leaf) -or
+            ([IO.File]::ReadAllText($visualReport) | ConvertFrom-Json).passed -ne $true) {
+            throw "Unity visual verification did not pass. Inspect $visualReport"
+        }
+        $summary.visual.status = 'passed'
+        Write-Host "Unity visual verification passed. Report: $visualReport"
+    }
+}
+finally {
+    $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding UTF8
+}

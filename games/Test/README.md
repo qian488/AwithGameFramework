@@ -68,6 +68,8 @@ powershell -File games/Test/verify-rain-pass.ps1 -PlayerPath '<Player/Test.exe>'
 
 需要图形和性能证据时，在有图形的 Windows Player 上传入 `-rain-pass-evidence <证据目录>`，保存截图和帧时间摘要。
 
+已生成的 Rain Pass PNG 可提交给[画面自动验收](../../docs/reference/unity-visual-verification.md)的 `image` 用例，后台检查尺寸、纯色、异常洋红和已评审基准的变化。Rain Pass 的 HUD 在运行时用 IMGUI 绘制，截图应在相应的关卡状态采集。
+
 ## 特效库
 
 1. 退出 Play Mode，打开 `Tools > Test > Effect Library`。在左侧按名称、标签和分类查找特效。在右侧看说明、图层和校验提示。`Play Preview` 可在独立预览中播放，支持暂停、重启、循环和拖动时间轴。

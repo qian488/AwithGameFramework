@@ -1,5 +1,11 @@
 # 最近验证
 
+## Unity 画面自动验收（2026-11-20）
+
+- Unity **2022.3.16f1 / Direct3D11** 在隐藏的批处理进程离屏渲染 uGUI。正常场景与复拍基准的像素差异为 **0%**。故障夹具检出了出屏、控件重叠、矩形裁切、文字溢出和异常洋红，差异图标出了 **17.99%** 的变化像素。纯黑 PNG 触发了纯色和近黑比例检查。报告和图像在 `artifacts/UnityValidation/ab0de8a4d4674f108e7a60776ff611f0/VisualSmoke`。
+- `verify-game-unity.ps1 -VisualSpec` 在 `-nographics` 下检查了 Rain Pass 已存的四张 1920×1080 Player 截图，尺寸、纯色、近黑和洋红比例检查通过。缺图反例返回非零退出码，并保留 `summary.json` 和逐项错误。两次证据分别在 `artifacts/game-unity/Test/20261120-103319-d63d81a1` 和 `artifacts/game-unity/Test/20261120-103605-bf9e880b`。
+- `tools/verify.ps1` 通过，框架 **640/640**、模板 **13/13**，Headless 和 AgentKit 契约通过。
+
 ## Unity 后台验证（2026-11-19）
 
 - Unity **2022.3.16f1** 的 Windows Mono 样例通过仅构建与后台 Player 冒烟两条路径。`Build-report.json` 分别记录 `runtimeVerified: false` 和 `runtimeVerified: true`。证据在 `artifacts/UnityValidation/082d6a2424cb43fbab3d3fc652a04b9e` 与 `artifacts/UnityValidation/cd7aeabe78bf4d8888542bf3a288acf1`。

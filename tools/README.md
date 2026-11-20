@@ -16,6 +16,7 @@
 | 经真实 HTTP 下载并验证内容安装 | [verify-content.ps1](verify-content.ps1) | 校验清单和下载文件；不替代原生资源加载 |
 | 验证完整 Unity 示例 | [verify-unity.ps1](verify-unity.ps1) | 后台导入、PlayMode 和构建。追加 `-RunPlayerSmoke` 可后台运行 Windows Player |
 | 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 在隔离工作区后台导入并检查场景和 Prefab，可运行 Unity 测试、构建单场景 Windows Player 并报告各步结果 |
+| 自动检查 Unity 画面 | [verify-game-unity.ps1](verify-game-unity.ps1) `-VisualSpec` | [画面自动验收](../docs/reference/unity-visual-verification.md)包含离屏截图、控件布局断言和基准图对比 |
 | 验证无旧插件的 Unity 接入 | [verify-unity-minimal.ps1](verify-unity-minimal.ps1) | 独立工程，仅安装现代包 |
 | 验证 Godot .NET 接入 | [verify-godot.ps1](verify-godot.ps1) | 原生运行与可选 Windows 导出 |
 | 保存开发任务上下文、计划、执行与交接证据 | [agent.ps1](agent.ps1)、[AgentKit 实现](AgentKit/README.md) | 使用约定在 [agent](../agent/README.md)，不进入游戏运行时 |

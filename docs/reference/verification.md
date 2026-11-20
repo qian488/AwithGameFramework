@@ -49,6 +49,8 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 
 指定游戏的脚本在隔离工作区后台导入、运行 EditMode 和 PlayMode 测试，并按参数构建单场景 Windows Player。`summary.json` 记录导入、测试与构建结果，附 XML、日志和 Player 路径。项目可提供自己的后台 Player 冒烟入口，例如 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)。
 
+追加 `-VisualSpec '<visual-cases.json>'` 可执行[画面自动验收](unity-visual-verification.md)。用例支持后台离屏截图和已有 PNG 检查，并保存实际画面、差异图与逐项报告。
+
 `-PlayerTarget Android` / `WebGL` 提供构建入口，WebGL 要求 IL2CPP。这些目标只构建并报告 `runtimeVerified:false`，需另行设备/浏览器运行；PlayMode 使用的 Windows bundles 不能代替目标平台资源。Windows IL2CPP 样例只证明所执行代码的 AOT 路径。
 
 ### 桌面会话与人工验收
