@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$RepositoryRoot,
     [Parameter(Mandatory = $true)][string]$GameRoot,
-    [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug'
+    [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
+    [string]$ClientDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -200,7 +201,12 @@ foreach ($assembly in @(($game.name + '.Application'), ($game.name + '.Domain'),
 }
 
 $clientName = if ($game.engine -eq 'unity') { 'Unity' } else { 'Godot' }
-$client = Get-FullChildPath $GameRoot ('client/' + $clientName)
+if ([string]::IsNullOrWhiteSpace($ClientDirectory)) { $clientDirectoryPath = $clientName }
+else {
+    if ($ClientDirectory -notmatch '^[A-Za-z][A-Za-z0-9_-]*$') { throw "Invalid client directory name: $ClientDirectory" }
+    $clientDirectoryPath = $ClientDirectory
+}
+$client = Get-FullChildPath $GameRoot ('client/' + $clientDirectoryPath)
 Assert-NoLinks $client
 if ($game.engine -eq 'unity') {
     foreach ($entry in @('Assets', 'ProjectSettings/ProjectVersion.txt', 'Packages/manifest.json')) {

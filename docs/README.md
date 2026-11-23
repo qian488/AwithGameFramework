@@ -14,6 +14,7 @@
 | 构建、分发并加载资源包 | [内容流水线](guides/content-pipeline.md) |
 | 使用配置或协议生成器 | [ConfigGen](../tools/ConfigGen/README.md)、[Protocol](../samples/Protocol/README.md) |
 | 为人类与 AI 准备任务和上下文 | [AgentKit](../agent/README.md) |
+| 进行 AI 协作、诊断和代码评审 | [AI 协作与代码评审](guides/ai-collaboration.md) |
 | 编写和维护文档 | [写作约定](guides/documentation.md) |
 | 从旧版升级 | [迁移指南](migrations/README.md) |
 | 执行检查，确认检查范围 | [验证参考](reference/verification.md) |

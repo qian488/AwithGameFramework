@@ -32,7 +32,8 @@ For a new editor command, describe its input and result in terms of the engine A
 
 1. Start from a concrete maintenance problem. Trace two callers or two changes through their modules and identify the dependency, duplicated decision or lifetime that forces them to change together.
 2. Write down the current invariant and check it through the closest public entry point. Describe an alternative that reduces the changed surfaces. Confirm dependency direction in the module manifests and locate engine-owned effects at the adapter boundary.
-3. Make the smallest proposed change as a ticket, then rerun the behavior and dependency checks. Compare changed modules and results in the handoff. Record a durable change of ownership or contract in the architecture decisions and let the project reviewer decide adoption.
+3. Decide whether the problem compounds future work. Consider current callers, likely follow-up changes, repeated diagnostic or validation cost, and the scope of an immediate fix. Fix a recurring problem in the current slice. Record a one-off or wide-scope problem with a concrete trigger before deferring it.
+4. Make the smallest proposed change as a ticket, then rerun the behavior and dependency checks. Compare changed modules and results in the handoff. Record a durable change of ownership or contract in the architecture decisions and let the project reviewer decide adoption.
 
 ## Diagnose a Failure
 
@@ -43,4 +44,5 @@ For a new editor command, describe its input and result in terms of the engine A
 ## Deliver and Review a Slice
 
 1. Describe the shortest user-visible path through the affected boundaries. Build and validate one path at a time. For a reusable editor command, exercise its public entry point in an independent engine project. For a gameplay task, exercise the rule, the game asset that uses it, and the observable behavior in the selected game.
-2. Review the diff against the agreed behavior, then review ownership, compatibility and failure paths against repository conventions. Link the evidence to each outcome and use the [review checklist](../../../../agent/templates/review.md) when recording a review. Carry gaps into the [handoff](../../../../agent/templates/handoff.md) where applicable.
+2. Review the diff against the agreed behavior, then review ownership, compatibility, failure paths and code understandability against repository conventions. Confirm that each new abstraction has a real caller, that abnormal exits have diagnostic context, and that deferred debt has a concrete trigger.
+3. Link the evidence to each outcome and use the [review checklist](../../../../agent/templates/review.md) when recording a review. Carry gaps into the [handoff](../../../../agent/templates/handoff.md) where applicable.

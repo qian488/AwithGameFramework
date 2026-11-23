@@ -1,0 +1,37 @@
+{
+  "namespace": "Test.Application.Configuration",
+  "tables": [
+    {
+      "name": "BossStrike",
+      "fields": [
+        { "name": "Id", "type": "int" },
+        { "name": "Windup", "type": "int" },
+        { "name": "Active", "type": "int" },
+        { "name": "Recovery", "type": "int" },
+        { "name": "Damage", "type": "int" },
+        { "name": "Pressure", "type": "int" },
+        { "name": "Reach", "type": "float" },
+        { "name": "Arc", "type": "float" }
+      ]
+    },
+    {
+      "name": "BossChallenge",
+      "fields": [
+        { "name": "Id", "type": "int" },
+        { "name": "Map", "type": "string" },
+        { "name": "Name", "type": "string" },
+        { "name": "Advice", "type": "string" },
+        { "name": "Weapon", "type": "string" },
+        { "name": "Health", "type": "int" },
+        { "name": "Posture", "type": "int" },
+        { "name": "Cooldown", "type": "int" },
+        { "name": "Speed", "type": "float" },
+        { "name": "Lunge", "type": "float" },
+        { "name": "Guards", "type": "bool" },
+        { "name": "Opening", "type": "int[]", "references": "BossStrike" },
+        { "name": "FollowUp", "type": "int[]", "references": "BossStrike" },
+        { "name": "Desperation", "type": "int[]", "references": "BossStrike" }
+      ]
+    }
+  ]
+}

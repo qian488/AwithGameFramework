@@ -1,0 +1,18 @@
+[
+  {
+    "Id": 101,
+    "Map": "CedarGrove",
+    "Name": "Cedar Sentinel",
+    "Advice": "Watch for the delayed third cut at half health.",
+    "Weapon": "TwinBlades",
+    "Health": 128,
+    "Posture": 104,
+    "Cooldown": 59,
+    "Speed": 2.8,
+    "Lunge": 0.46,
+    "Guards": false,
+    "Opening": [101, 102],
+    "FollowUp": [103],
+    "Desperation": [101, 104, 103]
+  }
+]

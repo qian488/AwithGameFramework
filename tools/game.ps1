@@ -1,14 +1,15 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('new', 'paths', 'new-module', 'build', 'sync', 'run-server')]
+    [ValidateSet('new', 'paths', 'new-module', 'config', 'build', 'sync', 'run-server')]
     [string]$Command,
     [Parameter(Mandatory = $true)][string]$Name,
     [ValidateSet('unity', 'godot')][string]$Engine,
     [string]$Module,
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
     [ValidateRange(0, 86400)][double]$RunForSeconds = 0,
-    [string]$ServerConfig
+    [string]$ServerConfig,
+    [switch]$Check
 )
 
 $ErrorActionPreference = 'Stop'
@@ -79,6 +80,31 @@ function Read-Game {
     return $game
 }
 
+function Invoke-GameConfiguration($Game, [bool]$Verify) {
+    $source = Join-Path $gameRoot 'configuration'
+    $schema = Join-Path $source 'schema.json'
+    $data = Join-Path $source 'Data'
+    $application = Split-Path -Parent (Join-Path $gameRoot $Game.applicationProject)
+    $output = Join-Path $application 'Runtime/Generated/Configuration'
+    foreach ($path in @($schema, $data, $output)) { Assert-NoReparsePoint $path }
+    if (-not (Test-Path -LiteralPath $schema -PathType Leaf) -or -not (Test-Path -LiteralPath $data -PathType Container)) {
+        throw "Game configuration needs configuration/schema.json and configuration/Data: $gameRoot"
+    }
+    foreach ($directory in @($data, $output)) {
+        if (-not (Test-Path -LiteralPath $directory -PathType Container)) { continue }
+        foreach ($item in Get-ChildItem -LiteralPath $directory -Force) {
+            if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw "Game configuration directories must contain only regular files: $($item.FullName)"
+            }
+        }
+    }
+    $arguments = @('run', '--project', (Join-Path $PSScriptRoot 'ConfigGen/AwithGameFrame.ConfigGen.csproj'),
+        '--configuration', 'Release', '--', $schema, $data, $output)
+    if ($Verify) { $arguments += '--check' }
+    try { Invoke-DotNet $arguments }
+    catch { throw "Configuration for $Name failed. After updating source data, run game.ps1 config -Name $Name. $($_.Exception.Message)" }
+}
+
 # This is a dependency check, not an OS sandbox. Native MSBuild still executes with the caller's permissions.
 function Assert-PortableProjects([string]$Project) {
     $pending = New-Object 'System.Collections.Generic.Stack[string]'
@@ -139,6 +165,7 @@ function Assert-PortableProjects([string]$Project) {
 }
 
 Assert-Identifier $Name
+if ($Check -and $Command -ne 'config') { throw '-Check applies to the config command.' }
 $gameRoot = Join-Path $repositoryRoot "games/$Name"
 Assert-NoReparsePoint $gameRoot
 
@@ -171,9 +198,8 @@ switch ($Command) {
                 readme = "games/$Name/README.md"; dependencies = @('core','data','gameplay','networking')
                 verificationTools = @('game-build') }
             Write-Utf8 (Join-Path $stage 'module.json') (($moduleDescriptor | ConvertTo-Json -Depth 6) + "`n")
-            foreach ($area in @('configuration', 'protocol')) {
-                Write-Utf8 (Join-Path $stage "$area/README.md") "# $Name $area`n`nKeep editable $area sources here, outside the engine project. Configure explicit inputs and outputs before using ConfigGen; the existing sample commands only process samples.`n"
-            }
+            Write-Utf8 (Join-Path $stage 'configuration/README.md') "# $Name configuration`n`nAdd schema.json and a flat Data directory here. Run game.ps1 config -Name $Name to generate and -Check to verify the outputs.`n"
+            Write-Utf8 (Join-Path $stage 'protocol/README.md') "# $Name protocol`n`nKeep editable protocol sources and compatibility baselines here. Use explicit inputs and outputs with ConfigGen.`n"
             [IO.Directory]::CreateDirectory((Join-Path $repositoryRoot 'games')) | Out-Null
             [IO.Directory]::Move($stage, $gameRoot)
             Write-Host "Created external C# workspace: $gameRoot"
@@ -224,8 +250,12 @@ switch ($Command) {
         $applicationXml.Save($applicationPath)
         Write-Host "Created $moduleName and referenced it from $Name.Application."
     }
+    'config' { Invoke-GameConfiguration (Read-Game) ([bool]$Check) }
     'build' {
         $game = Read-Game
+        if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
+            Invoke-GameConfiguration $game $true
+        }
         $applicationPath = Join-Path $gameRoot $game.applicationProject
         Assert-PortableProjects $applicationPath
         $outputRoot = Join-Path $repositoryRoot "artifacts/games/$Name/$Configuration"
@@ -279,10 +309,16 @@ switch ($Command) {
     }
     'sync' {
         $game = Read-Game
+        Write-Host "Building $Name before client sync so Unity receives current external assemblies."
+        & $PSCommandPath build -Name $Name -Configuration $Configuration
+        if ($LASTEXITCODE -ne 0) { throw "Game build failed before sync: $Name" }
         & (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repositoryRoot -GameRoot $gameRoot -Configuration $Configuration
     }
     'run-server' {
         $game = Read-Game
+        if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
+            Invoke-GameConfiguration $game $true
+        }
         Assert-PortableProjects (Join-Path $gameRoot $game.applicationProject)
         Assert-NoReparsePoint (Join-Path $gameRoot $game.serverProject)
         $arguments = @('run', '--project', (Join-Path $gameRoot $game.serverProject), '--configuration', $Configuration, '--')

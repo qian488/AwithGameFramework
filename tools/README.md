@@ -9,13 +9,13 @@
 | 验证 Unity 编辑器自动化 | [verify-unity-editor-automation.ps1](verify-unity-editor-automation.ps1) | 默认批处理。实时编辑器检查使用 `-RunLiveEditor` |
 | 检查依赖、元数据、生成结果，构建、测试并运行 Headless | [verify.ps1](verify.ps1) | 标准交付检查 |
 | 检查维护中文档的本地链接 | [verify-docs.ps1](verify-docs.ps1) | 由标准验证调用；检查 Markdown/MDC 行内链接和引用定义的本地目标及仓库范围，跳过代码块；不联网，不检查锚点或 HTML |
-| 生成配置 DTO 与数据 | [generate-config.ps1](generate-config.ps1)、[ConfigGen](ConfigGen/README.md) | 源在 `samples/Shared/Configuration`；`-Check` 检查产物 |
+| 生成配置 DTO 与数据 | [game.ps1](game.ps1) `config -Name <Game>`、[generate-config.ps1](generate-config.ps1)、[ConfigGen](ConfigGen/README.md) | 分别处理具体游戏与共享样例，`-Check` 只读检查产物 |
 | 生成协议并检查兼容性 | [generate-protocol.ps1](generate-protocol.ps1) | 源和基线在 [Protocol](../samples/Protocol/README.md) |
 | 构建原生资源包 | [build-unity-content.ps1](build-unity-content.ps1)、[build-godot-content.ps1](build-godot-content.ps1) | 需要真实引擎；生成 AssetBundle/PCK 与地址目录 |
 | 发布文件与大小/hash 清单 | [publish-content.ps1](publish-content.ps1) | 写入独立发布目录 |
 | 经真实 HTTP 下载并验证内容安装 | [verify-content.ps1](verify-content.ps1) | 校验清单和下载文件；不替代原生资源加载 |
 | 验证完整 Unity 示例 | [verify-unity.ps1](verify-unity.ps1) | 后台导入、PlayMode 和构建。追加 `-RunPlayerSmoke` 可后台运行 Windows Player |
-| 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 在隔离工作区后台导入并检查场景和 Prefab，可运行 Unity 测试、构建单场景 Windows Player 并报告各步结果 |
+| 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 在命名的临时隔离工作区后台导入并检查场景和 Prefab，可运行 Unity 测试、构建单场景 Windows Player；默认结束后清理副本，追加 `-KeepProject` 保留副本 |
 | 自动检查 Unity 画面 | [verify-game-unity.ps1](verify-game-unity.ps1) `-VisualSpec` | [画面自动验收](../docs/reference/unity-visual-verification.md)包含离屏截图、控件布局断言和基准图对比 |
 | 验证无旧插件的 Unity 接入 | [verify-unity-minimal.ps1](verify-unity-minimal.ps1) | 独立工程，仅安装现代包 |
 | 验证 Godot .NET 接入 | [verify-godot.ps1](verify-godot.ps1) | 原生运行与可选 Windows 导出 |

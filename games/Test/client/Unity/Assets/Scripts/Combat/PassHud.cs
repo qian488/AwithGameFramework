@@ -113,7 +113,7 @@ namespace Test.Client.Combat
         }
 
         public void DrawTrialSelection(CombatShowcase showcase, IReadOnlyList<TrialOpponent> opponents, TrialSession trials,
-            string configurationError, ref Vector2 scroll)
+            IReadOnlyList<MapBossOption> bosses, string configurationError, string bossError, ref Vector2 scroll)
         {
             PrepareStyles();
             var matrix = BeginTrialOverlay(out float width, out float height);
@@ -131,34 +131,50 @@ namespace Test.Client.Combat
                 var map = CombatMap.Routes[index];
                 if (GUI.Button(new Rect(left + 24 + index * 194, top + 72, 184, 41), map.Name)) route = map.Id;
             }
+            const float rowHeight = 86;
+            const float rowWidth = 552;
+            const float headingHeight = 28;
+            int bossCount = bosses?.Count ?? 0;
+            float trialTop = headingHeight + rowHeight * bossCount;
+            var viewport = new Rect(left + 24, top + 122, panelWidth - 48, panelHeight - 146);
+            scroll = GUI.BeginScrollView(viewport, scroll,
+                new Rect(0, 0, rowWidth, trialTop + headingHeight + rowHeight * (opponents?.Count ?? 0)));
+            Label(new Rect(0, 0, rowWidth, headingHeight), bossError ?? "Route boss challenges", small, bossError == null ? Slate : Red);
+            int? bossId = null;
+            for (int index = 0; index < bossCount; index++)
+            {
+                var option = bosses[index];
+                var map = option.Route;
+                float rowTop = headingHeight + index * rowHeight;
+                Fill(new Rect(0, rowTop, rowWidth, rowHeight - 8), new Color(.065f, .10f, .13f));
+                Label(new Rect(12, rowTop + 7, 395, 25), map.Boss.Name, middle, Ivory);
+                Label(new Rect(432, rowTop + 7, 106, 25), map.Name, small, Amber);
+                GUI.Label(new Rect(12, rowTop + 34, 410, 39), map.BossAdvice, wrappedSmall);
+                if (GUI.Button(new Rect(432, rowTop + 37, 106, 30), "Enter route")) bossId = option.Id;
+            }
             string prompt = configurationError ?? (opponents == null ? "Loading opponents and records..."
-                : trials.RecordsUnavailable ? "Records unavailable. Check the log for details."
-                : "Duel trials   /   Personal bests");
-            Label(new Rect(left + 25, top + 124, 570, 24), prompt, small, configurationError == null ? Slate : Red);
-
+                : trials.RecordsUnavailable ? "Duel trials   /   Records unavailable" : "Duel trials   /   Personal bests");
+            Label(new Rect(0, trialTop, rowWidth, headingHeight), prompt, small, configurationError == null ? Slate : Red);
             int? selected = null;
             if (opponents != null)
             {
-                const float rowHeight = 92;
-                const float rowWidth = 552;
-                var viewport = new Rect(left + 24, top + 154, panelWidth - 48, panelHeight - 178);
-                scroll = GUI.BeginScrollView(viewport, scroll, new Rect(0, 0, rowWidth, opponents.Count * rowHeight));
                 for (int index = 0; index < opponents.Count; index++)
                 {
                     var opponent = opponents[index];
-                    float rowTop = index * rowHeight;
+                    float rowTop = trialTop + headingHeight + index * rowHeight;
                     Fill(new Rect(0, rowTop, rowWidth, rowHeight - 8), new Color(.065f, .10f, .13f));
                     Label(new Rect(12, rowTop + 7, 325, 25), opponent.Name, middle, Ivory);
                     Label(new Rect(354, rowTop + 7, 184, 25), $"Best   {FormatTime(trials.BestTicks(opponent.Id))}", small, Amber);
-                    GUI.Label(new Rect(12, rowTop + 34, 410, 43), opponent.Description, new GUIStyle(small) { wordWrap = true });
-                    if (GUI.Button(new Rect(432, rowTop + 36, 106, 33), "Challenge")) selected = opponent.Id;
+                    GUI.Label(new Rect(12, rowTop + 34, 410, 39), opponent.Description, wrappedSmall);
+                    if (GUI.Button(new Rect(432, rowTop + 37, 106, 30), "Challenge")) selected = opponent.Id;
                 }
-                GUI.EndScrollView();
             }
+            GUI.EndScrollView();
             GUI.matrix = matrix;
             if (selected.HasValue) showcase.StartTrial(selected.Value);
             if (expedition) showcase.RestartRun();
             if (route.HasValue) showcase.StartMap(route.Value);
+            if (bossId.HasValue) showcase.StartMapBoss(bossId.Value);
         }
 
         public void DrawTrialResult(CombatShowcase showcase, TrialSession trials)

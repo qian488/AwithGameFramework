@@ -65,6 +65,9 @@ namespace Test.Application.Combat
         public MapEnemy Patrol { get; }
         public MapEnemy Boss { get; }
 
+        internal CombatMap WithBoss(MapEnemy boss, string advice) =>
+            new CombatMap(Id, Name, Advice, advice, GateDepth, Guards, Patrol, boss);
+
         public static IReadOnlyList<CombatMap> Routes { get; } = Array.AsReadOnly(new[]
         {
             new CombatMap(CombatMapId.CedarGrove, "Cedar Grove", "Deflect the quick cuts.", "Watch for a third cut at low health.", 16, 3,

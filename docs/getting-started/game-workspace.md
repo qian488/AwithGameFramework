@@ -52,6 +52,15 @@ powershell -File tools/game.ps1 new-module -Name MyGame -Module MyFeature
 
 ## 构建外部代码
 
+需要生成配置时，在游戏的 `configuration` 目录添加 `schema.json` 和平铺的 `Data`。表源支持 JSON 与 UTF-8 CSV，字段定义和引用规则见 [ConfigGen](../../tools/ConfigGen/README.md)。
+
+```powershell
+powershell -File tools/game.ps1 config -Name MyGame
+powershell -File tools/game.ps1 config -Name MyGame -Check
+```
+
+生成的 C# DTO 与 JSON 位于 Application 的 `Runtime/Generated/Configuration`，随游戏源码提交并由生成命令维护。存在 `configuration/schema.json` 时，`build`、`run-server` 和仓库标准验证会只读检查产物。项目按需将 JSON 声明为程序集资源，再用生成 DTO 的 `SchemaHash` 加载。完整接线见 [Test 的 Boss 配置](../../games/Test/configuration/README.md)。协议继续使用显式输入和输出。
+
 ```powershell
 powershell -File tools/game.ps1 build -Name MyGame -Configuration Debug
 ```
@@ -69,6 +78,8 @@ powershell -File tools/game.ps1 build -Name MyGame -Configuration Debug
 ```powershell
 powershell -File tools/game.ps1 sync -Name MyGame -Configuration Debug
 ```
+
+`sync` 会先执行同一配置的 `build`，再更新 Unity 的工作区包。这样源码变化不会被旧 DLL 遮蔽。单独使用 `workspace-client.ps1` 属于工具内部入口，项目开发应使用 `game.ps1 sync`。
 
 工具要求目标位置已有完整 Unity 工程，然后写入嵌入式 UPM 包 `Packages/com.awithgameframe.workspace`。其中包括游戏与框架 DLL/PDB、现代 Unity 适配源码及其元数据。Unity 原生适配仍由编辑器编译；生成的 asmdef 使用 DLL 引用，不再引用同名便携源码程序集。
 

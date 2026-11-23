@@ -5,7 +5,8 @@ param(
     [string]$BuildScene,
     [switch]$RunTests,
     [ValidateRange(60, 3600)][int]$TimeoutSeconds = 600,
-    [string]$VisualSpec
+    [string]$VisualSpec,
+    [switch]$KeepProject
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,7 +39,8 @@ if ($BuildScene -and ($BuildScene -notmatch '^Assets/[A-Za-z0-9 /_.-]+\.unity$' 
 $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $evidence = Join-Path $repository "artifacts/game-unity/$Name/$runId"
 $isolatedGame = $evidence
-$isolated = Join-Path $isolatedGame 'client/Unity'
+$isolatedClientDirectory = "$Name-Unity-Verification"
+$isolated = Join-Path $isolatedGame ('client/' + $isolatedClientDirectory)
 [IO.Directory]::CreateDirectory($isolated) | Out-Null
 Write-Host "Unity verification evidence: $evidence"
 Copy-Item -LiteralPath $gameFile -Destination $isolatedGame
@@ -52,6 +54,12 @@ foreach ($entry in @('Assets', 'Packages', 'ProjectSettings')) {
         Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $isolated $entry) -Recurse
     }
 }
+$settingsPath = Join-Path $isolated 'ProjectSettings/ProjectSettings.asset'
+if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+    $settings = [IO.File]::ReadAllText($settingsPath)
+    $settings = [Text.RegularExpressions.Regex]::Replace($settings, '(?m)^(\s*productName:\s*).*$', ('$1' + $Name + ' - Verification'))
+    [IO.File]::WriteAllText($settingsPath, $settings)
+}
 $manifest = Join-Path $isolated 'Packages/manifest.json'
 $packages = [IO.File]::ReadAllText($manifest) | ConvertFrom-Json
 foreach ($dependency in $packages.dependencies.PSObject.Properties) {
@@ -64,9 +72,24 @@ foreach ($dependency in $packages.dependencies.PSObject.Properties) {
 }
 [IO.File]::WriteAllText($manifest, ($packages | ConvertTo-Json -Depth 20))
 
+$identityPath = Join-Path $evidence 'verification.json'
+$identity = [ordered]@{
+    schemaVersion = 1
+    kind = 'unity-verification'
+    game = $Name
+    runId = $runId
+    sourceProject = $project
+    verificationProject = $isolated
+    clientDirectory = $isolatedClientDirectory
+    displayName = "$Name - Verification"
+    retained = [bool]$KeepProject
+    cacheRemnant = $false
+}
+$identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identityPath -Encoding UTF8
+
 & (Join-Path $PSScriptRoot 'game.ps1') build -Name $Name
 if ($LASTEXITCODE -ne 0) { throw "Game build failed: $Name" }
-& (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $isolatedGame
+& (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory
 
 $probe = Join-Path $isolated 'Assets/AwithGameWorkspaceProbe/Editor'
 [IO.Directory]::CreateDirectory($probe) | Out-Null
@@ -157,41 +180,71 @@ function Invoke-Unity {
     }
 }
 
-$marker = Join-Path $evidence 'import.ok'
-Invoke-Unity 'import' @('-quit', '-executeMethod', 'AwithGameWorkspaceProbe.Verify', '-awith-game-import-marker', $marker)
-if (-not (Test-Path -LiteralPath $marker)) { throw "Unity did not complete its import checks. Inspect $evidence/import.log" }
-$actualVersion = [IO.File]::ReadAllText($marker)
-if ($actualVersion -ne $expectedVersion) { Write-Warning "Workspace records $expectedVersion and used $actualVersion." }
-$testReports = [ordered]@{}
-if ($RunTests) {
-    foreach ($mode in @('EditMode', 'PlayMode')) {
-        $results = Join-Path $evidence ($mode + '.xml')
-        Invoke-Unity $mode @('-runTests', '-testPlatform', $mode, '-testResults', $results)
-        if (-not (Test-Path -LiteralPath $results)) { throw "Unity did not produce $results" }
-        $testRun = ([xml][IO.File]::ReadAllText($results)).'test-run'
-        if ([int]$testRun.total -eq 0 -or $testRun.result -ne 'Passed') { throw "$mode tests did not pass: $results" }
-        $testReports[$mode] = @{ passed = [int]$testRun.passed; total = [int]$testRun.total; results = $results }
+function Remove-DisposableProject([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $true }
+    $fullPath = [IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
+    $evidencePath = [IO.Path]::GetFullPath($evidence).TrimEnd([char[]]@('\', '/'))
+    if (-not $fullPath.StartsWith($evidencePath + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove a path outside the verification evidence directory: $Path"
     }
+    for ($attempt = 1; $attempt -le 4; $attempt++) {
+        try {
+            [IO.Directory]::Delete($fullPath, $true)
+            return $true
+        }
+        catch {
+            if ($attempt -eq 4) {
+                $projectMarker = Join-Path $Path 'ProjectSettings/ProjectVersion.txt'
+                if (-not (Test-Path -LiteralPath $projectMarker -PathType Leaf)) {
+                    Write-Warning "Unity cache remnants remain after cleanup, but the verification project marker was removed: $Path"
+                    return $true
+                }
+                Write-Warning "Could not remove disposable Unity verification project after $attempt attempts: $Path. The project was retained for diagnosis."
+                return $false
+            }
+            Start-Sleep -Milliseconds (250 * $attempt)
+        }
+    }
+    return $false
 }
-$player = $null
-$buildLog = $null
-if ($BuildScene) {
-    $player = Join-Path $evidence "Player/$Name.exe"
-    $buildLog = Join-Path $evidence 'Player-build.log'
-    Invoke-Unity 'Player-build' @('-quit', '-buildTarget', 'Win64', '-executeMethod', 'AwithGameWorkspaceProbe.Build',
-        '-awith-game-scene', $BuildScene, '-awith-game-player', $player)
-    if (-not (Test-Path -LiteralPath $player -PathType Leaf)) { throw "Unity did not produce the Player. Inspect $buildLog" }
-    Write-Host "Windows Player built: $player"
-}
-$summary = [ordered]@{
-    game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
-    mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log')
-    testsRun = [bool]$RunTests; tests = $testReports
-    buildScene = $BuildScene; buildVerified = [bool]$BuildScene; buildLog = $buildLog; player = $player
-    runtimeVerified = $false; manualReview = 'not-run'
-    visual = @{ status = 'not-run' }
-}
+
+$summary = $null
 try {
+    $marker = Join-Path $evidence 'import.ok'
+    Invoke-Unity 'import' @('-quit', '-executeMethod', 'AwithGameWorkspaceProbe.Verify', '-awith-game-import-marker', $marker)
+    if (-not (Test-Path -LiteralPath $marker)) { throw "Unity did not complete its import checks. Inspect $evidence/import.log" }
+    $actualVersion = [IO.File]::ReadAllText($marker)
+    if ($actualVersion -ne $expectedVersion) { Write-Warning "Workspace records $expectedVersion and used $actualVersion." }
+    $testReports = [ordered]@{}
+    if ($RunTests) {
+        foreach ($mode in @('EditMode', 'PlayMode')) {
+            $results = Join-Path $evidence ($mode + '.xml')
+            Invoke-Unity $mode @('-runTests', '-testPlatform', $mode, '-testResults', $results)
+            if (-not (Test-Path -LiteralPath $results)) { throw "Unity did not produce $results" }
+            $testRun = ([xml][IO.File]::ReadAllText($results)).'test-run'
+            if ([int]$testRun.total -eq 0 -or $testRun.result -ne 'Passed') { throw "$mode tests did not pass: $results" }
+            $testReports[$mode] = @{ passed = [int]$testRun.passed; total = [int]$testRun.total; results = $results }
+        }
+    }
+    $player = $null
+    $buildLog = $null
+    if ($BuildScene) {
+        $player = Join-Path $evidence "Player/$Name.exe"
+        $buildLog = Join-Path $evidence 'Player-build.log'
+        Invoke-Unity 'Player-build' @('-quit', '-buildTarget', 'Win64', '-executeMethod', 'AwithGameWorkspaceProbe.Build',
+            '-awith-game-scene', $BuildScene, '-awith-game-player', $player)
+        if (-not (Test-Path -LiteralPath $player -PathType Leaf)) { throw "Unity did not produce the Player. Inspect $buildLog" }
+        Write-Host "Windows Player built: $player"
+    }
+    $summary = [ordered]@{
+        game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
+        mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log')
+        testsRun = [bool]$RunTests; tests = $testReports
+        buildScene = $BuildScene; buildVerified = [bool]$BuildScene; buildLog = $buildLog; player = $player
+        verificationProject = $isolated; verificationProjectRetained = [bool]$KeepProject; verificationIdentity = $identityPath
+        runtimeVerified = $false; manualReview = 'not-run'
+        visual = @{ status = 'not-run' }
+    }
     if ($VisualSpec) {
         $visualOutput = Join-Path $evidence 'Visual'
         $visualReport = Join-Path $visualOutput 'visual-report.json'
@@ -208,5 +261,16 @@ try {
     }
 }
 finally {
-    $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding UTF8
+    $projectRemoved = $true
+    if (-not $KeepProject) { $projectRemoved = Remove-DisposableProject $isolated }
+    $identity.retained = [bool]$KeepProject -or -not $projectRemoved
+    $identity.cacheRemnant = Test-Path -LiteralPath $isolated
+    $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identityPath -Encoding UTF8
+    if ($summary -ne $null) {
+        $summary.verificationProjectRetained = $identity.retained
+        $summary.verificationCacheRemnant = $identity.cacheRemnant
+        $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding UTF8
+    }
+    if ($KeepProject) { Write-Host "Retained Unity verification project: $isolated" }
+    elseif ($projectRemoved) { Write-Host "Removed disposable Unity verification project. Use -KeepProject to retain it." }
 }

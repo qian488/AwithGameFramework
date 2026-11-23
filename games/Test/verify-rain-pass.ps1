@@ -32,7 +32,9 @@ try {
     if ($report.passed -ne $true -or $report.result -ne 'Victory' -or $report.graphicsEvidence -ne $false -or $report.bowVerified -ne $true) {
         throw "Rain Pass headless assertions did not pass. See $reportPath"
     }
-    if (@($report.routes).Count -ne 3 -or @($report.routes | Where-Object { $_.result -ne 'Victory' }).Count -gt 0) {
+    if (@($report.routes | Where-Object { $_.bossChallengeId -eq 0 }).Count -ne 3 -or
+        @($report.routes | Where-Object { $_.bossChallengeId -eq 101 }).Count -ne 1 -or
+        @($report.routes | Where-Object { $_.result -ne 'Victory' }).Count -gt 0) {
         throw "Rain Pass route assertions did not pass. See $reportPath"
     }
     Write-Host "Rain Pass headless Player passed. Report: $reportPath"

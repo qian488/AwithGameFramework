@@ -4,6 +4,8 @@
 
 AgentKit 把一次人类与 AI 协作开发任务保存为可检查的任务清单、有限上下文、工具执行证据和人工评审记录。工具位于 `tools/AgentKit`，使用 .NET 8，不进入 `src`、UPM 或游戏运行时；无需模型账号或 API 凭据。代码修改仍由开发者及其现有 agent 完成，AgentKit 不自动调用模型、修改源码或提交 Git。
 
+AI 协作的诊断、复利债务判断和代码可理解性要求见 [AI 协作与代码评审](../docs/guides/ai-collaboration.md)。任务说明提供范围和验收，评审者还需确认实现可以从入口追踪、抽象对应真实调用者、异常路径具有诊断上下文，暂缓项具有明确的后续触发条件。
+
 按已确认的[产品方向](../docs/product-direction.md)，开发者继续使用自己选择的 AI 编程工具，仓库提供上下文、规范、skill、模板和命令。当前优先完善框架基座与实际游戏接入，复杂 Agent 系统留在范围之外；现有 AgentKit 命令按需使用。尚待编写的 skill 和后续工具能力以[路线图](../docs/roadmap.md)为准。
 
 开发具体游戏先读[游戏工作区入门](../docs/getting-started/game-workspace.md)和本游戏 README/AGENTS。创建、外部构建、客户端同步和服务端启动使用 `tools/game.ps1`；它与这里用于保存协作任务的 `tools/agent.ps1` 分别承担工程操作和任务记录。实际游戏路径需按本次任务显式纳入读写范围。

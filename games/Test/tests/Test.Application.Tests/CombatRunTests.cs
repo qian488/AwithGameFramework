@@ -423,6 +423,26 @@ namespace Test.Application.Tests
             Assert.That(run.View(1).Guarding, Is.False);
         }
 
+        [Test]
+        public async Task GeneratedBossUsesTheExistingRouteAndItsOwnCombatStats()
+        {
+            var option = (await MapBossCatalog.LoadAsync()).Single(candidate => candidate.Id == 101);
+            var original = CombatMap.Routes.Single(map => map.Id == CombatMapId.CedarGrove);
+            Assert.That(option.Route.Boss.Name, Is.EqualTo("Cedar Sentinel"));
+            Assert.That(original.Boss.Name, Is.EqualTo("Twinblade Keeper"));
+            Assert.That(option.Route.Patrol, Is.SameAs(original.Patrol));
+            Assert.That(option.Route.GateDepth, Is.EqualTo(original.GateDepth));
+
+            var space = new Space { EnemiesCanHit = false };
+            var run = new CombatRun(space, option.Route);
+            ClearArea(run, space, option.Route.GateDepth + 1.5f);
+            Assert.That(run.Encounter, Is.EqualTo(Encounter.Gate));
+            Assert.That(run.View(1).HealthLimit, Is.EqualTo(128));
+            Assert.That(run.View(1).PostureLimit, Is.EqualTo(104));
+            run.Retry();
+            Assert.That(run.Map.Boss.Name, Is.EqualTo("Cedar Sentinel"));
+        }
+
         private static CombatRun CreateFinishOpportunity(out Space space)
         {
             space = new Space { EnemiesCanHit = false };

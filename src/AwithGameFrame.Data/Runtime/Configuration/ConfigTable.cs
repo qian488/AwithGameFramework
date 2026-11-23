@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using AwithGameFrame.Foundation.DataPersistence;
@@ -27,13 +28,15 @@ namespace AwithGameFrame.Data.Configuration
         private readonly Dictionary<int, T> byId;
         private readonly Func<T, int> getId;
         public string SchemaHash { get; }
+        public string ContentHash { get; }
         public IReadOnlyList<T> Rows { get; }
         public int Count => Rows.Count;
         public T this[int id] => byId[id];
 
-        private ConfigTable(string schemaHash, List<T> rows, Func<T, int> getId)
+        private ConfigTable(string schemaHash, string contentHash, List<T> rows, Func<T, int> getId)
         {
             SchemaHash = schemaHash;
+            ContentHash = contentHash;
             this.getId = getId;
             byId = new Dictionary<int, T>();
             var snapshot = new List<T>(rows);
@@ -64,7 +67,9 @@ namespace AwithGameFrame.Data.Configuration
             if (document == null || document.Rows == null) throw new ConfigurationValidationException("A configuration document must contain rows.");
             if (!string.Equals(document.SchemaHash, expectedSchemaHash, StringComparison.OrdinalIgnoreCase))
                 throw new ConfigurationValidationException($"Configuration schema mismatch: expected {expectedSchemaHash}, got {document.SchemaHash ?? "<missing>"}.");
-            return new ConfigTable<T>(document.SchemaHash, document.Rows, getId);
+            using var hash = SHA256.Create();
+            var contentHash = BitConverter.ToString(hash.ComputeHash(data)).Replace("-", string.Empty).ToLowerInvariant();
+            return new ConfigTable<T>(document.SchemaHash, contentHash, document.Rows, getId);
         }
 
         public bool ContainsId(int id) => byId.ContainsKey(id);

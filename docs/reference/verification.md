@@ -47,7 +47,7 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 
 编辑器自动化脚本在独立工程导入现代 UPM 包，生成验证 Prefab 和序列化组件。默认用批处理通过公共 CLI 验证查找与放置、字段读写与预览、白名单、原生粒子字段落盘，以及场景与 Prefab 的重启恢复。成功标记为 `UNITY_EDITOR_AUTOMATION_BATCH_PASSED`。
 
-指定游戏的脚本在隔离工作区后台导入、运行 EditMode 和 PlayMode 测试，并按参数构建单场景 Windows Player。`summary.json` 记录导入、测试与构建结果，附 XML、日志和 Player 路径。项目可提供自己的后台 Player 冒烟入口，例如 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)。
+指定游戏的脚本在名为 `<Game>-Unity-Verification` 的隔离工作区后台导入、运行 EditMode 和 PlayMode 测试，并按参数构建单场景 Windows Player。验证工程的 Unity 显示名带有 `- Verification` 后缀。默认结束后删除临时 Unity 工程，只保留 `summary.json`、`verification.json`、XML、日志和 Player 路径，避免验证副本进入 Unity Hub。Unity 正在释放缓存文件时可能暂时留下没有 `ProjectSettings` 的缓存目录，报告会记录 `verificationCacheRemnant`，它不是可被 Unity Hub 识别的工程。需要手动打开验证副本时追加 `-KeepProject`，路径和保留状态会写入报告。项目可提供自己的后台 Player 冒烟入口，例如 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)。
 
 追加 `-VisualSpec '<visual-cases.json>'` 可执行[画面自动验收](unity-visual-verification.md)。用例支持后台离屏截图和已有 PNG 检查，并保存实际画面、差异图与逐项报告。
 

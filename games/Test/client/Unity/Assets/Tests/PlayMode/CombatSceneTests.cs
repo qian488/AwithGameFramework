@@ -25,6 +25,8 @@ namespace Test.Client.Tests
             var layouts = new HashSet<string> { original };
             var originalMusic = showcase.GetComponentsInChildren<AudioSource>().Single(source => source.name == "Music theme");
             var themes = new HashSet<string> { originalMusic.clip.name };
+            int baselineObjects = showcase.GetComponentsInChildren<Transform>(true).Length;
+            int baselineAudioSources = showcase.GetComponentsInChildren<AudioSource>(true).Length;
             AssertAudible(originalMusic.clip);
 
             foreach (var map in CombatMap.Routes)
@@ -61,7 +63,17 @@ namespace Test.Client.Tests
                 Assert.That(mapRoot == null, Is.True, map.Name);
                 Assert.That(music == null, Is.True);
                 Assert.That(originalMusic.gameObject.activeInHierarchy, Is.True);
+                Assert.That(showcase.GetComponentsInChildren<Transform>(true).Length, Is.EqualTo(baselineObjects));
+                Assert.That(showcase.GetComponentsInChildren<AudioSource>(true).Length, Is.EqualTo(baselineAudioSources));
             }
+            Assert.That(showcase.StartMapBoss(101), Is.True);
+            Assert.That(showcase.ActiveMapId, Is.EqualTo(CombatMapId.CedarGrove));
+            Assert.That(showcase.CurrentArea, Is.EqualTo(nameof(Encounter.Courtyard)));
+            showcase.ShowTrialSelection();
+            yield return null;
+            Assert.That(showcase.LayoutDigest, Is.EqualTo(original));
+            Assert.That(showcase.GetComponentsInChildren<Transform>(true).Length, Is.EqualTo(baselineObjects));
+            Assert.That(showcase.GetComponentsInChildren<AudioSource>(true).Length, Is.EqualTo(baselineAudioSources));
             Assert.That(showcase.StartTrial(1), Is.True);
             yield return SceneManager.LoadSceneAsync("SampleScene");
         }

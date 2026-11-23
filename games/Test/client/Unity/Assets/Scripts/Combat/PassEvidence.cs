@@ -43,7 +43,7 @@ namespace Test.Client.Combat
             {
                 unity = UnityEngine.Application.unityVersion, platform = UnityEngine.Application.platform.ToString(),
                 gpu = SystemInfo.graphicsDeviceName, cpu = SystemInfo.processorType, digest = showcase.LayoutDigest,
-                graphicsEvidence = captureScreenshots
+                graphicsEvidence = captureScreenshots, configurationHash = showcase.BossConfigurationHash
             };
             QualitySettings.vSyncCount = 0;
             UnityEngine.Application.targetFrameRate = -1;
@@ -152,16 +152,23 @@ namespace Test.Client.Combat
 
         private IEnumerator VerifyRoutes(EvidenceReport report)
         {
+            const int pilotBossId = 101;
+            var selections = new List<(CombatMapId? Map, int BossId)>();
+            foreach (var map in CombatMap.Routes) selections.Add((map.Id, 0));
+            selections.Add((null, pilotBossId));
             var results = new List<RouteReport>();
-            foreach (var map in CombatMap.Routes)
+            foreach (var selection in selections)
             {
                 showcase.ShowTrialSelection();
-                if (!showcase.StartMap(map.Id))
+                bool started = selection.Map.HasValue
+                    ? showcase.StartMap(selection.Map.Value) : showcase.StartMapBoss(selection.BossId);
+                if (!started)
                 {
-                    failure = $"Could not start {map.Name}.";
+                    failure = $"Could not start route {selection.Map} or BossChallenge ID {selection.BossId}.";
                     break;
                 }
                 var run = showcase.Run;
+                var map = run.Map;
                 int initialFinishes = finishes;
                 int initialDeflects = deflects;
                 guarded = false;
@@ -188,7 +195,12 @@ namespace Test.Client.Combat
                 }
                 run.Cue -= Record;
                 int routeFinishes = finishes - initialFinishes;
-                results.Add(new RouteReport { name = map.Name, digest = showcase.LayoutDigest, result = run.Status.ToString(),
+                results.Add(new RouteReport { name = map.Name, boss = map.Boss.Name, bossChallengeId = selection.BossId,
+                    configurationHash = showcase.BossConfigurationHash,
+                    objectCount = showcase.GetComponentsInChildren<Transform>(true).Length,
+                    audioSourceCount = showcase.GetComponentsInChildren<AudioSource>(true).Length,
+                    architectureCount = showcase.ArchitectureCount,
+                    digest = showcase.LayoutDigest, result = run.Status.ToString(),
                     steps = steps, deflects = deflects - initialDeflects, finishes = routeFinishes });
                 if (failure == null && (run.Status != RunStatus.Victory || routeFinishes != map.Guards + 1 || bossEntries != 1))
                     failure = $"{map.Name} stopped at {run.Encounter}/{run.Status} after {steps} steps with {routeFinishes} finishes. " +
@@ -304,7 +316,7 @@ namespace Test.Client.Combat
         [Serializable]
         private sealed class EvidenceReport
         {
-            public string unity, platform, gpu, cpu, digest, result, error;
+            public string unity, platform, gpu, cpu, digest, result, error, configurationHash;
             public int width, height, deflects, finishes;
             public bool passed, defeatAndRetry, gcCounterAvailable, graphicsEvidence, bowVerified;
             public AreaReport[] areas;
@@ -314,8 +326,8 @@ namespace Test.Client.Combat
         [Serializable]
         private sealed class RouteReport
         {
-            public string name, digest, result;
-            public int steps, deflects, finishes;
+            public string name, boss, digest, result, configurationHash;
+            public int steps, deflects, finishes, bossChallengeId, objectCount, audioSourceCount, architectureCount;
         }
 
         [Serializable]

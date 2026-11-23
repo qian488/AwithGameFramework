@@ -23,6 +23,8 @@ namespace AwithGameFrame.Tests.Unit
             Assert.Multiple(() =>
             {
                 Assert.That(table.Count, Is.EqualTo(1));
+                Assert.That(table.ContentHash, Has.Length.EqualTo(64));
+                Assert.That(table.ContentHash, Is.EqualTo(table.ContentHash.ToLowerInvariant()));
                 Assert.That(table[7].Name, Is.EqualTo("sword"));
                 Assert.That(table.ContainsId(7), Is.True);
                 Assert.That(table.TryGet(99, out _), Is.False);

@@ -24,7 +24,7 @@ powershell -File tools/game.ps1 sync -Name Test
 powershell -File tools/game.ps1 run-server -Name Test
 ```
 
-修改外部代码后先 `build`，再 `sync`。生成的 `Packages/com.awithgameframe.workspace` 不提交，由这两个命令重建；手写脚本放在客户端 `Assets` 中。
+修改外部代码后执行 `sync` 即可。`sync` 会先构建当前外部代码，再更新 `Packages/com.awithgameframe.workspace`，避免 Unity 继续加载旧 DLL。生成目录不提交，手写脚本放在客户端 `Assets` 中。需要单独诊断编译时仍可先执行 `build`。
 
 ## 演示场景
 
@@ -53,6 +53,12 @@ powershell -File tools/game.ps1 run-server -Name Test
 | Ember Foundry（余烬铸造厂） | 2 名盾锤卫兵，正面举盾 | 炉心铁匠，使用慢起手重砸与两段重击 | 炉柱之间有开阔侧翼，绕盾或抓攻击后的空档 |
 
 `CombatMap.cs` 维护路线、巡逻队配置和招式参数。`CombatRun` 推进战斗与检查点，Unity 生成地形、掩体、角色、武器和灯光。新路线使用运行时生成。环境预览和烘焙入口适用于原版 Rain Pass。新路线的通关状态随本局保留，单场试炼记录最佳时间。
+
+### 配置 Boss 试点
+
+选关页的 `Route boss challenges` 提供 **Cedar Sentinel**。点 `Enter route` 从杉林入口开始，清掉斥候后在 Boss 区挑战新的双刃守卫。半血后会出现延迟第三击。直接选择 `Cedar Grove` 仍可挑战原守林人。
+
+用 [Boss 表配置](configuration/README.md) 新增选项或调整招式，再生成、构建和同步。新增选项自动出现在可滚动的选关列表。后台验证使用 Boss ID `101` 完成杉林变体、重试 Boss 检查点并通关。`result.json` 会记录配置 hash、地图布局 hash、场景对象数量、AudioSource 数量和程序化建筑数量，便于检查重复切图后的资源增长。人工验收可检查选项可读性、点击路径和半血后的战斗节奏。
 
 ### 原版 Rain Pass
 

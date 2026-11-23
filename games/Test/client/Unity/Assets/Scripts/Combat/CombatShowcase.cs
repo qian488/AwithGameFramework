@@ -38,6 +38,9 @@ namespace Test.Client.Combat
         private (PassWorld World, PassSpace Space, CombatRun Run, PassEffects Effects, PassAudio Audio) original;
         private PassHud hud;
         private IReadOnlyList<TrialOpponent> opponents;
+        private IReadOnlyList<MapBossOption> mapBossOptions;
+        private MapBossCatalogResult mapBossCatalog;
+        private string mapBossError;
         private TrialSession trials;
         private string trialCatalogError;
         private bool expedition;
@@ -93,6 +96,7 @@ namespace Test.Client.Combat
         public bool TrialsReady => opponents != null;
         public int? ActiveTrialId => run?.TrialOpponent?.Id;
         public CombatMapId? ActiveMapId => run?.Map?.Id;
+        public string BossConfigurationHash => mapBossCatalog?.ConfigurationHash;
 
         public void RestartRun()
         {
@@ -111,6 +115,7 @@ namespace Test.Client.Combat
         public void ShowTrialSelection()
         {
             if (run == null || trials?.IsSaving == true) return;
+            Debug.Log($"Rain Pass stage=return-selection map={run.Map?.Name ?? "Original"} objects={GetComponentsInChildren<Transform>(true).Length}.", this);
             expedition = false;
             if (original.World != null)
             {
@@ -130,26 +135,49 @@ namespace Test.Client.Combat
             if (!IsTrialSelection || trials?.IsSaving == true) return false;
             foreach (var map in CombatMap.Routes)
             {
-                if (map.Id != id) continue;
-                var nextWorld = BuildWorld(false, false, map);
+                if (map.Id == id) return StartRoute(map);
+            }
+            Debug.LogWarning($"Rain Pass could not open route '{id}'.", this);
+            return false;
+        }
+
+        public bool StartMapBoss(int id)
+        {
+            if (!IsTrialSelection || trials?.IsSaving == true || mapBossOptions == null) return false;
+            foreach (var option in mapBossOptions)
+                if (option.Id == id) return StartRoute(option.Route);
+            Debug.LogWarning($"Rain Pass could not open BossChallenge ID {id}.", this);
+            return false;
+        }
+
+        private bool StartRoute(CombatMap map)
+        {
+            Debug.Log($"Rain Pass stage=route-building map={map.Name} boss={map.Boss.Name} config={BossConfigurationHash}.", this);
+            var nextWorld = BuildWorld(false, false, map);
+            try
+            {
                 var nextSpace = new PassSpace(nextWorld, characterScale);
                 var nextRun = new CombatRun(nextSpace, map);
-                var nextEffects = new PassEffects(nextWorld, effectsShader, id == CombatMapId.CedarGrove ? rainDensity / 3 : 0);
+                var nextEffects = new PassEffects(nextWorld, effectsShader, map.Id == CombatMapId.CedarGrove ? rainDensity / 3 : 0);
                 var nextAudio = new PassAudio(nextWorld, soundVolume, musicVolume);
                 original = (world, space, run, effects, audio);
                 audio.Sleep();
                 world.Root.SetActive(false);
                 (world, space, run, effects, audio) = (nextWorld, nextSpace, nextRun, nextEffects, nextAudio);
-                Physics.SyncTransforms();
-                run.Cue += ReceiveCue;
-                run.Rebuilt += ResetPresentation;
-                expedition = true;
-                ApplyEnvironment(map);
-                ResetPresentation();
-                return true;
             }
-            Debug.LogWarning($"Rain Pass could not open route '{id}'.", this);
-            return false;
+            catch
+            {
+                nextWorld.Dispose();
+                throw;
+            }
+            Physics.SyncTransforms();
+            run.Cue += ReceiveCue;
+            run.Rebuilt += ResetPresentation;
+            expedition = true;
+            ApplyEnvironment(map);
+            ResetPresentation();
+            Debug.Log($"Rain Pass stage=route-ready map={map.Name} boss={map.Boss.Name} objects={GetComponentsInChildren<Transform>(true).Length}.", this);
+            return true;
         }
 
         public bool StartTrial(int opponentId)
@@ -212,6 +240,7 @@ namespace Test.Client.Combat
             RenderSettings.ambientEquatorColor = new Color(.31f, .36f, .42f);
             RenderSettings.ambientGroundColor = new Color(.18f, .20f, .23f);
             world = BuildWorld(false, false);
+            Debug.Log("Rain Pass stage=environment-built.", this);
             space = new PassSpace(world, characterScale);
             run = new CombatRun(space);
             var cameraNode = PassWorld.Group("Shoulder camera", transform);
@@ -229,6 +258,18 @@ namespace Test.Client.Combat
             run.Rebuilt += ResetPresentation;
             expedition = PassEvidence.Requested;
             ResetPresentation();
+            try
+            {
+                mapBossCatalog = await MapBossCatalog.LoadAsync();
+                mapBossOptions = mapBossCatalog;
+                Debug.Log($"Rain Pass stage=configuration-loaded hash={mapBossCatalog.ConfigurationHash} options={mapBossCatalog.Count}.", this);
+            }
+            catch (Exception error)
+            {
+                mapBossError = "Boss challenges could not be loaded. See the log.";
+                Debug.LogError($"Rain Pass BossChallenge or BossStrike configuration failed. {error}", this);
+            }
+            if (this == null) return;
             if (expedition)
             {
                 gameObject.AddComponent<PassEvidence>().Initialize(this);
@@ -472,7 +513,7 @@ namespace Test.Client.Combat
             if (hud == null || run == null) return;
             if (IsTrialSelection)
             {
-                hud.DrawTrialSelection(this, opponents, trials, trialCatalogError, ref opponentScroll);
+                hud.DrawTrialSelection(this, opponents, trials, mapBossOptions, trialCatalogError, mapBossError, ref opponentScroll);
                 return;
             }
             hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest, Time.unscaledTime < noticeUntil ? notice : "", noticeColor);
