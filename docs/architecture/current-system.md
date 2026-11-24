@@ -32,6 +32,7 @@ flowchart TB
         GameTools[tools/game.ps1\n构建、配置、同步、服务端]
         Generators[ConfigGen 和协议生成\n源码与配置产物]
         Verification[verify、Unity/Godot 验证、视觉检查]
+        DevPanel[tools/DevPanel\n本地 Web 构建、生成与测试]
         AgentKit[tools/AgentKit\n任务上下文、计划、证据]
     end
 
@@ -60,6 +61,9 @@ flowchart TB
     GameTools -.开发期构建.-> GameApp
     GameTools -.开发期同步.-> Client
     Generators -.开发期生成.-> GameApp
+    DevPanel --> GameTools
+    DevPanel --> Generators
+    DevPanel -- 标准与静态检查 --> Verification
     Verification -.验证.-> Unity
     Verification -.验证.-> Client
     AgentKit -.开发期.-> GameApp
@@ -230,17 +234,16 @@ Test WebGL 由 Unity 客户端读取工作区导出的 TextAsset，再把配置�
 
 ```mermaid
 flowchart TD
-    GameSource[games/Test/src 和 server] --> GameBuild[tools/game.ps1 build]
+    Sync[tools/game.ps1 sync] --> GameBuild[同配置的 game.ps1 build]
+    GameSource[游戏 src、server 与公共运行时] --> GameBuild
     GameBuild --> Portable[artifacts/games/Test/Debug/portable]
-    Portable --> Sync[tools/game.ps1 sync]
-    Sync --> Workspace[games/Test/client/Unity/Packages/com.awithgameframe.workspace]
-    FrameworkPackages[公共框架包和适配器] --> Workspace
-    Workspace --> UnityCompile[Unity 编译游戏 DLL、框架适配器和客户端脚本]
-    UnityCompile --> Scene[Unity 场景、Prefab、ScriptableObject、Shader]
-    UnityCompile --> Verification[Unity EditMode/PlayMode/Player 验证]
+    Portable --> Workspace[同步到 Unity 工作区包]
+    FrameworkPackages[Unity 适配源码和配置] --> Workspace
+    Workspace --> UnityImport[Unity 导入 DLL 和配置]
+    UnityImport --> UnityCompile[Unity 编译适配器和客户端脚本]
 ```
 
-`sync` 会先构建当前外部 C# 代码，再更新 Unity 工作区包，避免客户端继续加载旧 DLL。`Packages/com.awithgameframe.workspace` 是工具拥有的生成目录，不手工混入插件，也不同时接入同名源码程序集和 DLL。
+单独运行 `build` 时流程止于 `artifacts`。`sync` 将 DLL、适配源码与配置更新到 `Packages/com.awithgameframe.workspace`。Unity 导入后开始编译客户端。 [工作区接入](../getting-started/game-workspace.md#将产物接入-unity)
 
 客户端选装 Addressables 或 HybridCLR 后，`sync` 将对应适配源码加入生成包。Addressables 把 Catalog 对应的资源和场景接入 `ResourceStore` 与 `SceneService`。HybridCLR 在 Windows IL2CPP Player 启动阶段校验 Player 身份和文件哈希，加载 AOT 元数据和更新程序集。工作区验证工具可构建 WebGL、启动无界面浏览器，并可调用微信小游戏 SDK 导出。 [真实验证记录](../validation/latest.md)
 
@@ -278,7 +281,7 @@ flowchart TB
     TestServer --> Application
 ```
 
-Test.Server 的 `OnlineProbePort` 入口在独立 ASP.NET Core 进程中接收 WebSocket 命令和心跳，断线后可通过 HTTP 查询状态。公共 Networking 包负责会话规则，测试命令和查询状态由 Test.Server 定义。 [Test 服务端](../../games/Test/server/Test.Server/README.md)
+Test.Server 在自己的 .NET 进程内通过 `OnlineProbePort` 启动 ASP.NET Core 测试端点，接收 WebSocket 命令与心跳，并提供 HTTP 补查。公共 Networking 包负责会话规则，测试命令与查询状态归 Test.Server。 [Test 服务端](../../games/Test/server/Test.Server/README.md)
 
 ### Test 各区域职责
 
@@ -338,9 +341,11 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    BossSource[configuration\nBoss challenge/strike JSON] --> ConfigGen[ConfigGen]
+    BossSource[configuration/Data\nBossChallenge.json 与 BossStrike.csv] --> ConfigGen[ConfigGen]
     ConfigGen --> Generated[Application Generated\nBossChallenge、BossStrike DTO 和 JSON]
-    Generated --> BossTable[MapBossCatalog]
+    Generated --> Synced[同步配置到 Unity Resources]
+    Synced --> Read[CombatShowcase 读取 TextAsset 字节]
+    Read --> BossTable[MapBossCatalog.LoadAsync]
     BossTable --> Map[CombatMap]
     Map --> Run[CombatRun]
     Run --> BossRules[Domain CombatRules]
@@ -373,12 +378,10 @@ Test 客户端负责生成器、参数资源、可维护的 Unity 输出以及�
 
 ```mermaid
 flowchart LR
-    SourceChange[代码、配置、资源变更] --> Static[静态检查\n文档链接、依赖、包元数据、GUID、生成产物]
-    Static --> Dotnet[.NET 构建和 NUnit]
-    Dotnet --> Headless[Headless 无图形场景]
-    Headless --> UnityBatch[Unity 批处理\n导入、EditMode、PlayMode、Player Smoke]
+    SourceChange[代码、配置、资源变更] --> Standard[标准验证\n静态检查、.NET 构建与测试、Headless]
+    SourceChange --> UnityBatch[Unity 批处理\n导入编译，可选测试或构建]
     UnityBatch --> Visual[PNG 截图和 VisualFrameChecks\n可选视觉规格]
-    Visual --> Manual[人工验收\n画面、声音、手感、设备行为]
+    SourceChange --> Manual[人工验收\n画面、声音、手感、设备行为]
 ```
 
 ### 自动检查能确认的内容
@@ -411,6 +414,7 @@ flowchart LR
 | Unity/Godot 宿主和原生表现接线 | 引擎适配 | `adapters/unity`、`adapters/godot` |
 | Unity 编辑器命令和后台验证 | Unity 适配与开发工具 | `adapters/unity/Editor`、`tools` |
 | AgentKit 任务上下文、计划和证据 | 开发工具 | `tools/AgentKit`、`agent` |
+| 浏览器触发构建、生成和测试 | 开发工具 | [开发控制台](../../tools/DevPanel/README.md) |
 | 粒子公式、公式资产、粒子预设和特效库 | Test Domain 与客户端 | `games/Test/src/Test.Domain`、`games/Test/client/Unity` |
 | 雨、雪、火焰、星光、闪电链等具体特效 | Test 客户端 | `games/Test/client/Unity/Assets/Particles` |
 | Rain Pass 地图、敌人、Boss、弓箭和战斗规则 | Test 外部 C# 与客户端 | `games/Test/src`、`games/Test/client/Unity` |

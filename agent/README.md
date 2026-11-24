@@ -6,7 +6,7 @@ AgentKit 把一次人类与 AI 协作开发任务保存为可检查的任务清�
 
 框架能力目录位于 [`agent/capabilities.json`](capabilities.json)。执行 `powershell -File tools/agent.ps1 capabilities` 可按统一格式查看工作流、Unity 编辑器、构建、验证和内容流水线的负责人、入口、参数、执行模式和所需检查。使用 `--kind`、`--mode` 或 `--query` 缩小范围。AI 开始任务时先查询相关能力，再决定采用对话澄清、后台验证或编辑器操作入口。
 
-AI 协作的需求澄清门、诊断、复利债务判断和代码可理解性要求见 [AI 协作与代码评审](../docs/guides/ai-collaboration.md)。任务说明提供设计来源、玩家体验、内容范围和验收，评审者还需确认实现可以从入口追踪、抽象对应真实调用者、异常路径具有诊断上下文，暂缓项具有明确的后续触发条件。
+当任务涉及内容设计、故障或交付评审时，按任务选择仓库 skill。需要记录已定范围、执行证据或交接时，再使用本页的 AgentKit 命令。 [AI 协作与代码评审](../docs/guides/ai-collaboration.md)
 
 `game-content`、`content-design` 和 `presentation-content` 任务可先用 `new` 保存草稿，再用 `context` 收集资料。`plan` 和 `run` 要求 `designSource` 与 `experienceScope` 已填写，且 `openDesignDecisions` 为 `[]`。澄清过程中可在 `openDesignDecisions` 登记问题。
 

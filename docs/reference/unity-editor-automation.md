@@ -6,7 +6,7 @@ Unity 适配包在项目内提供编辑器操作。DLL 工作区通过 `tools/ga
 
 1. 选择目标工程。仓库游戏使用 `-Name`，其他工程使用 `-ProjectPath`。
 2. 选择运行方式。Unity 已打开时，在目标工程启用 `Tools > AwithGameFrame > Enable Editor Automation`。Unity 关闭时，传入与 `ProjectVersion.txt` 对应的 `-EditorPath`，脚本在后台执行。
-3. 用 `project.info` 核对返回的工程路径，再选择操作。用 `-Action actions` 查命令和参数。
+3. 用 `-Action actions` 查脚本的命令和参数。用目标工程的 `project.info` 验证连接并核对返回的工程路径，再执行操作。
 
 ```powershell
 ./tools/unity-editor.ps1 -Action actions
@@ -158,6 +158,6 @@ $saved = (./tools/unity-editor.ps1 @project -Action checkpoint.capture -Asset $s
 
 在桌面可用的时段追加 `-RunLiveEditor`，检查实时事务回滚、Undo 和未保存状态，成功日志包含 `UNITY_EDITOR_AUTOMATION_PASSED`。组合 `-RunLiveEditor -DiagnosticsOnly` 验证实时日志和编译、关闭工程后的批处理错误定位，成功日志包含 `UNITY_EDITOR_DIAGNOSTICS_PASSED`。
 
-## 项目采用与覆盖
+## 参考设计
 
-用 `-Action actions` 查当前项目可调用的操作。事务范围是一个场景，检查点按单个场景或 Prefab 资产保存。成组操作的预览、执行结果和恢复入口沿用 Unity-Skills 的文档组织思路。 [Unity-Skills 操作与治理说明](https://github.com/Besty0728/Unity-Skills/blob/main/docs/OPERATING_MODES.md) · [本仓库实测记录](../validation/latest.md)
+Unity-Skills 按预览、执行、审计与恢复说明编辑器操作。本仓库对应入口为同场景事务、项目白名单、操作审计与场景或 Prefab 检查点。命令由 `unity-editor.ps1` 通过项目的本机文件通道提交。 [Unity-Skills 操作与治理说明](https://github.com/Besty0728/Unity-Skills/blob/656c50cc0474bb05659d6184047ffe5aafcc1344/docs/OPERATING_MODES.md) · [本仓库实测记录](../validation/latest.md)

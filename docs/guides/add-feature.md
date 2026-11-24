@@ -13,7 +13,8 @@
 | HTTP、协议、内容更新、WebSocket | 可选 [Networking](../../src/AwithGameFrame.Networking/README.md) |
 | 引擎 API 或需要引擎类型的接口 | [Unity](../../adapters/unity/README.md) / [Godot](../../adapters/godot/README.md) |
 | 跨宿主应用组合、引擎演示 | [samples](../../samples/README.md) 的 Shared / Headless / Unity / Godot |
-| 配置/协议生成 | [ConfigGen](../../tools/ConfigGen/README.md)，源位于 `samples/Shared/Configuration`、`samples/Protocol` |
+| 具体游戏玩法、配置、协议及引擎接线 | [游戏工作区](../getting-started/game-workspace.md) |
+| 共享示例的配置与协议生成 | [ConfigGen](../../tools/ConfigGen/README.md)，源位于 `samples/Shared/Configuration`、`samples/Protocol` |
 | 复用功能骨架 | [portable-feature](../../templates/portable-feature/README.md) |
 | 开发期任务、工具和上下文 | [AgentKit](../../agent/README.md)，实现位于 `tools/AgentKit` |
 
@@ -31,20 +32,10 @@
 
 视图、场景与音频先销毁原生实例，再归还 scope，最后关闭资源模块。模块默认依赖、线程约束、输入/UI 路由和后端细节以各包 README 为准。删除引擎宿主对象前显式等待 `ShutdownAsync`，不依赖销毁回调完成异步清理。
 
-## 诊断、重构与抽象时机
-
-故障先建立最短复现，再使用日志、断点或探针确认首个失败边界。正常控制流中的早返回不需要制造日志噪声；配置错误、资产过期、生命周期错误、恢复路径和不可预期失败需要记录模块、操作和上下文。
-
-重构优先处理会在后续工作中重复出现的问题。判断依据包括已有调用者数量、后续修改概率、每次验证或诊断增加的成本，以及当前修复的影响面。暂缓项写入任务说明，记录触发条件、影响范围和负责位置。
-
-文件大小不单独决定拆分。独立输入、独立生命周期、独立验证方式或第二个调用者出现时，再提取职责。抽象需要对应真实调用者，避免为可能的未来需求预留空层。
-
-跨所有权的通知适合使用 `EventBus`；命令、查询和组合根内的协作保留显式依赖。对象池、配置格式和数据驱动程度根据真实约束选择，不作为所有模块的固定模板。
-
 ## 验证与交付
 
 1. 行为变化编写有意义的规则/服务测试；文档和简单移动执行相应静态检查。
-2. 修改配置/协议源后运行 `tools/generate-config.ps1` / `tools/generate-protocol.ps1`，不手改 Generated；标准验证检查确定性产物及兼容性基线。
+2. 修改配置或协议源后，运行对应的游戏或共享示例生成命令。 [生成入口](../reference/verification.md#通用运行时与开发工具)
 3. 运行 `powershell -File tools/verify.ps1`，先验证通用边界、Release 构建、NUnit 与 Headless。
 4. 影响适配层时用真实引擎检查，记录实际版本、平台、构建与运行范围；命令见[验证参考](../reference/verification.md)。
 5. 同步模块 README 中当前的 API、程序集和行为，记录实际验证结果。

@@ -4,6 +4,7 @@
 
 | 要做的事 | 入口 | 说明 |
 | --- | --- | --- |
+| 在浏览器运行编译、生成和测试 | [开发控制台](DevPanel/README.md) | 选择框架仓库或游戏工作区，查看命令输出、退出码和日志路径 |
 | 创建游戏代码骨架、模块、外部构建、客户端接入和服务端启动 | [game.ps1](game.ps1) | 不创建引擎工程；目录与步骤见[游戏工作区](../docs/getting-started/game-workspace.md) |
 | 查询和编辑 Unity 场景 | [unity-editor.ps1](unity-editor.ps1) | 用真实编辑器检查层级、放置 Prefab 和修改对象。见[操作说明](../docs/reference/unity-editor-automation.md) |
 | 验证 Unity 编辑器自动化 | [verify-unity-editor-automation.ps1](verify-unity-editor-automation.ps1) | 默认批处理。实时编辑器检查使用 `-RunLiveEditor` |
@@ -16,7 +17,7 @@
 | 发布文件与大小/hash 清单 | [publish-content.ps1](publish-content.ps1) | 写入独立发布目录 |
 | 经真实 HTTP 下载并验证内容安装 | [verify-content.ps1](verify-content.ps1) | 校验清单和下载文件；不替代原生资源加载 |
 | 验证完整 Unity 示例 | [verify-unity.ps1](verify-unity.ps1) | 后台导入、PlayMode 和构建。追加 `-RunPlayerSmoke` 可后台运行 Windows Player |
-| 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 隔离导入、EditMode 和 PlayMode 检查，按目标构建 Windows、WebGL 或导出微信小游戏。参数见[验证参考](../docs/reference/verification.md#unity) |
+| 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 默认后台导入并编译。用 `-RunTests` 运行 EditMode 和 PlayMode，用 `-BuildScene` 构建 Player。 [验证参考](../docs/reference/verification.md#unity) |
 | 自动检查 Unity 画面 | [verify-game-unity.ps1](verify-game-unity.ps1) `-VisualSpec` | [画面自动验收](../docs/reference/unity-visual-verification.md)包含离屏截图、控件布局断言和基准图对比 |
 | 验证 Unity 基础适配 | [verify-unity-minimal.ps1](verify-unity-minimal.ps1) | 独立工程仅安装基础适配及其依赖 |
 | 验证 Unity Addressables 资源后端 | [verify-unity-addressables.ps1](verify-unity-addressables.ps1) | 在独立工程构建真实资产目录，后台验证租约、类型和取消行为 |

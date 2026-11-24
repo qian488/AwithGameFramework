@@ -70,6 +70,6 @@ powershell -File tools/verify-content.ps1 -SourceDirectory '<pack directory>' -V
 
 ## 发布与验收
 
-`tools/publish-content.ps1` 生成文件大小/SHA-256 清单，`ContentUpdateService` 支持校验、增量复用、续传和原子激活。`tools/verify-content.ps1` 先发布，再通过临时 localhost HTTP 服务实际下载、安装并检查当前快照，输出 `Install-report.json`。此工具用于验收；生产 CDN、发布者认证和签名密钥由项目接入。
+`tools/publish-content.ps1` 生成文件大小与 SHA-256 清单，可用 RSA 私钥签名。应用通过 `ContentManifest.FromSignedJson` 使用可信公钥验证清单，再交给 `ContentUpdateService` 安装。调用 `PruneVersionsAsync` 清理磁盘时，传入仍在使用的旧快照指纹。`tools/verify-content.ps1` 通过本机 HTTP 测试下载和安装，结果写入 `Install-report.json`。 [内容更新 API](../../src/AwithGameFrame.Networking/Runtime/Content/README.md)
 
 双引擎验证脚本均自动构建内容包、发布、通过 HTTP 安装，并将安装目录交给真实引擎。Unity 断言覆盖共享依赖、跨 store 引用、bundle 场景与最后卸载；Godot 断言覆盖导入纹理、外部依赖、PackedScene/Control 和实例释放。完整命令与实测范围见 [验证说明](../reference/verification.md)。

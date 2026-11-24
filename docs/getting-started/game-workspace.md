@@ -75,13 +75,13 @@ powershell -File tools/game.ps1 build -Name MyGame -Configuration Debug
 
 ## 将产物接入 Unity
 
-关闭可能占用产物的运行会话，完成外部构建后执行：
+首次接入或修改外部代码后，从仓库根目录执行同步：
 
 ```powershell
 powershell -File tools/game.ps1 sync -Name MyGame -Configuration Debug
 ```
 
-`sync` 会先执行同一配置的 `build`，再更新 Unity 的工作区包。构建产物中的 `build.json` 会记录源码提交号、源码输入指纹、目标框架和引擎版本。同步时重新计算这些值，并校验 DLL/PDB hash，发现源码、引擎版本或产物来源不一致就拒绝接入。这样源码变化不会被旧 DLL 遮蔽。单独使用 `workspace-client.ps1` 属于工具内部入口，项目开发应使用 `game.ps1 sync`。
+`build` 将外部程序集写到 `artifacts`。`sync` 会执行同一配置的 `build`，核对 `build.json` 的源码指纹、引擎版本与 DLL/PDB hash，再更新 Unity 工作区包。也可以在开发控制台选「构建并同步客户端」。同步后由 Unity 导入 DLL 和配置，再编译客户端脚本。 [开发控制台](../../tools/DevPanel/README.md)
 
 工具要求目标位置已有完整 Unity 工程，然后写入嵌入式 UPM 包 `Packages/com.awithgameframe.workspace`。其中包括游戏与框架 DLL/PDB、现代 Unity 适配源码及其元数据。Unity 原生适配仍由编辑器编译；生成的 asmdef 使用 DLL 引用，不再引用同名便携源码程序集。
 
@@ -164,7 +164,7 @@ public partial class GameBootstrap : GameHostNode
 
 Unity 的游戏工作区同步也包含[编辑器自动化](../reference/unity-editor-automation.md)。仓库自带 [awith-game-development](../../.agents/skills/awith-game-development/SKILL.md)，用于定位规则、应用和引擎的职责与验证入口。
 
-修改外部代码后重复 `build`、`sync`，再让编辑器编译客户端。同步目录由工具维护，使用所有权记录识别生成物并清理过期文件；不要在生成目录中修改源码、添加手写文件或混放其他插件。客户端自己的接线与资源保留在生成目录之外。
+修改外部代码后运行 `sync`，再让编辑器编译客户端。如果 Unity 报缺少刚新增的方法或重载，先核对工作区包内的 DLL 是否已同步，然后查看编辑器导入和编译结果。同步目录由工具维护。客户端接线和自有资源放在客户端的 `Assets` 下。
 
 Debug 同步包含 PDB，调试器可用当前仓库源码定位外部程序集。断点、符号加载、引擎热重载和平台发布仍需在实际客户端检查；程序集更新后必要时停止运行或重启编辑器。
 
@@ -180,6 +180,6 @@ powershell -File tools/game.ps1 run-server -Name MyGame -ServerConfig games/MyGa
 
 服务端骨架提供进程配置、日志、单线程宿主驱动和正常退出。主循环在 GameHost 创建线程泵送异步延续与 Dispatcher，停止时等待模块清理。它是独立进程入口；账号、战斗同步、数据库接入和生产部署按游戏需求实现，不预置业务接口。
 
-`configuration` 和 `protocol` 是游戏源文件归属。`game.ps1 config` 和 `game.ps1 protocol` 会读取当前游戏的源文件，并在构建前使用检查模式确认生成产物没有过期。配置生成产物位于 Application 的 `Runtime/Generated/Configuration`，协议生成产物位于 `Runtime/Generated/Protocol`。不手改 Generated 文件。共享示例仍可使用独立的 `generate-config.ps1` 和 `generate-protocol.ps1` 入口。
+修改游戏配置或协议源后，分别运行 `game.ps1 config` 或 `game.ps1 protocol` 更新产物。`build` 在对应源存在时使用检查模式。配置产物位于 Application 的 `Runtime/Generated/Configuration`，JSON 协议产物位于 `Runtime/Generated/Protocol`，Protobuf 产物位于 `Runtime/Generated/Protobuf`。共享示例使用独立的生成入口。 [开发工具](../../tools/README.md)
 
 实际检查范围见[验证记录](../validation/latest.md)。客户端工程由开发者创建后，还需在选定编辑器中完成导入、启动、调试与目标平台发布验证；H5、UE5 不属于当前接入实现。

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>开发控制台 · AwithGameFrame</title>
+    <link rel="stylesheet" href="/panel.css">
+    <script src="/panel.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="frame brand"><span class="mark" aria-hidden="true">A</span> AwithGameFrame</div>
+    </header>
+    <main class="frame">
+        <div class="page-heading">
+            <h1>开发控制台</h1>
+            <div class="scope">
+                <label for="scope">工作范围</label>
+                <select id="scope" disabled></select>
+                <code id="scope-path"></code>
+            </div>
+        </div>
+        <p id="error" class="error" role="alert" hidden></p>
+        <div class="layout">
+            <section id="tools" class="tools" aria-label="工具"><p>正在读取工作区…</p></section>
+            <section class="console" aria-labelledby="console-title">
+                <header class="console-header">
+                    <h2 id="console-title">执行输出</h2>
+                    <span id="state" class="state" role="status">空闲</span>
+                </header>
+                <div id="execution" class="execution" hidden>
+                    <strong id="run-title"></strong>
+                    <span id="run-time"></span>
+                    <code id="run-command"></code>
+                </div>
+                <pre id="output" tabindex="0" aria-label="命令日志">从工具列表启动一项操作，输出将显示在这里。</pre>
+                <footer id="log" class="log" hidden>完整日志 <code id="log-path"></code></footer>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

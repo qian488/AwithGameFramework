@@ -1,6 +1,6 @@
 # 文档索引
 
-按要完成的任务选择入口。当前说明描述现有契约；迁移说明帮助升级；验证记录保存实际执行证据。
+按要完成的任务选择入口。验证记录保存实际执行证据。
 
 | 任务 | 文档 |
 | --- | --- |
@@ -13,12 +13,13 @@
 | 分离领域规则与应用效果 | [函数式核心](guides/functional-core.md) |
 | 构建、分发并加载资源包 | [内容流水线](guides/content-pipeline.md) |
 | 使用配置或协议生成器 | [ConfigGen](../tools/ConfigGen/README.md)、[Protocol](../samples/Protocol/README.md) |
+| 在浏览器中编译、生成和测试 | [开发控制台](../tools/DevPanel/README.md) |
 | 为人类与 AI 准备任务和上下文 | [AgentKit](../agent/README.md) |
 | 进行 AI 协作、诊断和代码评审 | [AI 协作与代码评审](guides/ai-collaboration.md) |
 | 编写和维护文档 | [写作约定](guides/documentation.md) |
 | 执行检查，确认检查范围 | [验证参考](reference/verification.md) |
 | 维护 Unity 程序化资产 | [程序化资产工作流](reference/unity-procedural-assets.md) |
-| 查看实际验证过的版本与平台 | [最近验证](validation/latest.md)、[代码规范审查](validation/2026-10-30-code-compliance.md)、[仓库重组检查](validation/2026-10-29-repository-organization.md)、[2026-10 历史记录](validation/history/2026-10.md) |
+| 查看实际验证过的版本、平台及往期记录 | [验证记录](validation/latest.md) |
 | 了解能力与待补范围 | [路线图](roadmap.md) |
 
 ## 决策与资料

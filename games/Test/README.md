@@ -40,7 +40,7 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 结算时按 `R` 或点 `Retry` 立即重试。按 `Enter` 或点 `Choose opponent` 返回选择。选关页可用 `Play original Rain Pass` 进入原版三段关卡。
 
-在 [对手配置](configuration/rain-pass-opponents.json) 的 `rows` 中复制一条记录，提供新的正整数 `id`，然后调整名称和数值。执行 `tools/game.ps1 build -Name Test` 和 `tools/game.ps1 sync -Name Test` 后重新进入 Play。已有纪录按 `id` 保留。若数值改动需要开启新的成绩榜，给该对手分配新 ID。
+在对手配置的 `rows` 中复制一条记录，提供新的正整数 `id`，然后调整名称和数值。执行 `tools/game.ps1 sync -Name Test` 后重新进入 Play。已有纪录按 `id` 保留。若数值改动需要开启新的成绩榜，给该对手分配新 ID。 [对手配置](configuration/rain-pass-opponents.json)
 
 ### 新路线
 

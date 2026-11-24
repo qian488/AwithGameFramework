@@ -54,7 +54,7 @@ graph TD
 
 `ViewHandle` 和 `SceneHandle` 暴露应用所需的标识、状态与关闭/卸载操作。原生视图和服务借出的资源 scope 由后端创建回调使用，服务保持清理权限。设置与布局使用普通事实快照完成规则计算，服务负责提交状态及调用设备、事件和存储，详见[规则与应用编排](../guides/functional-core.md)。
 
-## 引擎接入与兼容
+## 引擎接入
 
 Unity 包提供实例宿主、Resources/AssetBundle、视图、场景、输入、音频、日志和时间接入。项目按需选择 SQLite、Addressables 或 HybridCLR 集成。 [Unity 包](../../adapters/unity/README.md) · [可选集成](../../adapters/README.md#unity-项目可选集成)
 
@@ -65,7 +65,7 @@ Unity 包提供实例宿主、Resources/AssetBundle、视图、场景、输入�
 
 配置和协议使用可审查 schema、确定性生成、普通 DTO、运行时结构校验和兼容性基线。生成工具独立于引擎。版本化存档将数据、元信息和 checksum 放入单个封装，原子提交并保留上一版；旧分离格式需要显式导入。
 
-Networking.Content 提供文件清单、大小/hash 校验、续传和原子激活。Unity AssetBundle 与 Godot PCK 分别构建、发布并从固定快照加载，见[资源流水线](../guides/content-pipeline.md)。Godot 的 PCK 挂载属于进程，不能卸载或替换同 namespace。发布者认证、CDN 和历史版本磁盘回收由项目接入。
+Networking.Content 提供文件清单、大小与哈希校验、续传、原子激活及已安装版本清理。项目在安全时机调用 `PruneVersionsAsync`，传入仍在使用的旧快照。Unity AssetBundle 和 Godot PCK 各自构建并从固定快照加载。 [资源流水线](../guides/content-pipeline.md) · [内容更新 API](../../src/AwithGameFrame.Networking/Runtime/Content/README.md)
 
 HTTP transport 默认单个响应正文最多 16 MiB，同时检查声明与实际读取长度。WebSocket 提供心跳、有限重连和显式推送恢复契约，不隐式重放业务操作。实际鉴权、服务端接口和业务幂等由项目实现。
 

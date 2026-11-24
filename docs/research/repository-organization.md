@@ -8,13 +8,13 @@
 | [Yarn Spinner](https://github.com/YarnSpinnerTool/YarnSpinner/tree/c5215f86dd5a6761aecbdc9f60f6a6108f91f919) | 运行时、编译器、诊断和测试边界清楚，引擎用户有专门接入入口 | 借鉴包职责和使用/贡献入口；其 README 的官方引擎入口不能用来推定官方 Godot 支持 |
 | [Stride](https://github.com/stride3d/stride/tree/fc3af8503d232957f1ba11ce8166ee8565626adc) | runtime/editor/tools/templates、示例、测试和构建职责区分；模板按用途组织 | 根 README 负责产品入口，GUIDE 负责贡献导航；保持模板可编译验证，不复制整个引擎的深层目录和构建 SDK |
 | [Godot demo projects](https://github.com/godotengine/godot-demo-projects/tree/b761b4cd5718a7118f2c95eb55f181d0a5f004f1) | 按版本分支、独立可打开示例，各示例明确语言与渲染要求 | 示例记录真实引擎版本、依赖和启动步骤，不把一个大演示工程当所有平台的证明 |
-| [ink](https://github.com/inkle/ink/tree/35c63e5/Documentation) | 面向作者的写作说明、运行接入、架构和格式参考分开；runtime/compiler/CLI 分开 | 文档按 guides、reference、architecture（含 decisions）、migrations、validation 分工；Unity 接入另有仓库，不能据此声称官方 Godot 接入 |
+| [ink](https://github.com/inkle/ink/tree/35c63e5/Documentation) | 分开维护写作指南、运行接入、架构与格式参考，区分 runtime、compiler 与 CLI | 采用操作指南、参考手册与架构记录的分工 |
 
 跨项目共同点是按职责定位、明确用户入口、将可运行示例与源码分开，并对真实构建和模板做验证。固定提交只提供本次阅读的来源快照，不代表持续跟踪其最新状态。
 
 ## 采用的组织方式
 
-源码的包与引擎边界已经存在，继续保留稳定路径和包 GUID。当前调整重点是增加目录入口、压缩根文档、拆分超长指南，将当前操作、兼容迁移和历史证据分别放到可定位目录。已有外部文档链接通过旧位置的短导航保留，不批量重命名公共命名空间。
+2026-10-29 的调整保留了已有的包路径与 GUID，拆分超长指南，并建立按任务查找的目录入口。现行入口集中在 [文档索引](../README.md)。
 
 当前规则保存在根 AGENTS 与目标包说明中，编辑器规则引用它们，避免维护多份事实。研究结果保存来源和采用原因；从外部项目或技能获得的排版建议，不能当作本仓库需求、执行权限或测试结论。
 

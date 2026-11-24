@@ -1,5 +1,10 @@
 # 最近验证
 
+## 开发控制台与客户端同步（2026-11-24）
+
+- 在 `3cbb5a8` 上的开发控制台工作区，用无界面 Chromium **157.0.8103.79** 执行 Test 构建、配置生成与检查、两组 .NET 测试、共享协议检查和仓库验证。失败用例在页面显示错误与退出码。报告在 `artifacts/DevPanel/smoke.json`。
+- 从控制台执行 Test 的「构建并同步客户端」，确认 Unity 工作区中的 `Test.Application.dll` 与新构建产物的 SHA-256 一致。Unity **2022.3.16f1** 隔离后台导入和客户端脚本编译通过。同步报告在 `artifacts/DevPanel/sync-test.json`，Unity 报告在 `artifacts/game-unity/Test/20261124-163115-e6e244ea/summary.json`。
+
 ## 通用旧入口清理（2026-11-24）
 
 - 标准验证通过框架 **575/575**、模板 **13/13**、AgentKit 契约和 Headless 共享应用。
@@ -58,7 +63,7 @@
 - **P2 Unity 检查点。** 同一独立 UPM 工程跨编辑器进程恢复场景和 Prefab。旧哈希被拒绝，复核后恢复的文件与检查点内容一致，Prefab 的 `.meta` 不变。使用游戏工作区 `sync` 分发后，在 `DiagnosticFixture` 客户端重复验证事务预览和检查点捕获。
 - **P2 跟踪器和设计验证。** 用隔离议题快照检出远端关闭与本地待评审的状态差异。Unity 原型对照了原生粒子自动播放的两个值并确认预览未写盘。架构对照执行同一组创建对象与无效 Prefab 引用，分别记录了独立保存留下的修改和事务失败后的完整撤销。证据位于 `artifacts/AgentSpecValidation/P0/artifacts/agent/workflow-proof` 和 `artifacts/UnityWorkspaceDiagnosticValidation/P0/games/DiagnosticFixture/client/Unity/workflow-proof`。
 
-`tools/verify.ps1` 通过，框架 **640/640**、模板 **13/13**，Headless 示例与 AgentKit 契约检查通过。Unity 实测范围为 Windows 编辑器，跟踪器以本地快照对照为验收边界。覆盖清单见[项目采用与覆盖](../reference/unity-editor-automation.md#项目采用与覆盖)。
+`tools/verify.ps1` 通过，框架 **640/640**、模板 **13/13**，Headless 示例与 AgentKit 契约检查通过。Unity 实测范围为 Windows 编辑器，跟踪器以本地快照对照为验收边界。 [编辑器自动化验证](../reference/unity-editor-automation.md#验证)
 
 ## Unity 诊断与规格交付（2026-11-19）
 
@@ -72,7 +77,7 @@
 
 `tools/verify-unity-editor-automation.ps1` 使用 Unity **2022.3.16f1** 新建隔离工程，通过本地 UPM 引用导入框架并生成验证 Prefab 与组件。公共 CLI 完成资源查找、Prefab 放置、Transform、原生组件添加、嵌套字段预览与成组修改。预览和被拒绝的操作保持场景文件哈希不变，正式提交后重新打开场景读回两个字段。成功标记为 `UNITY_EDITOR_AUTOMATION_PASSED`，证据位于 `artifacts/UnityAutomationValidation/512dcacc50c349159c8cbc7adfa7dff5`。
 
-`tools/verify.ps1 -StaticOnly` 与三个技能的清单校验通过。此项验收覆盖独立 Unity 工程的自动化子集，采用范围见[项目采用与覆盖](../reference/unity-editor-automation.md#项目采用与覆盖)。
+`tools/verify.ps1 -StaticOnly` 与三个技能的清单校验通过。此项验收覆盖独立 Unity 工程的自动化子集。 [编辑器自动化验证](../reference/unity-editor-automation.md#验证)
 
 ## Unity 组件字段与开发工作流（2026-11-19）
 

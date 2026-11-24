@@ -5,8 +5,8 @@
       "id": "workflow.design-clarification",
       "kind": "workflow",
       "description": "Clarify player experience, content scope, presentation direction and acceptance before implementing unresolved game content.",
-      "owner": "docs/guides/ai-collaboration.md",
-      "entryPoint": "docs/guides/ai-collaboration.md#内容需求澄清门",
+      "owner": ".agents/skills/awith-content-design/SKILL.md",
+      "entryPoint": ".agents/skills/awith-content-design/SKILL.md",
       "modes": ["conversation", "manual"],
       "parameters": ["requestType", "designSource", "experienceScope", "openDesignDecisions"],
       "checks": ["agent-contracts"]
