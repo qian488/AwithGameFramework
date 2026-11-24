@@ -1,0 +1,1 @@
+{"name":"AwithHybridFixture.Editor","references":["HybridCLR.Editor","AwithGameFrame.Unity.HybridCLR.Editor"],"includePlatforms":["Editor"]}

@@ -20,6 +20,8 @@
 
 程序化资产的自动检查覆盖输入哈希、生成器版本、来源标记、输出清单、资源引用和可重新实例化。画面观感、材质质量、声音和手感仍由实际引擎运行与人工验收确认。
 
+公共 `AwithGameFrame.Data.Generation.GeneratedAssetManifest` 只保存这些过程的可验证身份。它记录生成器、输入 hash、seed、输出路径/大小/hash 和结果 fingerprint，支持运行时选择或编辑器烘焙后的过期判断。具体生成器和 Unity/Godot 资产仍放在游戏客户端区域。
+
 ## Unity AssetBundle
 
 在安装 Unity 适配包的工程中准备 JSON specification。资源路径使用工程内 `Assets/...`，同一个资源只能显式归入一个 bundle；共享材质等依赖应独立分包。场景独立于普通资产分包，并标记 `scene: true`。
@@ -47,7 +49,9 @@ powershell -File tools/verify-content.ps1 -SourceDirectory '<bundle directory>' 
 
 运行时读取 `ContentSnapshot.GetPath("bundle-catalog.json")`，用 `UnityBundleCatalog.FromJson` 解析，再创建 `UnityAssetBundleLoader(catalog, snapshot.GetPath)`，交给 `ResourceStore`。普通资产按目录 key 加载；场景配合 `UnityBundleSceneBackend` 与 `SceneService`，场景 scope 将 bundle 固定到原生卸载结束。
 
-原生异步请求无法中断，取消时等待迟到结果再释放。实例必须先销毁，再归还资产租约；最后所有者释放时调用 `AssetBundle.Unload(true)`，继续使用已归还的原生资产会失效。框架不包含 Addressables 和代码热更新。
+取消时等待原生请求完成并释放资源。先销毁实例，再归还资产租约。最后一个所有者释放时调用 `AssetBundle.Unload(true)`。
+
+使用 Addressables 的项目可接入 [Unity Addressables 资源后端](../../adapters/unity-addressables/README.md)，通过相同的资源租约使用 Catalog 中的资产。
 
 ## Godot PCK
 

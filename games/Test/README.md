@@ -86,9 +86,9 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 Rain Pass 环境支持运行时生成和预生成资产两种模式。选中 `Rain Pass` 根节点，在 Inspector 的 `Environment Asset` 区域创建 `RainPassEnvironment` 参数资源。参数资源保存种子、环境密度、月光和雾色，修改它不会直接改写生成结果。
 
-点击 `Bake Environment Asset` 后，Unity 将当前参数生成的环境保存到 `Assets/Content/RainPass/Generated`，包括环境 Prefab、生成的材质和纹理，以及记录生成器版本、输入哈希和输出文件的 manifest。`Validate Generated Asset` 检查输入是否过期、输出是否缺失和 Prefab 来源标记是否匹配。修改参数后，Inspector 会显示过期状态，需要重新烘焙。
+点击 `Bake Environment Asset` 后，Unity 在 `Assets/Content/RainPass/Generated` 保存 Prefab、材质、纹理和 manifest。每个新 Profile 使用自己的输出目录。重烘焙会覆盖当前生成资产的内容并保留已有 GUID，原有 manifest 会在重烘焙时更新为带输出哈希的格式。修改参数后，Inspector 会提示过期。`Validate Generated Asset` 检查来源、缺失文件和过期状态，并在 Console 列出本次烘焙后编辑过的文件。
 
-`RuntimeGenerated` 每次运行时按参数和固定种子重建环境，适合需要动态变化的布局。`BakedAsset` 读取已烘焙的 Prefab，适合需要在 Project 和 Prefab Mode 中维护的环境内容。天气、战斗特效、角色和音频仍然按运行时状态创建。清理操作只删除 manifest 登记的生成输出。
+`RuntimeGenerated` 每次运行时按参数和固定种子重建环境，适合需要动态变化的布局。`BakedAsset` 读取已烘焙的 Prefab，可在 Project 和 Prefab Mode 中维护。需要在重烘焙后保留的手工覆盖可以放到 Prefab Variant 或独立材质。天气、战斗特效、角色和音频按运行时状态创建。清理依据 Profile 及其 manifest 共同登记的输出路径。
 
 `Test.Domain` 负责命中结果、弹反窗口和架势规则。 `Test.Application` 管理固定步进、输入缓冲、进攻轮转和检查点，通过 `ICombatSpace` 请求空间事实。Unity 负责实际扫掠查询、镜头以及几何、材质、贴花、动作、音频、特效和 HUD 的程序化生成。改变招式时序和数值时更新外部代码并重新构建、同步。
 

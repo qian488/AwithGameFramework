@@ -1,9 +1,0 @@
-{
-  "name": "AwithGameFrame.Unity.DOTween",
-  "references": [
-    "AwithGameFrame.Core",
-    "AwithGameFrame.Unity",
-    "AwithGameFrame.Foundation"
-  ],
-  "autoReferenced": false
-}

@@ -9,6 +9,7 @@ namespace Test.Server
     {
         public int TickRate { get; set; } = 30;
         public int DispatchBudgetPerTick { get; set; } = 64;
+        public int OnlineProbePort { get; set; }
 
         internal static ServerOptions Load(string[] args, out double? runForSeconds)
         {
@@ -41,6 +42,8 @@ namespace Test.Server
                 throw new InvalidDataException("TickRate must be between 1 and 240.");
             if (options.DispatchBudgetPerTick < 1 || options.DispatchBudgetPerTick > 65536)
                 throw new InvalidDataException("DispatchBudgetPerTick must be between 1 and 65536.");
+            if (options.OnlineProbePort < 0 || options.OnlineProbePort > 65535)
+                throw new InvalidDataException("OnlineProbePort must be zero (disabled) or a valid TCP port.");
             return options;
         }
     }

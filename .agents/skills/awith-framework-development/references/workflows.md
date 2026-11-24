@@ -4,9 +4,12 @@ Use the selected module or game README for the terms and boundaries in these wor
 
 ## Clarify a Design
 
-1. Explain the intended behavior with one concrete caller example and one boundary case. Check code, module READMEs and [existing decisions](../../../../docs/architecture/overview.md) for answers.
-2. Ask about the remaining choice if alternatives change user-visible behavior, ownership or compatibility. For each choice, state its consequence for the caller and validation.
-3. Record agreed domain terms in the owning module or game README. Record a durable framework-wide tradeoff in the architecture decisions. Put the observable acceptance criteria and agreed scope in the task brief when one is in use.
+1. Classify the request before implementation. Separate framework capability, game-specific implementation, content design and presentation acceptance. A request to add a map, Boss, weapon, UI, effect or story is a content request when the intended content has not been specified.
+2. Identify the decisions that change the user-visible result. Ask about the player goal, content roster, gameplay role, visual or audio direction, difficulty, scope, references, platform constraints and acceptance standard. Bundle related questions so the developer can answer them together.
+3. Do not create dependent game content while those decisions are unresolved. You may inspect the repository, prepare a proposal, build independent tooling and identify affected modules. Wait for the developer's decision before writing the map layout, enemy roster, Boss behavior, art direction, UI arrangement or similar content.
+4. If the developer explicitly delegates design, present a concrete design proposal with alternatives, assumptions and acceptance examples. Treat implementation as authorized after the proposal is accepted, or when the request explicitly says to decide and implement without an approval step.
+5. Explain the intended behavior with one concrete caller example and one boundary case. Check code, module READMEs and [existing decisions](../../../../docs/architecture/overview.md) for answers.
+6. Record agreed domain terms in the owning module or game README. Record a durable framework-wide tradeoff in the architecture decisions. Put the decision source, unresolved assumptions, observable acceptance criteria and agreed scope in the task brief when one is in use.
 
 For a new editor command, describe its input and result in terms of the engine API. Record game-specific types, asset paths and acceptance examples with the game that owns them.
 
@@ -43,6 +46,8 @@ For a new editor command, describe its input and result in terms of the engine A
 
 ## Deliver and Review a Slice
 
-1. Describe the shortest user-visible path through the affected boundaries. Build and validate one path at a time. For a reusable editor command, exercise its public entry point in an independent engine project. For a gameplay task, exercise the rule, the game asset that uses it, and the observable behavior in the selected game.
+1. Describe the shortest user-visible path through the affected boundaries. For a core rule or a repeatable regression, run one check through the caller's entry point and capture its failure before changing the behavior. Make the smallest change that passes the same check. Review structure after the behavior passes. For a reusable editor command, use an independent engine project. For a gameplay task, use the rule, the game asset that consumes it, and the observable behavior in the selected game.
 2. Review the diff against the agreed behavior, then review ownership, compatibility, failure paths and code understandability against repository conventions. Confirm that each new abstraction has a real caller, that abnormal exits have diagnostic context, and that deferred debt has a concrete trigger.
 3. Link the evidence to each outcome and use the [review checklist](../../../../agent/templates/review.md) when recording a review. Carry gaps into the [handoff](../../../../agent/templates/handoff.md) where applicable.
+
+The interview sequence, public-entry-point checks and separate spec and standards reviews draw on [grilling](https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/grilling), [tdd](https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/engineering/tdd) and [code-review](https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/engineering/code-review).

@@ -1,6 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "framework-change",
+  "requestType": "framework-capability",
+  "designSource": "Confirmed framework requirement and applicable product direction",
+  "experienceScope": "The affected framework caller and its observable acceptance boundary",
+  "openDesignDecisions": [],
   "objective": "在明确授权的 Settings 范围内实现一项行为变化，保持通用逻辑与引擎适配边界，并交付测试和人工可审阅的证据。",
   "readModules": ["gameplay"],
   "readPaths": [
@@ -21,7 +25,6 @@
     "docs"
   ],
   "protectedPaths": [
-    "docs/legacy",
     "src/AwithGameFrame.Gameplay/Documentation~/legacy"
   ],
   "allowedTools": [

@@ -50,6 +50,7 @@ namespace Test.Server
             try
             {
                 host.AddModule(new TestModule());
+                if (options.OnlineProbePort != 0) host.AddModule(new OnlineProbeModule(options.OnlineProbePort));
                 Task startup = host.StartAsync(startupCancellation.Token);
                 PumpUntil(startup, host, context, () =>
                 {

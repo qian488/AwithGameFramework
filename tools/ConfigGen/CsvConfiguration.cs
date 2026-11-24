@@ -14,7 +14,7 @@ namespace AwithGameFrame.Tools.Configuration
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        /// <summary>Compiles one UTF-8 JSON or CSV source per table from a flat data directory.</summary>
+        /// <summary>Compiles one JSON, CSV or XLSX source per table from a flat data directory.</summary>
         public static IReadOnlyDictionary<string, string> CompileDirectory(string schemaJson, string dataDirectory)
         {
             using var schema = JsonDocument.Parse(schemaJson);
@@ -22,36 +22,40 @@ namespace AwithGameFrame.Tools.Configuration
             var data = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var path in Directory.GetFiles(dataDirectory).OrderBy(path => path, StringComparer.Ordinal))
             {
-                var extension = Path.GetExtension(path);
-                if (!string.Equals(extension, ".csv", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase)) continue;
+                var extension = Path.GetExtension(path).ToLowerInvariant();
+                if (extension is not (".csv" or ".json" or ".xlsx")) continue;
                 var name = Path.GetFileNameWithoutExtension(path);
                 var table = model.Tables.SingleOrDefault(definition => definition.Name == name);
                 if (table == null) throw new InvalidDataException("Unknown data table: " + name);
-                if (data.ContainsKey(name)) throw new InvalidDataException("Multiple data sources for table " + name + "; choose JSON or CSV.");
+                if (data.ContainsKey(name)) throw new InvalidDataException("Multiple data sources for table " + name + ". Choose one file.");
+                if (extension == ".xlsx")
+                {
+                    data.Add(name, RecordsToJson(ReadWorkbook(path, name), model, table, "XLSX"));
+                    continue;
+                }
                 var source = new UTF8Encoding(false, true).GetString(File.ReadAllBytes(path));
                 if (source.Length != 0 && source[0] == '\uFEFF') source = source.Substring(1);
-                data.Add(name, string.Equals(extension, ".csv", StringComparison.OrdinalIgnoreCase)
-                    ? CsvToJson(source, model, table) : source);
+                data.Add(name, extension == ".csv"
+                    ? RecordsToJson(ParseCsv(source, name), model, table, "CSV") : source);
             }
             return Compile(schemaJson, data);
         }
 
-        private static string CsvToJson(string source, ConfigurationSchema schema, ConfigurationSchema.Definition table)
+        private static string RecordsToJson(List<string[]> records, ConfigurationSchema schema, ConfigurationSchema.Definition table, string format)
         {
-            var records = ParseCsv(source, table.Name);
-            if (records.Count == 0) throw new InvalidDataException(table.Name + " CSV requires a header.");
+            var label = table.Name + " " + format;
+            if (records.Count == 0) throw new InvalidDataException(label + " requires a header.");
             var header = records[0];
             if (header.Length != table.Fields.Count || header.Distinct(StringComparer.Ordinal).Count() != header.Length ||
                 header.Any(name => !table.Fields.Any(field => field.Name == name)))
-                throw new InvalidDataException(table.Name + " CSV header must contain every field exactly once.");
+                throw new InvalidDataException(label + " header must contain every field exactly once.");
             var fields = header.Select(name => table.Fields.Single(field => field.Name == name)).ToArray();
             var rows = new List<string>();
             for (int record = 1; record < records.Count; record++)
             {
                 var cells = records[record];
                 if (cells.Length != header.Length)
-                    throw new InvalidDataException(table.Name + " CSV record " + (record + 1) + " has " + cells.Length + " columns; expected " + header.Length + ".");
+                    throw new InvalidDataException(label + " record " + (record + 1) + " has " + cells.Length + " columns; expected " + header.Length + ".");
                 var properties = new List<string>();
                 for (int column = 0; column < fields.Length; column++)
                 {
@@ -75,14 +79,14 @@ namespace AwithGameFrame.Tools.Configuration
                             }
                             catch (JsonException error)
                             {
-                                throw new InvalidDataException(table.Name + " CSV record " + (record + 1) + " field " + field.Name + " requires a valid " + (field.Type.Element == null ? field.Type.Name : "array JSON") + " value.", error);
+                                throw new InvalidDataException(label + " record " + (record + 1) + " field " + field.Name + " requires a valid " + (field.Type.Element == null ? field.Type.Name : "array JSON") + " value.", error);
                             }
                         }
                     }
                     properties.Add(JsonSerializer.Serialize(field.Name) + ":" + json);
                 }
                 var rowJson = "{" + string.Join(",", properties) + "}";
-                using (var row = JsonDocument.Parse(rowJson)) schema.ValidateObject(row.RootElement, table, table.Name + " CSV record " + (record + 1));
+                using (var row = JsonDocument.Parse(rowJson)) schema.ValidateObject(row.RootElement, table, label + " record " + (record + 1));
                 rows.Add(rowJson);
             }
             return "[" + string.Join(",", rows) + "]";

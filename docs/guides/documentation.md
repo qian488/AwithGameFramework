@@ -10,14 +10,13 @@
 | 怎样完成某件事 | `docs/guides` | 前提、输入、步骤、结果和验证 |
 | 接口、参数、命令有什么限制 | 包 README、`docs/reference` | 当前行为、选项、错误、线程与所有权契约 |
 | 为什么采用这个边界 | `docs/architecture` 与决策记录 | 背景、决定、后果与替代状态 |
-| 旧代码怎样升级 | `docs/migrations` | 旧入口到新入口、破坏性变化、迁移步骤 |
 | 哪些版本和平台真的运行过 | `docs/validation` | 实际环境、命令、结果、证据与未执行项 |
 
 这种分类借鉴 [Diátaxis](https://diataxis.fr/) 对学习、操作、参考和解释的区分。文档索引负责把任务引到唯一入口，不在每个入口复制完整使用说明。
 
 ## 描述当前事实
 
-使用说明对照当前源码、脚本和输出编写。写“现在怎样使用”，把“曾经怎样、下一步准备怎样”分别放入迁移、决策、任务或历史记录。建设过程中的讨论、失败尝试和反复确认不进入长期操作步骤；影响当前选择的限制应保留。
+使用说明对照当前源码、脚本和输出编写。长期操作步骤写明当前入口、所需条件和结果。需要解释过去的选择时，引用决策、验证记录或 Git。影响当前操作的限制放在对应步骤旁。
 
 架构决策按独立记录保存，列明背景、决定、后果和状态。新决定替代旧决定时保留旧记录并标记替代关系，不把旧决定改写成一直如此。做法参考 [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)。历史资料仅供追溯，不作为当前开发约定。
 
@@ -50,5 +49,7 @@
 3. 确认命令的工作目录、必填参数、版本前提、输出位置和成功条件。文档改动执行对应静态检查；行为或示例改变时运行适用验证。
 4. 对照源码复核取消、异常、线程、所有权和兼容性条件，避免删段时丢失接口契约。
 5. 保持协作规则唯一：`AGENTS.md` 给规则，`GUIDE.md` 给导航，编辑器规则只指向它们，不复制多套约定。
+
+给 Agent 写入口时，用触发动作开头，例如“诊断故障时”。只在入口保留每次都需要遵守的规则，具体命令和例外用链接按需查阅。每个步骤写到能判断完成的位置，查看命令参数时优先使用脚本的命令列表。 [mattpocock/skills · writing-for-agents](https://github.com/mattpocock/skills/blob/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/writing-for-agents/SKILL.md)
 
 以上结合了 [Google 技术写作的读者分析](https://developers.google.com/tech-writing/one/audience)、[Microsoft 写作风格建议](https://learn.microsoft.com/en-us/style-guide/top-10-tips-style-voice)，以及所调研的 [HeBtcd/skills 固定版本](https://github.com/HeBtcd/skills/tree/18006c4d54091303da80c00355c9b4cccbf05821)。后者的 [write-the-docs](https://github.com/HeBtcd/skills/blob/18006c4d54091303da80c00355c9b4cccbf05821/skills/write-the-docs/SKILL.md)、[for-the-audience](https://github.com/HeBtcd/skills/blob/18006c4d54091303da80c00355c9b4cccbf05821/skills/for-the-audience/SKILL.md)、[plain-language](https://github.com/HeBtcd/skills/blob/18006c4d54091303da80c00355c9b4cccbf05821/skills/plain-language/SKILL.md) 提供编辑原则，未提供本仓库的链接检查或文档正确性保证；这里以中文重新表述并结合框架契约使用，不要求安装该 skill 集合。

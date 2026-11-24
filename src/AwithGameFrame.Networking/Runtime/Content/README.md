@@ -26,4 +26,6 @@ var config = await scope.LoadAsync<byte[]>("config/levels.json", token);
 
 `OpenCurrent()` 重新验证已安装版本；无版本返回 null，损坏明确报错。`RollbackAsync()` 验证并原子切回上一版。`ContentSnapshot` 固定版本，更新及回退不改变现存快照的文件；新会话用新快照创建资源 resolver/store，避免同一个 key 在旧会话中突然换内容。框架保留历史版本，不自动清理磁盘；产品应在确认不再持有旧快照后安排清理。同进程相同安装目录的写入串行化，跨进程协调由宿主负责。
 
+`PruneVersionsAsync(pinnedFingerprints)` 显式清理不再需要的已安装版本。当前 `active` 和 `active.bak` 会自动保留，调用方传入仍被旧会话或资源快照使用的 `ContentSnapshot.Fingerprint`，避免清理这些版本。该方法不清理 staging、partials 或未知目录，也不会替调用方判断旧快照是否仍在使用。
+
 这是原始文件分发基础。Unity AssetBundle/Addressables、Godot PCK 的构建、依赖关系、装载与卸载需要专用引擎后端；不能把文件下载成功等同于这些格式的完整更新管线。SHA-256 检查损坏，不验证发布者身份；应用决定可信清单和内容来源。本包不处理代码热更新。

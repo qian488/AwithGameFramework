@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,21 +71,8 @@ namespace AwithGameFrame.Networking.Realtime
                 {
                     ThrowIfDisposed();
                     using (linked.Token.Register(Abort))
-                    using (var output = new MemoryStream())
-                    {
-                        var buffer = new byte[Math.Min(8192, maxMessageBytes)];
-                        while (true)
-                        {
-                            var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), linked.Token).ConfigureAwait(false);
-                            if (result.MessageType == WebSocketMessageType.Close) return null;
-                            if (result.MessageType != WebSocketMessageType.Binary)
-                                throw new RealtimeProtocolException("Only binary WebSocket messages are supported.");
-                            if (result.Count > maxMessageBytes - output.Length)
-                                throw new RealtimeProtocolException("The incoming message exceeds the size limit.");
-                            output.Write(buffer, 0, result.Count);
-                            if (result.EndOfMessage) return output.ToArray();
-                        }
-                    }
+                        return await RealtimeServerSession.ReadBinaryAsync(socket, new byte[Math.Min(8192, maxMessageBytes)],
+                            maxMessageBytes, linked.Token).ConfigureAwait(false);
                 }
                 catch { Abort(); throw; }
                 finally { receiveGate.Release(); }

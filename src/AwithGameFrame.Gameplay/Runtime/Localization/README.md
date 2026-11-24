@@ -1,6 +1,6 @@
 # 宿主本地化
 
-新应用使用 `LocalizationService` 实例。旧 `LocalizationManager` / `LocalizationAPI` 保持原有静态兼容行为；两者不共享语言、字典或事件。
+每个 `LocalizationService` 实例维护当前语言和自己的词条。
 
 ```csharp
 var localization = new LocalizationService(host.Context, fallbackLanguage: "en");

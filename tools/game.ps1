@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('new', 'paths', 'new-module', 'config', 'build', 'sync', 'run-server')]
+    [ValidateSet('new', 'paths', 'new-module', 'config', 'protocol', 'build', 'sync', 'run-server')]
     [string]$Command,
     [Parameter(Mandatory = $true)][string]$Name,
     [ValidateSet('unity', 'godot')][string]$Engine,
@@ -16,6 +16,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $utf8 = New-Object System.Text.UTF8Encoding($false)
+. (Join-Path $PSScriptRoot 'build-identity.ps1')
 
 function Assert-Identifier([string]$Value) {
     $keywords = @('abstract','as','base','bool','break','byte','case','catch','char','checked','class',
@@ -105,6 +106,40 @@ function Invoke-GameConfiguration($Game, [bool]$Verify) {
     catch { throw "Configuration for $Name failed. After updating source data, run game.ps1 config -Name $Name. $($_.Exception.Message)" }
 }
 
+function Invoke-GameProtocol($Game, [bool]$Verify) {
+    $source = Join-Path $gameRoot 'protocol'
+    $schema = Join-Path $source 'schema.json'
+    $baseline = Join-Path $source 'baseline.json'
+    $protobuf = Join-Path $source 'protobuf'
+    $application = Split-Path -Parent (Join-Path $gameRoot $Game.applicationProject)
+    $usesProtobuf = Test-Path -LiteralPath (Join-Path $protobuf 'buf.yaml') -PathType Leaf
+    if ($usesProtobuf) {
+        foreach ($path in @($protobuf, (Join-Path $source 'baseline.binpb'), (Join-Path $application 'Runtime/Generated/Protobuf'))) {
+            Assert-NoReparsePoint $path
+        }
+        $options = @{
+            SourceDirectory = $protobuf
+            BaselinePath = (Join-Path $source 'baseline.binpb')
+            OutputDirectory = (Join-Path $application 'Runtime/Generated/Protobuf')
+            Check = $Verify
+        }
+        if ($env:AWITH_BUF) { $options.Buf = $env:AWITH_BUF }
+        if ($env:AWITH_PROTOC) { $options.Protoc = $env:AWITH_PROTOC }
+        & (Join-Path $PSScriptRoot 'generate-protobuf.ps1') @options
+        if (!(Test-Path -LiteralPath $schema -PathType Leaf)) { return }
+    }
+    $output = Join-Path $application 'Runtime/Generated/Protocol/GameProtocol.cs'
+    foreach ($path in @($schema, $baseline, $output)) { Assert-NoReparsePoint $path }
+    if (-not (Test-Path -LiteralPath $schema -PathType Leaf) -or -not (Test-Path -LiteralPath $baseline -PathType Leaf)) {
+        throw "Game protocol needs protocol/schema.json and protocol/baseline.json: $gameRoot"
+    }
+    $arguments = @('run', '--project', (Join-Path $PSScriptRoot 'ConfigGen/AwithGameFrame.ConfigGen.csproj'),
+        '--configuration', 'Release', '--', '--protocol', $schema, $baseline, $output)
+    if ($Verify) { $arguments += '--check' }
+    try { Invoke-DotNet $arguments }
+    catch { throw "Protocol generation for $Name failed. After updating the source, run game.ps1 protocol -Name $Name. $($_.Exception.Message)" }
+}
+
 # This is a dependency check, not an OS sandbox. Native MSBuild still executes with the caller's permissions.
 function Assert-PortableProjects([string]$Project) {
     $pending = New-Object 'System.Collections.Generic.Stack[string]'
@@ -165,7 +200,7 @@ function Assert-PortableProjects([string]$Project) {
 }
 
 Assert-Identifier $Name
-if ($Check -and $Command -ne 'config') { throw '-Check applies to the config command.' }
+if ($Check -and $Command -notin @('config', 'protocol')) { throw '-Check applies to the config or protocol command.' }
 $gameRoot = Join-Path $repositoryRoot "games/$Name"
 Assert-NoReparsePoint $gameRoot
 
@@ -193,13 +228,13 @@ switch ($Command) {
             Write-Utf8 (Join-Path $stage 'game.json') (($game | ConvertTo-Json) + "`n")
             $moduleDescriptor = [ordered]@{ schemaVersion = 1; id = 'game-' + $Name.ToLowerInvariant().Replace('_', '-')
                 purpose = "Engine-independent game code and server composition for $Name."
-                sourcePaths = @("games/$Name/src", "games/$Name/server")
-                entryPoints = @("games/$Name/game.json", "games/$Name/src/$Name.Application/$Name.Application.csproj")
+                sourcePaths = @("games/$Name/src", "games/$Name/server", "games/$Name/configuration", "games/$Name/protocol")
+                entryPoints = @("games/$Name/game.json", "games/$Name/src/$Name.Application/$Name.Application.csproj", "games/$Name/configuration/README.md", "games/$Name/protocol/README.md")
                 readme = "games/$Name/README.md"; dependencies = @('core','data','gameplay','networking')
                 verificationTools = @('game-build') }
             Write-Utf8 (Join-Path $stage 'module.json') (($moduleDescriptor | ConvertTo-Json -Depth 6) + "`n")
             Write-Utf8 (Join-Path $stage 'configuration/README.md') "# $Name configuration`n`nAdd schema.json and a flat Data directory here. Run game.ps1 config -Name $Name to generate and -Check to verify the outputs.`n"
-            Write-Utf8 (Join-Path $stage 'protocol/README.md') "# $Name protocol`n`nKeep editable protocol sources and compatibility baselines here. Use explicit inputs and outputs with ConfigGen.`n"
+            Write-Utf8 (Join-Path $stage 'protocol/README.md') "# $Name protocol`n`nKeep editable protocol sources and the compatibility baseline here, outside the engine project. Add schema.json and baseline.json, then run:`n`npowershell -File tools/game.ps1 protocol -Name $Name`npowershell -File tools/game.ps1 protocol -Name $Name -Check`n`nThe generated GameProtocol.cs is written to the Application Runtime/Generated/Protocol directory. Do not edit generated output.`n"
             [IO.Directory]::CreateDirectory((Join-Path $repositoryRoot 'games')) | Out-Null
             [IO.Directory]::Move($stage, $gameRoot)
             Write-Host "Created external C# workspace: $gameRoot"
@@ -251,10 +286,15 @@ switch ($Command) {
         Write-Host "Created $moduleName and referenced it from $Name.Application."
     }
     'config' { Invoke-GameConfiguration (Read-Game) ([bool]$Check) }
+    'protocol' { Invoke-GameProtocol (Read-Game) ([bool]$Check) }
     'build' {
         $game = Read-Game
         if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
             Invoke-GameConfiguration $game $true
+        }
+        if ((Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/schema.json')) -or
+            (Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/protobuf/buf.yaml'))) {
+            Invoke-GameProtocol $game $true
         }
         $applicationPath = Join-Path $gameRoot $game.applicationProject
         Assert-PortableProjects $applicationPath
@@ -285,8 +325,11 @@ switch ($Command) {
             $files = @(Get-ChildItem -LiteralPath $stage -File | Sort-Object Name | ForEach-Object {
                 [ordered]@{ path = $_.Name; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
             })
+            $identity = Get-BuildIdentity $repositoryRoot $gameRoot $game
             $build = [ordered]@{ schemaVersion = 1; name = $Name; configuration = $Configuration
-                applicationProject = $game.applicationProject; files = $files }
+                applicationProject = $game.applicationProject; sourceCommit = $identity.sourceCommit
+                sourceDirty = $identity.sourceDirty; sourceFingerprint = $identity.sourceFingerprint
+                targetFramework = $identity.targetFramework; engineVersion = $identity.engineVersion; files = $files }
             Write-Utf8 (Join-Path $stage 'build.json') (($build | ConvertTo-Json -Depth 6) + "`n")
             # A successful complete build replaces the old set, so removed dependencies cannot linger.
             $backup = Join-Path $outputRoot ('portable-previous-' + [Guid]::NewGuid().ToString('N'))

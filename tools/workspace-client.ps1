@@ -3,13 +3,15 @@ param(
     [Parameter(Mandatory = $true)][string]$RepositoryRoot,
     [Parameter(Mandatory = $true)][string]$GameRoot,
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
-    [string]$ClientDirectory
+    [string]$ClientDirectory,
+    [string]$SourceGameRoot
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $ownershipFile = '.awith-workspace.json'
+. (Join-Path $PSScriptRoot 'build-identity.ps1')
 
 function Write-Utf8([string]$Path, [string]$Text) {
     [System.IO.File]::WriteAllText($Path, $Text, $utf8)
@@ -180,6 +182,33 @@ $build = Get-Content -LiteralPath $buildManifest -Raw -Encoding UTF8 | ConvertFr
 if ($build.schemaVersion -ne 1 -or $build.name -cne $game.name -or $build.configuration -cne $Configuration -or $build.applicationProject -cne $game.applicationProject) {
     throw 'Portable build manifest does not match the selected game/configuration. Rebuild before syncing.'
 }
+$clientDirectoryName = if ($ClientDirectory) { $ClientDirectory } elseif ($game.engine -eq 'unity') { 'Unity' } else { 'Godot' }
+if ($clientDirectoryName -notmatch '^[A-Za-z][A-Za-z0-9_-]*$') { throw "Invalid client directory name: $clientDirectoryName" }
+$client = Get-FullChildPath $GameRoot ('client/' + $clientDirectoryName)
+Assert-NoLinks $client
+
+if ($SourceGameRoot) {
+    $SourceGameRoot = [IO.Path]::GetFullPath($SourceGameRoot).TrimEnd([char[]]@('\', '/'))
+    if (-not $SourceGameRoot.StartsWith($RepositoryRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'SourceGameRoot must be inside RepositoryRoot.'
+    }
+    Assert-NoLinks $SourceGameRoot
+    $sourceGameFile = Join-Path $SourceGameRoot 'game.json'
+    Assert-NoLinks $sourceGameFile
+    if ((Get-FileHash -LiteralPath $sourceGameFile).Hash -ne (Get-FileHash -LiteralPath (Join-Path $GameRoot 'game.json')).Hash) {
+        throw 'The verification client must use the source game manifest.'
+    }
+}
+else { $SourceGameRoot = $GameRoot }
+$identity = Get-BuildIdentity $RepositoryRoot $SourceGameRoot $game
+foreach ($field in @('sourceCommit', 'sourceFingerprint', 'targetFramework')) {
+    if ([string]$build.$field -cne [string]$identity.$field) {
+        throw "Portable build identity mismatch for $field. Rebuild before syncing."
+    }
+}
+if ($game.engine -eq 'unity' -and [string]$build.engineVersion -cne [string](Get-BuildIdentityUnityVersion $client)) {
+    throw 'Portable build identity does not match the current engine project version. Rebuild before syncing.'
+}
 $builtFiles = @{}
 foreach ($entry in @($build.files)) {
     $file = Get-FullChildPath $portable $entry.path
@@ -200,19 +229,13 @@ foreach ($assembly in @(($game.name + '.Application'), ($game.name + '.Domain'),
     }
 }
 
-$clientName = if ($game.engine -eq 'unity') { 'Unity' } else { 'Godot' }
-if ([string]::IsNullOrWhiteSpace($ClientDirectory)) { $clientDirectoryPath = $clientName }
-else {
-    if ($ClientDirectory -notmatch '^[A-Za-z][A-Za-z0-9_-]*$') { throw "Invalid client directory name: $ClientDirectory" }
-    $clientDirectoryPath = $ClientDirectory
-}
-$client = Get-FullChildPath $GameRoot ('client/' + $clientDirectoryPath)
-Assert-NoLinks $client
 if ($game.engine -eq 'unity') {
     foreach ($entry in @('Assets', 'ProjectSettings/ProjectVersion.txt', 'Packages/manifest.json')) {
         if (-not (Test-Path -LiteralPath (Join-Path $client $entry))) { throw "Create your Unity project at $client before syncing (missing $entry)." }
     }
     $manifest = Get-Content -LiteralPath (Join-Path $client 'Packages/manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $addressables = $manifest.dependencies.PSObject.Properties['com.unity.addressables']
+    $hybridClr = $null -ne $manifest.dependencies.PSObject.Properties['com.code-philosophy.hybridclr']
     foreach ($dependency in $manifest.dependencies.PSObject.Properties) {
         if ($dependency.Name -like 'com.awithgameframe.*' -and $dependency.Name -ne 'com.awithgameframe.workspace') {
             throw "Source packages and workspace DLLs cannot be mixed. Remove $($dependency.Name) from the Unity project before syncing. Optional legacy/plugin packages require a separate integration."
@@ -223,6 +246,7 @@ if ($game.engine -eq 'unity') {
         if ($directory.Name -eq 'com.awithgameframe.workspace' -or -not (Test-Path -LiteralPath $packagePath)) { continue }
         $packageName = (Get-Content -LiteralPath $packagePath -Raw -Encoding UTF8 | ConvertFrom-Json).name
         if ($packageName -like 'com.awithgameframe.*') { throw "Remove the duplicate embedded framework package before syncing: $($directory.FullName)" }
+        if ($packageName -eq 'com.code-philosophy.hybridclr') { $hybridClr = $true }
     }
     $destination = Get-FullChildPath $client 'Packages/com.awithgameframe.workspace'
 }
@@ -237,7 +261,23 @@ $stage = Get-FullChildPath $buildRoot ('client-stage-' + [Guid]::NewGuid().ToStr
 [System.IO.Directory]::CreateDirectory($stage) | Out-Null
 try {
     if ($game.engine -eq 'unity') {
+        Copy-Item -LiteralPath $buildManifest -Destination (Join-Path $stage 'build.json')
         Copy-PortableAssemblies (Join-Path $stage 'Plugins') $true
+        if ($game.PSObject.Properties['unityConfiguration']) {
+            $configDirectory = Join-Path $stage "Runtime/Resources/AwithConfiguration/$($game.name)"
+            foreach ($binding in $game.unityConfiguration.PSObject.Properties) {
+                if ($binding.Name -notmatch '^[A-Za-z][A-Za-z0-9_]*$' -or $binding.Value -isnot [string] -or
+                    [IO.Path]::GetExtension($binding.Value) -cne '.json' -or
+                    $binding.Value -notmatch '^(configuration/|src/[^/]+/Runtime/Generated/Configuration/)' -or
+                    $binding.Value -match '(^|[/\\])\.\.([/\\]|$)') {
+                    throw "Invalid Unity configuration binding: $($binding.Name)"
+                }
+                $config = Get-FullChildPath $SourceGameRoot $binding.Value
+                Assert-NoLinks $config
+                [IO.Directory]::CreateDirectory($configDirectory) | Out-Null
+                Copy-Item -LiteralPath $config -Destination (Join-Path $configDirectory ($binding.Name + '.json'))
+            }
+        }
         foreach ($source in @('Runtime', 'Editor')) {
             $sourcePath = Get-FullChildPath (Join-Path $RepositoryRoot 'adapters/unity') $source
             Assert-NoLinks $sourcePath
@@ -247,6 +287,22 @@ try {
             Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $stage $source) -Recurse
             $sourceMeta = $sourcePath + '.meta'
             if (Test-Path -LiteralPath $sourceMeta) { Copy-Item -LiteralPath $sourceMeta -Destination (Join-Path $stage ($source + '.meta')) }
+        }
+        $optionalAdapters = [ordered]@{}
+        if ($addressables) { $optionalAdapters['Runtime/Addressables'] = 'adapters/unity-addressables/Runtime' }
+        if ($hybridClr) {
+            $optionalAdapters['Runtime/HybridCLR'] = 'adapters/unity-hybridclr/Runtime'
+            $optionalAdapters['Editor/HybridCLR'] = 'adapters/unity-hybridclr/Editor'
+        }
+        foreach ($destinationPath in $optionalAdapters.Keys) {
+            $source = Get-FullChildPath $RepositoryRoot $optionalAdapters[$destinationPath]
+            Assert-NoLinks $source
+            foreach ($item in Get-ChildItem -LiteralPath $source -Recurse -Force) {
+                Assert-NoLinks $item.FullName
+            }
+            $adapter = Join-Path $stage $destinationPath
+            Copy-Item -LiteralPath $source -Destination $adapter -Recurse
+            Copy-Item -LiteralPath ($source + '.meta') -Destination ($adapter + '.meta')
         }
         # Engine adapters depend on framework assemblies, never on a concrete game's DLLs.
         $dllNames = @('AwithGameFrame.Core.dll', 'AwithGameFrame.Data.dll', 'AwithGameFrame.Gameplay.dll', 'AwithGameFrame.Networking.dll' |
@@ -265,6 +321,9 @@ try {
             unity = '2022.3'
             dependencies = [ordered]@{ 'com.unity.ugui' = '1.0.0'; 'com.unity.nuget.newtonsoft-json' = '3.2.1' }
         }
+        if ($addressables -and $addressables.Value -match '^\d+\.\d+\.\d+$') {
+            $package.dependencies['com.unity.addressables'] = $addressables.Value
+        }
         Write-Utf8 (Join-Path $stage 'package.json') (($package | ConvertTo-Json -Depth 5) + "`n")
         foreach ($item in @(Get-ChildItem -LiteralPath $stage -Recurse -Force | Sort-Object FullName)) {
             if (-not $item.PSIsContainer -and $item.Extension -eq '.meta') { continue }
@@ -277,6 +336,7 @@ try {
         & dotnet build (Join-Path $RepositoryRoot 'adapters/godot/AwithGameFrame.Godot.csproj') --configuration $Configuration --output $adapterOutput --nologo
         if ($LASTEXITCODE -ne 0) { throw 'Godot adapter build failed; client output was preserved.' }
         Copy-PortableAssemblies $stage $false
+        Copy-Item -LiteralPath $buildManifest -Destination (Join-Path $stage 'build.json')
         foreach ($extension in @('.dll', '.pdb')) {
             $file = Join-Path $adapterOutput ('AwithGameFrame.Godot' + $extension)
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing adapter output: $file" }

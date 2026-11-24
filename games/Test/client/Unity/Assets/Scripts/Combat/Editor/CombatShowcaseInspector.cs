@@ -88,8 +88,12 @@ namespace Test.Client.Combat.Editor
                 {
                     try
                     {
-                        RainPassEnvironmentBaker.Bake(showcase);
-                        Debug.Log("Rain Pass environment baked to Assets/Content/RainPass/Generated.", showcase);
+                        if (profile.BakedPrefab == null || EditorUtility.DisplayDialog("Rebake Rain Pass Environment",
+                            "Regenerate the Prefab, materials and textures at their registered paths? Edits to those assets will be replaced.", "Rebake", "Cancel"))
+                        {
+                            RainPassEnvironmentBaker.Bake(showcase);
+                            Debug.Log("Rain Pass environment baked: " + profile.ManifestPath, showcase);
+                        }
                     }
                     catch (Exception error) { Debug.LogException(error, showcase); }
                 }
@@ -98,14 +102,18 @@ namespace Test.Client.Combat.Editor
             {
                 if (GUILayout.Button("Validate Generated Asset"))
                 {
-                    var result = RainPassEnvironmentBaker.Validate(profile);
-                    if (result == null) Debug.Log("Rain Pass generated asset validation passed.", profile);
-                    else Debug.LogError(result, profile);
+                    var result = RainPassEnvironmentBaker.Validate(profile, true, out var edited);
+                    if (result != null) Debug.LogError(result, profile);
+                    else if (edited.Length > 0) Debug.Log("Rain Pass baked asset is current. Files edited since bake:\n" + string.Join("\n", edited), profile);
+                    else Debug.Log("Rain Pass generated asset validation passed.", profile);
                 }
                 if (GUILayout.Button("Clear Generated Asset"))
                 {
                     if (EditorUtility.DisplayDialog("Clear Rain Pass Generated Asset", "Delete the generated prefab, materials, textures and manifest?", "Clear", "Cancel"))
-                        RainPassEnvironmentBaker.Clear(profile);
+                    {
+                        try { RainPassEnvironmentBaker.Clear(profile); }
+                        catch (Exception error) { Debug.LogException(error, profile); }
+                    }
                 }
             }
         }

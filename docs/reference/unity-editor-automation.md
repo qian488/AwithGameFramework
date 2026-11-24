@@ -1,10 +1,12 @@
 # Unity 编辑器自动化
 
-框架的 Unity Editor 程序集提供一组项目内操作。项目选用现代 Unity 适配包时即可使用。走 DLL 工作区接入的项目通过 `tools/game.ps1 sync -Name <游戏名>` 分发同一份 Editor 实现。技能位于仓库的 `.agents/skills`，调用工具位于 `tools`。
+Unity 适配包在项目内提供编辑器操作。DLL 工作区通过 `tools/game.ps1 sync -Name <游戏名>` 更新同一份实现。 [Unity 操作技能](../../.agents/skills/awith-unity-editor/SKILL.md)
 
 ## 查找与执行
 
-使用运行中的 Unity 时，在该项目选择 `Tools > AwithGameFrame > Enable Editor Automation`。开关按编辑器会话生效，支持脚本重载后恢复。使用关闭的项目时传入匹配项目版本的 `-EditorPath`。项目外部路径可用 `-ProjectPath` 指定。
+1. 选择目标工程。仓库游戏使用 `-Name`，其他工程使用 `-ProjectPath`。
+2. 选择运行方式。Unity 已打开时，在目标工程启用 `Tools > AwithGameFrame > Enable Editor Automation`。Unity 关闭时，传入与 `ProjectVersion.txt` 对应的 `-EditorPath`，脚本在后台执行。
+3. 用 `project.info` 核对返回的工程路径，再选择操作。用 `-Action actions` 查命令和参数。
 
 ```powershell
 ./tools/unity-editor.ps1 -Action actions
@@ -12,12 +14,23 @@ $project = @{ ProjectPath = '<Unity 工程路径>' }
 ./tools/unity-editor.ps1 @project -Action project.info
 ./tools/unity-editor.ps1 @project -Action asset.find -Query 't:Prefab'
 ./tools/unity-editor.ps1 @project -Action scene.inspect
+```
+
+后台检查额外传 `-EditorPath '<Unity.exe>'`。检查指定场景时传 `-Scene`。编译或连接失败时先读诊断。 [编辑器诊断](#诊断编辑器)
+
+### 实时编辑与保存
+
+以下示例在已打开的目标场景放置 Prefab，修改 `/Preview`，再保存。先用 `asset.find` 确认 Prefab 路径，并用 `scene.inspect` 核对层级目标。
+
+```powershell
 ./tools/unity-editor.ps1 @project -Action prefab.place -Asset 'Assets/Prefabs/Marker.prefab' -ObjectName 'Preview' -Position 1,0,0
 ./tools/unity-editor.ps1 @project -Action object.transform -Target '/Preview' -Rotation 0,0,30
 ./tools/unity-editor.ps1 @project -Action scene.save
 ```
 
-关闭项目后的批处理示例使用新的场景路径。目录须已存在。`scene.create` 直接保存新场景，后续的对象、组件和 Prefab 操作需要在同一次调用中传 `-Scene` 与 `-Save`。
+### 后台编辑与保存
+
+下面使用已有目录中的新场景路径。`scene.create` 直接保存新场景。之后每条对象、组件和 Prefab 修改命令都需要传 `-Scene` 与 `-Save`。
 
 ```powershell
 $editor = '<Unity.exe>'
@@ -26,6 +39,12 @@ $scene = 'Assets/Scenes/AutomationDemo.unity'
 ./tools/unity-editor.ps1 @project -EditorPath $editor -Action object.create -Scene $scene -Save -ObjectName Marker -Kind Cube
 ./tools/unity-editor.ps1 @project -EditorPath $editor -Action component.add -Scene $scene -Save -Target '/Marker' -Kind Light
 ```
+
+## 检查 Prefab
+
+`prefab.inspect -Asset <Assets/...prefab>` 读取 Prefab 的 GUID、类型、层级、组件和依赖路径。使用 `-Limit` 限制层级和依赖各自的返回数量，结果超限时会标记 `truncated`。资产通过 AssetDatabase 读取，场景和 Prefab 文件保持原状。
+
+`scene.health -Scene <Assets/...unity>` 检查组件丢失脚本和可见序列化字段中的断引用，并记录对象数与有效相机数。结果包含出问题的对象层级、组件和属性路径。有效相机数可用于检查预配置相机的场景，运行时生成相机的场景可在 Player 检查。
 
 ## 诊断编辑器
 
@@ -39,6 +58,26 @@ $scene = 'Assets/Scenes/AutomationDemo.unity'
 - 实时诊断直接读取 `Library/AwithGameFrameAutomation/diagnostics.json`，编译期间也可读取。`state` 区分会话可用、关闭或缺少当前快照。`compilationState` 为 `not-observed`、`compiling`、`failed` 或 `succeeded`。
 - 快照从开启自动化时开始收集警告和错误，并保存最近一次编译的诊断。两组各保留最近 100 条，可用 `-Limit` 缩小返回量。编译消息附文件、行和列。`updatedUtc` 表示采集时间。脚本重载后继续同一会话，关闭或禁用自动化时清理实时快照。
 - 批处理诊断运行只读项目探测，报告退出状态、能定位的 C# 编译错误和 `logPath`，支持首次导入失败。普通批处理操作遇到编译失败时也会给出诊断；Unity 已返回操作错误时保留该操作的错误信息。
+
+## 操作审计
+
+每次编辑器命令完成后，框架会在 `Library/AwithGameFrameAutomation/audit.jsonl` 追加一条结构化记录。记录包含请求 ID、动作、实时或批处理模式、预览和保存标记、场景、资源、目标、事务步骤数、结果状态、错误和对应的结果文件名。失败、策略拒绝和预览也会记录，便于区分“请求已到达编辑器”和“修改已经落盘”。
+
+```powershell
+./tools/unity-editor.ps1 @project -Action audit.list -Limit 50
+```
+
+`audit.list` 只读取最近记录。具体字段变化和事务每一步仍在对应的 `*.result` 文件中，审计记录通过 `id` 和 `resultFile` 关联。审计日志属于目标 Unity 工程的开发期状态，不进入游戏运行时资源和发布包。
+
+## 性能快照
+
+`performance.inspect` 提供一次编辑器状态快照，包含当前 Unity 版本、场景脏状态、根对象数、工程内对象数、组件数，以及 Unity Profiler 可读取的总分配内存、总保留内存、未使用保留内存、Mono 已用内存和 Mono 堆大小。
+
+```powershell
+./tools/unity-editor.ps1 @project -EditorPath $editor -Action performance.inspect
+```
+
+快照适合后台导入和场景验证中的明显异常检查，也可以作为项目自己的回归报告输入。它是单次采样，不替代目标设备上的帧时间、持续运行、功耗和温升测试。
 
 ## 编辑组件字段
 
@@ -90,7 +129,7 @@ $changes = @{ m_Intensity = 4.5; m_BounceIntensity = 2.5 }
 {
   "version": 1,
   "live": ["project.info", "scene.inspect", "scene.transaction", "object.create"],
-  "batch": ["project.info", "scene.inspect", "checkpoint.inspect"]
+  "batch": ["project.info", "scene.inspect", "audit.list", "performance.inspect", "checkpoint.inspect"]
 }
 ```
 
@@ -121,14 +160,4 @@ $saved = (./tools/unity-editor.ps1 @project -Action checkpoint.capture -Asset $s
 
 ## 项目采用与覆盖
 
-采用标准是在独立游戏工作区接入框架后，所需的操作可以通过仓库技能和命令完成，并能用该项目的场景、资源或任务证据验证结果。当前覆盖按工作流判断。
-
-| 参考项目 | 框架内可用的工作流 | 采用时需要单独评估的上游能力 |
-| --- | --- | --- |
-| Unity-Skills | 场景和资产检查、对象与 Prefab 实例编辑、组件标量与原生粒子组件、实时与批处理诊断。同场景事务、预览、Undo、操作记录、项目白名单、场景及 Prefab 检查点。 | 材质和动画曲线、UI 布局、专用粒子模块、跨资产事务及项目完整备份。 |
-| mattpocock/skills | 设计澄清、规格、分诊、依赖工单、复现、切片交付、证据与评审。本地 GitHub Issue 快照对照、限范围原型和架构改进。 | 远端工单写入、其他跟踪平台和未按本项目需求验收的上游技能。 |
-
-Unity 命令的接入与行为可用本页的独立 Unity 验证复现。开发技能按目标 AI 工具对仓库技能的支持使用，任务验收记录以实际执行证据为准。开发任务步骤见[开发工作流](../../.agents/skills/awith-framework-development/references/workflows.md)。
-
-- [Unity-Skills](https://github.com/Besty0728/Unity-Skills)
-- [mattpocock/skills](https://github.com/mattpocock/skills)
+用 `-Action actions` 查当前项目可调用的操作。事务范围是一个场景，检查点按单个场景或 Prefab 资产保存。成组操作的预览、执行结果和恢复入口沿用 Unity-Skills 的文档组织思路。 [Unity-Skills 操作与治理说明](https://github.com/Besty0728/Unity-Skills/blob/main/docs/OPERATING_MODES.md) · [本仓库实测记录](../validation/latest.md)

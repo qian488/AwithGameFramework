@@ -1,6 +1,6 @@
 # 实例事件
 
-`AwithGameFrame.Core.Events.EventBus` 与旧的静态 `EventCenter` 独立。每个 bus 拥有自己的强类型订阅表，按发布时显式指定的 `T` 匹配，不自动通知基类或接口订阅。
+`AwithGameFrame.Core.Events.EventBus`的每个实例拥有自己的强类型订阅表，按发布时显式指定的 `T` 匹配，不自动通知基类或接口订阅。
 
 ```csharp
 using var events = new EventBus();

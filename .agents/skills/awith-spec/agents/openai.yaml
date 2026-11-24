@@ -1,0 +1,5 @@
+interface:
+  display_name: "Write an Awith specification"
+  short_description: "Record agreed behavior and verifiable work slices"
+policy:
+  allow_implicit_invocation: false

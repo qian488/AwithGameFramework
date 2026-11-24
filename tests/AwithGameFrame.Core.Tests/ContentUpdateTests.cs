@@ -16,6 +16,22 @@ namespace AwithGameFrame.Tests
 {
     public class ContentUpdateTests
     {
+        [Test]
+        public void SignedManifestAuthenticatesExactBytesBeforeParsing()
+        {
+            using var signer = RSA.Create(2048);
+            using var trustedKey = RSA.Create();
+            trustedKey.ImportParameters(signer.ExportParameters(false));
+            using var otherKey = RSA.Create(2048);
+            var manifest = new ContentManifest("signature-fixture", Array.Empty<ContentFile>());
+            var json = manifest.ToJson();
+            var signature = signer.SignData(json, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            Assert.That(ContentManifest.FromSignedJson(json, signature, trustedKey).Fingerprint, Is.EqualTo(manifest.Fingerprint));
+            Assert.Throws<CryptographicException>(() => ContentManifest.FromSignedJson(json, signature, otherKey));
+            Array.Resize(ref json, json.Length + 1);
+            json[json.Length - 1] = (byte)' ';
+            Assert.Throws<CryptographicException>(() => ContentManifest.FromSignedJson(json, signature, trustedKey));
+        }
         private string directory;
         [SetUp] public void Setup() => directory = Path.Combine(Path.GetTempPath(), "AwithContentTests", Guid.NewGuid().ToString("N"));
         [TearDown] public void Cleanup() { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
@@ -233,6 +249,28 @@ namespace AwithGameFrame.Tests
             File.WriteAllText(first.GetPath("config"), "corrupted");
             Assert.ThrowsAsync<InvalidDataException>(async () => await service.RollbackAsync());
             Assert.That(service.OpenCurrent().Manifest.Version, Is.EqualTo("2"));
+        }
+
+        [Test]
+        public async Task PruneVersionsKeepsActiveRollbackAndPinnedSnapshots()
+        {
+            var handler = new Handler();
+            await using var service = new ContentUpdateService(directory, handler);
+            var first = await service.UpdateAsync(Manifest("1", handler.Bytes), ContentUri);
+            handler.Bytes = Encoding.UTF8.GetBytes("second");
+            await service.UpdateAsync(Manifest("2", handler.Bytes), ContentUri);
+            handler.Bytes = Encoding.UTF8.GetBytes("third");
+            await service.UpdateAsync(Manifest("3", handler.Bytes), ContentUri);
+            handler.Bytes = Encoding.UTF8.GetBytes("fourth");
+            await service.UpdateAsync(Manifest("4", handler.Bytes), ContentUri);
+
+            var removed = await service.PruneVersionsAsync(new[] { first.Fingerprint });
+
+            Assert.That(removed, Has.Count.EqualTo(1));
+            Assert.That(removed, Does.Not.Contain(first.Fingerprint));
+            Assert.That(service.OpenCurrent().Manifest.Version, Is.EqualTo("4"));
+            Assert.That(File.Exists(first.GetPath("config")), Is.True);
+            Assert.That((await service.RollbackAsync()).Manifest.Version, Is.EqualTo("3"));
         }
     }
 }

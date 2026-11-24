@@ -55,19 +55,6 @@ foreach ($file in @($sourceFiles | Where-Object { $_.Extension -eq '.cs' })) {
     $code = [regex]::Replace([System.IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
     if ($code -match $enginePattern) { throw "Engine dependency in portable source: $($file.FullName)" }
 }
-# Keep the recommended instance runtime independent of the legacy global facades.
-$instanceDirectories = @('Hosting', 'Flow', 'Events', 'Timing', 'Pooling', 'Resources') |
-    ForEach-Object { Join-Path $sourceRoot "AwithGameFrame.Core/Runtime/$_" }
-$instanceDirectories += @('Audio', 'Input', 'Presentation', 'Scenes', 'Settings') |
-    ForEach-Object { Join-Path $sourceRoot "AwithGameFrame.Gameplay/Runtime/$_" }
-$instanceFiles = @($instanceDirectories | ForEach-Object { Get-ChildItem -LiteralPath $_ -Recurse -Filter '*.cs' -File })
-$instanceFiles += Get-Item -LiteralPath (Join-Path $sourceRoot 'AwithGameFrame.Gameplay/Runtime/Localization/LocalizationService.cs')
-foreach ($file in $instanceFiles) {
-    $code = [regex]::Replace([IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
-    if ($code -match '\b(BaseManager|FrameworkBootstrap|ServiceLocator|EventCenter|DataPersistenceAPI)\b') {
-        throw "Instance runtime depends on a legacy global API: $($file.FullName)"
-    }
-}
 $allowedPortableDependencies = @{
     'AwithGameFrame.Core' = @()
     'AwithGameFrame.Data' = @('AwithGameFrame.Core')
@@ -283,8 +270,8 @@ foreach ($name in @('AwithGameFrame.Unity', 'AwithGameFrame.Extensions', 'AwithG
 }
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'adapters/unity') -Recurse -Filter '*.cs' -File) {
     $code = [regex]::Replace([IO.File]::ReadAllText($file.FullName), $nonCodePattern, ' ')
-    if ($code -match '\b(BaseManager|FrameworkBootstrap|ServiceLocator|EventCenter|DataPersistenceAPI|Cysharp|DOTween|Sqlite)\b') {
-        throw "Modern Unity adapter contains a legacy global or optional plugin dependency: $($file.FullName)"
+    if ($code -match '\b(Cysharp|DOTween|Sqlite)\b') {
+        throw "Modern Unity adapter contains an optional plugin dependency: $($file.FullName)"
     }
 }
 
@@ -305,6 +292,11 @@ foreach ($dependency in $manifest.dependencies.PSObject.Properties) {
 foreach ($packagePath in (@($sourceFiles | Where-Object { $_.Name -eq 'package.json' }) +
     @($unityPackageRoots | ForEach-Object { Get-Item -LiteralPath (Join-Path $_ 'package.json') }))) {
     $package = Read-Json $packagePath.FullName
+    $modulePath = Join-Path (Split-Path $packagePath.FullName) 'module.json'
+    if (Test-Path -LiteralPath $modulePath -PathType Leaf) {
+        $module = Read-Json $modulePath
+        if ($module.PSObject.Properties['optional'] -and $module.optional -eq $true) { continue }
+    }
     if (-not $localFrameworkPackages.ContainsKey($package.name)) {
         throw "Unity sample is missing a local framework package: $($package.name)"
     }

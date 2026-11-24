@@ -12,6 +12,11 @@ namespace AwithGameFrame.AgentKit;
 
 public static class TaskFiles
 {
+    private static readonly HashSet<string> ContentRequestTypes = new(StringComparer.Ordinal)
+    {
+        "game-content", "content-design", "presentation-content"
+    };
+
     public static JsonSerializerOptions JsonOptions { get; } = new()
     {
         WriteIndented = true,
@@ -111,6 +116,8 @@ public static class TaskFiles
         if (task.SchemaVersion != 1) throw new InvalidDataException("Unsupported task schemaVersion: " + task.SchemaVersion);
         ValidateId(task.Id);
         if (string.IsNullOrWhiteSpace(task.Objective)) throw new InvalidDataException("Task objective is required.");
+        if (task.OpenDesignDecisions != null && task.OpenDesignDecisions.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("openDesignDecisions cannot contain empty entries.");
         if (task.Acceptance == null || task.Acceptance.Length == 0 || task.Acceptance.Any(string.IsNullOrWhiteSpace))
             throw new InvalidDataException("At least one nonempty acceptance criterion is required.");
         ValidatePaths(ws, task.ReadPaths, nameof(task.ReadPaths));
@@ -129,6 +136,22 @@ public static class TaskFiles
             task.RequiredChecks.Any(string.IsNullOrWhiteSpace) || task.RequiredChecks.Except(task.AllowedTools, StringComparer.Ordinal).Any())
             throw new InvalidDataException("A task needs at least one required check, and every required check must be an allowed tool.");
         // Protected paths may overlap the write scope to preserve existing edits inside a task area.
+    }
+
+    internal static void ValidateForImplementation(Workspace ws, TaskSpec task)
+    {
+        Validate(ws, task);
+        if (task.OpenDesignDecisions is { Length: > 0 })
+            throw new InvalidOperationException("Resolve openDesignDecisions before planning or running implementation tools.");
+        if (task.RequestType != null && ContentRequestTypes.Contains(task.RequestType))
+        {
+            if (string.IsNullOrWhiteSpace(task.DesignSource))
+                throw new InvalidDataException("Content tasks require designSource before planning or implementation.");
+            if (string.IsNullOrWhiteSpace(task.ExperienceScope))
+                throw new InvalidDataException("Content tasks require experienceScope before planning or implementation.");
+            if (task.OpenDesignDecisions == null)
+                throw new InvalidDataException("Content tasks require openDesignDecisions. Use [] when all design decisions are resolved.");
+        }
     }
 
     private static void ValidatePaths(Workspace ws, IEnumerable<string>? paths, string name)

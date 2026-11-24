@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "id": "workflow.design-clarification",
+      "kind": "workflow",
+      "description": "Clarify player experience, content scope, presentation direction and acceptance before implementing unresolved game content.",
+      "owner": "docs/guides/ai-collaboration.md",
+      "entryPoint": "docs/guides/ai-collaboration.md#内容需求澄清门",
+      "modes": ["conversation", "manual"],
+      "parameters": ["requestType", "designSource", "experienceScope", "openDesignDecisions"],
+      "checks": ["agent-contracts"]
+    },
+    {
+      "id": "workflow.specification",
+      "kind": "workflow",
+      "description": "Turn an agreed behavior into a bounded task with ownership, acceptance, scope and required checks.",
+      "owner": "agent/templates/task-brief.md",
+      "entryPoint": "tools/agent.ps1 new",
+      "modes": ["conversation", "manual"],
+      "parameters": ["taskTemplate", "taskId"],
+      "checks": ["agent-contracts"]
+    },
+    {
+      "id": "workflow.ticket-slicing",
+      "kind": "workflow",
+      "description": "Split an agreed specification into dependency-aware slices that can be handed to another session.",
+      "owner": "agent/templates/ticket-board.json",
+      "entryPoint": "tools/agent.ps1 board-import",
+      "modes": ["conversation", "manual"],
+      "parameters": ["boardSpec", "ticketId", "priority"],
+      "checks": ["agent-contracts"]
+    },
+    {
+      "id": "workflow.diagnosis",
+      "kind": "workflow",
+      "description": "Reproduce a failure at a public boundary, collect distinguishing evidence and rerun the same check after the fix.",
+      "owner": ".agents/skills/awith-framework-development/references/workflows.md",
+      "entryPoint": "docs/guides/ai-collaboration.md#先诊断再修改",
+      "modes": ["conversation", "manual"],
+      "parameters": ["reproduction", "expected", "actual", "verification"],
+      "checks": ["portable-verify"]
+    },
+    {
+      "id": "workflow.delivery-review",
+      "kind": "workflow",
+      "description": "Review implementation against the agreed behavior, ownership, compatibility, failure paths and evidence before delivery.",
+      "owner": "agent/templates/review.md",
+      "entryPoint": "tools/agent.ps1 review",
+      "modes": ["manual"],
+      "parameters": ["reviewer", "decision", "reason"],
+      "checks": ["agent-contracts"]
+    },
+    {
+      "id": "workspace.game-build-sync",
+      "kind": "build",
+      "description": "Build external game Domain/Application and server code, then synchronize the current DLL/PDB identity into the Unity workspace.",
+      "owner": "tools/game.ps1",
+      "entryPoint": "tools/game.ps1 build|sync -Name <game>",
+      "modes": ["background", "manual"],
+      "parameters": ["gameName"],
+      "checks": ["game-build"],
+      "mutatesProject": true
+    },
+    {
+      "id": "unity.editor.actions",
+      "kind": "editor",
+      "description": "List supported Unity editor actions and their argument syntax.",
+      "owner": "tools/unity-editor.ps1",
+      "entryPoint": "tools/unity-editor.ps1 -Action actions",
+      "modes": ["background"],
+      "checks": ["unity-editor-verify"]
+    },
+    {
+      "id": "unity.prefab.inspect",
+      "kind": "editor",
+      "description": "Read a Prefab's hierarchy, components, GUID, asset type and dependencies.",
+      "owner": "tools/unity-editor.ps1",
+      "entryPoint": "tools/unity-editor.ps1 -Action prefab.inspect",
+      "modes": ["background", "live-editor"],
+      "parameters": ["asset", "limit"],
+      "checks": ["unity-editor-verify"]
+    },
+    {
+      "id": "unity.editor.transaction",
+      "kind": "editor",
+      "description": "Preview or apply dependent Unity scene edits as one bounded transaction with persisted result evidence.",
+      "owner": "tools/unity-editor.ps1",
+      "entryPoint": "tools/unity-editor.ps1 -Action scene.transaction",
+      "modes": ["background", "live-editor"],
+      "parameters": ["projectPath", "scene", "stepsFile", "preview", "save"],
+      "checks": ["unity-editor-verify"],
+      "mutatesProject": true
+    },
+    {
+      "id": "unity.editor.diagnostics",
+      "kind": "verification",
+      "description": "Collect Unity compiler messages and editor diagnostics without opening a visible game window.",
+      "owner": "tools/unity-editor.ps1",
+      "entryPoint": "tools/unity-editor.ps1 -Action editor.diagnostics",
+      "modes": ["background", "live-editor"],
+      "parameters": ["projectPath", "editorPath", "limit"],
+      "checks": ["unity-editor-verify"]
+    },
+    {
+      "id": "unity.visual-verification",
+      "kind": "verification",
+      "description": "Run hidden Unity rendering checks and produce screenshots, difference images and machine-readable visual reports.",
+      "owner": "tools/verify-game-unity.ps1",
+      "entryPoint": "tools/verify-game-unity.ps1 -VisualSpec",
+      "modes": ["background", "manual"],
+      "parameters": ["gameName", "editorPath", "visualSpec"],
+      "checks": ["unity-verify"]
+    },
+    {
+      "id": "content.generated-asset-manifest",
+      "kind": "content",
+      "description": "Record generator identity, input hash, seed, output hashes and stale status for runtime-generated or baked assets.",
+      "owner": "src/AwithGameFrame.Data/Runtime/Generation/GeneratedAssetManifest.cs",
+      "entryPoint": "AwithGameFrame.Data.Generation.GeneratedAssetManifest",
+      "modes": ["background", "manual"],
+      "parameters": ["generatorId", "generatorVersion", "inputHash", "outputs"],
+      "checks": ["portable-verify"]
+    },
+    {
+      "id": "content.asset-bundle-pipeline",
+      "kind": "content",
+      "description": "Build Unity AssetBundles or Godot PCK content, publish a catalog, install it through the content snapshot and verify rollback behavior.",
+      "owner": "docs/guides/content-pipeline.md",
+      "entryPoint": "tools/build-unity-content.ps1|tools/build-godot-content.ps1",
+      "modes": ["background", "manual"],
+      "parameters": ["projectPath", "specificationPath", "outputDirectory", "buildTarget"],
+      "checks": ["portable-verify", "unity-verify"]
+    },
+    {
+      "id": "content.addressables-loader",
+      "kind": "content",
+      "description": "Load Unity Addressables assets and additive scenes through ResourceStore and SceneService.",
+      "owner": "adapters/unity-addressables/README.md",
+      "entryPoint": "AwithGameFrame.Unity.Addressables.AddressablesResourceLoader",
+      "modes": ["background", "live-editor", "manual"],
+      "parameters": ["key", "resourceType", "cancellationToken"],
+      "checks": ["unity-addressables-verify"]
+    }
+  ]
+}

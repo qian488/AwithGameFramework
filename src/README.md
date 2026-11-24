@@ -9,7 +9,7 @@
 | 管理视图/场景、导航、输入/音频、本地化、设置与版本化存档 | [Gameplay](AwithGameFrame.Gameplay/README.md) | Data、Core |
 | 接入 HTTP、文件内容更新、WebSocket 与推送恢复 | [Networking](AwithGameFrame.Networking/README.md) | Core；可选 |
 
-新应用从 `GameHost`、`GameModule` 和 `GameContext` 组合实例。Core 的旧全局入口集中在 [Compatibility](AwithGameFrame.Core/Runtime/Compatibility/README.md)，由旧应用独立管理生命周期。Networking 不进入 Data 或 Gameplay 的依赖。
+新应用从 `GameHost`、`GameModule` 和 `GameContext` 组合实例。Networking 不进入 Data 或 Gameplay 的依赖。
 
 引擎类型、原生资源和设备操作放在 [adapters](../adapters/README.md)，共享应用示例放在 [samples](../samples/README.md)。新增功能先读目标包说明和 [src 协作约定](AGENTS.md)，再按 [开发指南](../docs/guides/add-feature.md) 修改源码、测试和元数据。
 

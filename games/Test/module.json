@@ -4,13 +4,15 @@
     "purpose":  "Engine-independent game code and server composition for Test.",
     "sourcePaths":  [
                         "games/Test/src",
-                        "games/Test/server",
-                        "games/Test/configuration"
+        "games/Test/server",
+        "games/Test/configuration",
+        "games/Test/protocol"
                     ],
     "entryPoints":  [
                         "games/Test/game.json",
-                        "games/Test/src/Test.Application/Test.Application.csproj",
-                        "games/Test/configuration/schema.json"
+        "games/Test/src/Test.Application/Test.Application.csproj",
+        "games/Test/configuration/schema.json",
+        "games/Test/protocol/README.md"
                     ],
     "readme":  "games/Test/README.md",
     "dependencies":  [

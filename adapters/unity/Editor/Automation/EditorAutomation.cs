@@ -16,6 +16,8 @@ namespace AwithGameFrame.Unity.Editor
         private static string MarkerPath => Path.Combine(DirectoryPath, "live");
         private static double nextPoll;
 
+        internal static string AutomationDirectory => DirectoryPath;
+
         static EditorAutomation()
         {
             if (Application.isBatchMode) return;
@@ -130,6 +132,7 @@ namespace AwithGameFrame.Unity.Editor
             using (var stream = new FileStream(resultPath + ".tmp", FileMode.CreateNew, FileAccess.Write))
             using (var writer = new StreamWriter(stream)) writer.Write(JsonUtility.ToJson(response, true));
             File.Move(resultPath + ".tmp", resultPath);
+            EditorAutomationAudit.Record(request, response, resultPath);
             File.Delete(workingPath);
             return response.ok;
         }

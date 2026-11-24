@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using AwithGameFrame.Networking.Content;
@@ -16,7 +17,18 @@ namespace AwithGameFrame.Tools.ContentVerification
     {
         private static async Task<int> Main(string[] arguments)
         {
-            if (arguments.Length != 3) throw new ArgumentException("Usage: ContentVerify <published-directory> <installation-directory> <report.json>");
+            if (arguments.Length == 3 && arguments[0] == "sign")
+            {
+                var bytes = File.ReadAllBytes(arguments[1]);
+                ContentManifest.FromJson(bytes);
+                using var signer = ReadKey(arguments[2]);
+                var signature = signer.SignData(bytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                using var file = new FileStream(Path.ChangeExtension(arguments[1], ".sig"), FileMode.CreateNew);
+                file.Write(signature);
+                return 0;
+            }
+            if (arguments.Length is not (3 or 4))
+                throw new ArgumentException("Usage: ContentVerify <published-directory> <installation-directory> <report.json> [public-key.pem]");
             string root = NormalizePath(arguments[0]);
             string installation = NormalizePath(arguments[1]);
             string reportPath = NormalizePath(arguments[2]);
@@ -41,7 +53,15 @@ namespace AwithGameFrame.Tools.ContentVerification
             {
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 var bytes = await http.GetByteArrayAsync(new Uri(uri, "content-manifest.json"));
-                var manifest = ContentManifest.FromJson(bytes);
+                ContentManifest manifest;
+                bool signatureVerified = arguments.Length == 4;
+                if (signatureVerified)
+                {
+                    using var key = ReadKey(arguments[3]);
+                    var signature = await http.GetByteArrayAsync(new Uri(uri, "content-manifest.sig"));
+                    manifest = ContentManifest.FromSignedJson(bytes, signature, key);
+                }
+                else manifest = ContentManifest.FromJson(bytes);
                 await using var updater = new ContentUpdateService(installation);
                 var snapshot = await updater.UpdateAsync(manifest, uri);
                 var current = updater.OpenCurrent();
@@ -49,7 +69,7 @@ namespace AwithGameFrame.Tools.ContentVerification
                 foreach (var file in manifest.Files)
                     if (!File.Exists(snapshot.GetPath(file.Key))) throw new FileNotFoundException("Installed content file is missing: " + file.Key);
                 var report = new { version = manifest.Version, fingerprint = manifest.Fingerprint,
-                    directory = snapshot.Directory, files = manifest.Files.Count, requests, transport = "localhost HTTP" };
+                    directory = snapshot.Directory, files = manifest.Files.Count, requests, signatureVerified, transport = "localhost HTTP" };
                 File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
                 Console.WriteLine("CONTENT_HTTP_INSTALL_PASSED files=" + manifest.Files.Count + " requests=" + requests + " directory=" + snapshot.Directory);
                 return 0;
@@ -62,6 +82,18 @@ namespace AwithGameFrame.Tools.ContentVerification
                 catch (SocketException) when (cancellation.IsCancellationRequested) { }
                 catch (ObjectDisposedException) when (cancellation.IsCancellationRequested) { }
             }
+        }
+
+        private static RSA ReadKey(string path)
+        {
+            var key = RSA.Create();
+            try
+            {
+                key.ImportFromPem(File.ReadAllText(path));
+                if (key.KeySize < 2048) throw new CryptographicException("Use an RSA key of at least 2048 bits.");
+                return key;
+            }
+            catch { key.Dispose(); throw; }
         }
 
         private static string NormalizePath(string path)

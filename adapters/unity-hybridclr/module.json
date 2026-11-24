@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "unity-hybridclr",
+  "purpose": "Unity HybridCLR build inventory and startup loader.",
+  "optional": true,
+  "sourcePaths": [
+    "adapters/unity-hybridclr/Runtime",
+    "adapters/unity-hybridclr/Editor"
+  ],
+  "entryPoints": [
+    "adapters/unity-hybridclr/Runtime/HybridClrUpdate.cs",
+    "adapters/unity-hybridclr/Editor/HybridClrExport.cs"
+  ],
+  "readme": "adapters/unity-hybridclr/README.md",
+  "dependencies": [],
+  "verificationTools": [
+    "unity-hybridclr-verify"
+  ]
+}

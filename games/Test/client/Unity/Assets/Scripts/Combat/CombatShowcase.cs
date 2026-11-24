@@ -260,7 +260,7 @@ namespace Test.Client.Combat
             ResetPresentation();
             try
             {
-                mapBossCatalog = await MapBossCatalog.LoadAsync();
+                mapBossCatalog = await MapBossCatalog.LoadAsync(ReadConfiguration("BossStrike"), ReadConfiguration("BossChallenge"));
                 mapBossOptions = mapBossCatalog;
                 Debug.Log($"Rain Pass stage=configuration-loaded hash={mapBossCatalog.ConfigurationHash} options={mapBossCatalog.Count}.", this);
             }
@@ -277,7 +277,7 @@ namespace Test.Client.Combat
             }
 
             IReadOnlyList<TrialOpponent> catalog;
-            try { catalog = await TrialCatalog.LoadAsync(); }
+            try { catalog = await TrialCatalog.LoadAsync(ReadConfiguration("Opponents")); }
             catch (Exception error)
             {
                 trialCatalogError = "Opponent configuration could not be loaded. See the log for details.";
@@ -288,7 +288,19 @@ namespace Test.Client.Combat
             trials = new TrialSession(run, saveDirectory);
             try { await trials.OpenAsync(); }
             catch (Exception error) { Debug.LogError($"Rain Pass could not read records from '{saveDirectory}'. {error}", this); }
-            if (this != null) opponents = catalog;
+            if (this != null)
+            {
+                opponents = catalog;
+                Debug.Log($"Rain Pass stage=selection-ready opponents={catalog.Count}.", this);
+            }
+        }
+
+        private static byte[] ReadConfiguration(string id)
+        {
+            var asset = Resources.Load<TextAsset>("AwithConfiguration/Test/" + id);
+            if (asset == null) throw new FileNotFoundException($"Missing Rain Pass configuration '{id}'. Sync the game workspace.");
+            try { return asset.bytes; }
+            finally { Resources.UnloadAsset(asset); }
         }
 
         private RainPassEnvironmentParameters EffectiveEnvironmentParameters
@@ -322,7 +334,8 @@ namespace Test.Client.Combat
                 return PassWorld.FromBakedPrefab(environmentProfile.BakedPrefab, transform, surfaceShader, parameters.seed);
             }
 
-            var built = new PassWorld(transform, surfaceShader, parameters.seed, parameters.detailDensity, preview, map);
+            var built = new PassWorld(transform, surfaceShader, parameters.seed, parameters.detailDensity, preview, map,
+                keepTextureData: forceRuntime);
             var moon = PassWorld.Group("Moon key", built.Root.transform);
             moon.localRotation = Quaternion.Euler(43, -126, 0);
             var key = moon.gameObject.AddComponent<Light>();

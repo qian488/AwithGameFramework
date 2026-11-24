@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace AwithGameFrame.Unity.Hosting
 {
-    /// <summary>Drives one independent host. Legacy FrameworkEntry remains a separate compatibility entry.</summary>
+    /// <summary>Drives one independent host from Unity's lifecycle.</summary>
     public class GameHostBehaviour : MonoBehaviour
     {
         public GameHost Host { get; private set; }

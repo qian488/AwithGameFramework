@@ -50,7 +50,7 @@ namespace Test.Application.Combat
             return await LoadAsync(strikes, bosses).ConfigureAwait(false);
         }
 
-        private static async Task<MapBossCatalogResult> LoadAsync(byte[] strikeData, byte[] bossData)
+        public static async Task<MapBossCatalogResult> LoadAsync(byte[] strikeData, byte[] bossData)
         {
             var serializer = new JsonSerializer();
             var strikes = await ConfigTable<BossStrike>.LoadAsync(strikeData, serializer, BossStrike.SchemaHash, row => row.Id).ConfigureAwait(false);

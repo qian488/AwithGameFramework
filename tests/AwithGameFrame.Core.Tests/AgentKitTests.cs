@@ -30,6 +30,7 @@ namespace AwithGameFrame.Core.Tests
             File.WriteAllText(Path.Combine(root, "work", "source.md"), "source");
             Directory.CreateDirectory(Path.Combine(root, "agent"));
             WriteCatalog(false);
+            WriteCapabilities();
             Git("add", "."); Git("commit", "-m", "initial");
             workspace = new Workspace(root);
             task = new TaskSpec { Id = "test", Objective = "Exercise an isolated agent task", ReadPaths = new[] { "README.md" },
@@ -146,6 +147,116 @@ namespace AwithGameFrame.Core.Tests
         }
 
         [Test]
+        public void ContentDraftAllowsContextBeforeTheDesignSourceAndExperienceAreKnown()
+        {
+            var content = new TaskSpec
+            {
+                Id = "content-task",
+                Objective = "Add a game content slice",
+                RequestType = "game-content",
+                ReadPaths = new[] { "README.md" },
+                WritePaths = new[] { "work" },
+                AllowedTools = new[] { "probe" },
+                RequiredChecks = new[] { "probe" },
+                Acceptance = new[] { "A human checks the content" }
+            };
+            TaskFiles.Save(Path.Combine(root, "content-template.json"), content);
+            var taskPath = TaskFiles.Create(workspace, "content-template.json", "content-task", null);
+            var taskDirectory = Path.GetDirectoryName(workspace.Resolve(taskPath))!;
+            content = TaskFiles.ReadTask(workspace, taskPath);
+            ContextBundle.Build(workspace, content, taskDirectory);
+
+            Assert.That(() => ToolRunner.Plan(workspace, content, taskDirectory, "probe"),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("designSource"));
+
+            content.DesignSource = "Accepted content brief";
+            Assert.That(() => ToolRunner.Plan(workspace, content, taskDirectory, "probe"),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("experienceScope"));
+            content.ExperienceScope = "Player enters the route and understands the Boss goal";
+            Assert.That(() => ToolRunner.Plan(workspace, content, taskDirectory, "probe"),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("openDesignDecisions"));
+            content.OpenDesignDecisions = Array.Empty<string>();
+            TaskFiles.Save(workspace.Resolve(taskPath), content);
+            ContextBundle.Build(workspace, content, taskDirectory);
+            Assert.DoesNotThrow(() => ToolRunner.Plan(workspace, content, taskDirectory, "probe"));
+        }
+
+        [Test]
+        public void UnresolvedDesignDecisionsAllowClarificationButBlockPlanning()
+        {
+            var content = new TaskSpec
+            {
+                Id = "content-clarification",
+                Objective = "Clarify a game content slice",
+                RequestType = "game-content",
+                DesignSource = "Developer request under clarification",
+                ExperienceScope = "The player understands the purpose of the content",
+                OpenDesignDecisions = new[] { "Choose the enemy roster and difficulty" },
+                ReadPaths = new[] { "README.md" },
+                WritePaths = new[] { "work" },
+                AllowedTools = new[] { "probe" },
+                RequiredChecks = new[] { "probe" },
+                Acceptance = new[] { "A human checks the clarified content brief" }
+            };
+            TaskFiles.Save(Path.Combine(root, "content-clarification.json"), content);
+            string taskPath = TaskFiles.Create(workspace, "content-clarification.json", "content-clarification", null);
+            string taskDirectory = Path.GetDirectoryName(workspace.Resolve(taskPath))!;
+            var task = TaskFiles.ReadTask(workspace, taskPath);
+            ContextBundle.Build(workspace, task, taskDirectory);
+
+            Assert.That(() => ToolRunner.Plan(workspace, task, taskDirectory, "probe"),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("openDesignDecisions"));
+
+            task.OpenDesignDecisions = Array.Empty<string>();
+            TaskFiles.Save(Path.Combine(taskDirectory, "task.json"), task);
+            ContextBundle.Build(workspace, task, taskDirectory);
+            Assert.DoesNotThrow(() => ToolRunner.Plan(workspace, task, taskDirectory, "probe"));
+        }
+
+        [Test]
+        public void CapabilityCatalogCanFilterByExecutionModeAndText()
+        {
+            var capabilities = CapabilityCatalog.Find(workspace, new CapabilityQuery { Mode = "background" });
+            Assert.That(capabilities, Is.Not.Empty);
+            Assert.That(capabilities, Has.All.Property(nameof(CapabilityDescriptor.Modes)).Contain("background"));
+
+            var editor = CapabilityCatalog.Find(workspace, new CapabilityQuery { Query = "editor" });
+            Assert.That(editor, Has.Some.Property(nameof(CapabilityDescriptor.Id)).EqualTo("unity.editor.actions"));
+        }
+
+        [Test]
+        public void CapabilityCatalogRejectsDuplicateIdsAndUnknownChecks()
+        {
+            var path = Path.Combine(root, "agent", "capabilities.json");
+            var catalog = TaskFiles.Load<CapabilityCatalogDocument>(path);
+            catalog.Capabilities = new[]
+            {
+                catalog.Capabilities[0],
+                catalog.Capabilities[0]
+            };
+            TaskFiles.Save(path, catalog);
+            Assert.That(() => CapabilityCatalog.Read(workspace),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("unique"));
+
+            catalog.Capabilities = new[]
+            {
+                new CapabilityDescriptor
+                {
+                    Id = "workflow.invalid-check",
+                    Kind = "workflow",
+                    Description = "Invalid test capability",
+                    Owner = "README.md",
+                    EntryPoint = "test",
+                    Modes = new[] { "manual" },
+                    Checks = new[] { "missing-check" }
+                }
+            };
+            TaskFiles.Save(path, catalog);
+            Assert.That(() => CapabilityCatalog.Read(workspace),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("unknown check"));
+        }
+
+        [Test]
         public void ContextBudgetsAndDriftAreExplicitAndNeverSilentlyTruncated()
         {
             File.WriteAllText(Path.Combine(root, "README.md"), new string('x', 65537));
@@ -256,6 +367,36 @@ namespace AwithGameFrame.Core.Tests
             TaskFiles.Save(Path.Combine(root, "agent", "tools.json"), new ToolCatalog { Tools = new[] {
                 new ToolRecipe { Id = "probe", Executable = executable, Arguments = arguments ?? new[] { "--version" },
                     TimeoutSeconds = seconds, RequiresApproval = approval } } });
+        }
+
+        private void WriteCapabilities()
+        {
+            TaskFiles.Save(Path.Combine(root, "agent", "capabilities.json"), new CapabilityCatalogDocument
+            {
+                Capabilities = new[]
+                {
+                    new CapabilityDescriptor
+                    {
+                        Id = "workflow.probe",
+                        Kind = "workflow",
+                        Description = "Synthetic capability for the AgentKit fixture.",
+                        Owner = "README.md",
+                        EntryPoint = "probe",
+                        Modes = new[] { "background", "manual" },
+                        Checks = new[] { "probe" }
+                    },
+                    new CapabilityDescriptor
+                    {
+                        Id = "unity.editor.actions",
+                        Kind = "editor",
+                        Description = "Synthetic Unity editor capability for the AgentKit fixture.",
+                        Owner = "README.md",
+                        EntryPoint = "probe",
+                        Modes = new[] { "background" },
+                        Checks = new[] { "probe" }
+                    }
+                }
+            });
         }
 
         private void Git(params string[] arguments)

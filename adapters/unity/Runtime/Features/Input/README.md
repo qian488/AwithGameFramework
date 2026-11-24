@@ -1,6 +1,6 @@
 # Unity 动作输入后端
 
-`AwithGameFrame.Unity.Input.UnityInputBackend` 实现通用 `IInputBackend`，使用 Unity 内置 Input API。配合 `InputService(host.Events)` 与 `InputModule(input, backend)` 在宿主线程每帧 poll；不调用旧静态 InputManager，也不自动注册 Mono 回调。
+`AwithGameFrame.Unity.Input.UnityInputBackend` 通过 Unity 内置 Input API 实现 `IInputBackend`。配合 `InputService(host.Events)` 与 `InputModule(input, backend)` 在宿主线程每帧采样。
 
 默认 control 包含 `keyboard/space`、`keyboard/enter`、`keyboard/escape`、`keyboard/w/a/s/d`、`mouse/left/right`。通过 `MapKey(control, KeyCode)`、`MapMouse(control, button)`、`MapAxis(control, unityAxis)` 覆写或增加设备映射；axis 名称需配置在 Unity Input Manager。未知 control 明确报错，按键重绑定使用通用 InputContext，不把 KeyCode 写入通用模块。
 

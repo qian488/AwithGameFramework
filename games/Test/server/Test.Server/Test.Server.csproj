@@ -8,6 +8,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Compile Include="Runtime/**/*.cs" />
     <ProjectReference Include="../../src/Test.Application/Test.Application.csproj" />
     <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />

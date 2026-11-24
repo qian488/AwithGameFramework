@@ -12,9 +12,6 @@ namespace AwithGameFrame.Foundation.DataPersistence
     {
         #region 基础配置
 
-        /// <summary>默认存储类型</summary>
-        public StorageType DefaultStorageType = StorageType.JsonFile;
-        
         /// <summary>默认序列化格式</summary>
         public SerializationFormat DefaultSerializationFormat = SerializationFormat.Json;
         
@@ -156,14 +153,12 @@ namespace AwithGameFrame.Foundation.DataPersistence
             switch (preset)
             {
                 case DataPersistencePreset.Development:
-                    config.DefaultStorageType = StorageType.JsonFile;
                     config.EnableEncryption = false;
                     config.EnableCompression = false;
                     config.EnableDataValidation = true;
                     break;
                     
                 case DataPersistencePreset.Debug:
-                    config.DefaultStorageType = StorageType.JsonFile;
                     config.EnableEncryption = true;
                     config.EnableCompression = false;
                     config.EnableDataValidation = true;
@@ -171,7 +166,6 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     break;
                     
                 case DataPersistencePreset.Release:
-                    config.DefaultStorageType = StorageType.JsonFile;
                     config.EnableEncryption = false;
                     config.EnableCompression = true;
                     config.EnableDataValidation = true;
@@ -181,7 +175,6 @@ namespace AwithGameFrame.Foundation.DataPersistence
                     break;
                     
                 case DataPersistencePreset.Production:
-                    config.DefaultStorageType = StorageType.JsonFile;
                     config.EnableEncryption = false;
                     config.EnableCompression = true;
                     config.EnableDataValidation = true;

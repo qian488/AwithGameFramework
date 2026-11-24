@@ -40,7 +40,7 @@
 | AgentKit、ConfigGen、内容工具 | 严格拒绝标识符末尾换行，识别大小写不同的残留生成文件，释放 monitor 解析文档，统一内容 HTTP 路径的平台比较规则。 |
 | verify.ps1 | 补齐四包允许依赖矩阵、Core 标准库边界、Runtime 同源及 csproj/asmdef/UPM/module 一致性检查；增加独立 StaticOnly 入口。 |
 
-场景资源所有权缺口和角度死循环属于优先修复项。Core/Data/Networking、Unity 修复和新增依赖检查做了交叉代码审阅；未发现新的阻塞性回归。公共行为及旧 PlayerPrefs 数据限制见[兼容性说明](../migrations/compliance-fixes.md)。
+场景资源所有权缺口和角度死循环属于优先修复项。Core/Data/Networking、Unity 修复和新增依赖检查做了交叉代码审阅。
 
 ## 实际检查
 

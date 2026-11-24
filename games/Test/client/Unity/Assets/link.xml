@@ -1,0 +1,14 @@
+<linker>
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all" />
+  </assembly>
+  <assembly fullname="Test.Application">
+    <type fullname="Test.Application.Combat.TrialCatalog/Row" preserve="all" />
+    <type fullname="Test.Application.Configuration.BossStrike" preserve="all" />
+    <type fullname="Test.Application.Configuration.BossChallenge" preserve="all" />
+  </assembly>
+  <assembly fullname="AwithGameFrame.Data">
+    <type fullname="AwithGameFrame.Data.Configuration.ConfigTableDocument`1" preserve="all" />
+  </assembly>
+</linker>

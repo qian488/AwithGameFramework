@@ -3,6 +3,8 @@ param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z][A-Za-z0-9_]*$')][string]$Name,
     [Parameter(Mandatory = $true)][string]$EditorPath,
     [string]$BuildScene,
+    [ValidateSet('Windows64', 'WebGL', 'WeChatMiniGame')][string]$PlayerTarget = 'Windows64',
+    [string]$WeChatSdkPath,
     [switch]$RunTests,
     [ValidateRange(60, 3600)][int]$TimeoutSeconds = 600,
     [string]$VisualSpec,
@@ -35,6 +37,8 @@ if ($VisualSpec) {
 }
 if ($BuildScene -and ($BuildScene -notmatch '^Assets/[A-Za-z0-9 /_.-]+\.unity$' -or $BuildScene -match '(^|/)\.\.(/|$)' -or
     -not (Test-Path -LiteralPath (Join-Path $project $BuildScene) -PathType Leaf))) { throw "Expected a scene under Assets: $BuildScene" }
+if ($WeChatSdkPath -and $PlayerTarget -ne 'WeChatMiniGame') { throw '-WeChatSdkPath applies to WeChatMiniGame.' }
+if ($PlayerTarget -eq 'WeChatMiniGame' -and !$BuildScene) { throw 'WeChatMiniGame requires -BuildScene.' }
 
 $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $evidence = Join-Path $repository "artifacts/game-unity/$Name/$runId"
@@ -71,6 +75,14 @@ foreach ($dependency in $packages.dependencies.PSObject.Properties) {
     $dependency.Value = 'file:' + $resolvedPackage.Replace('\', '/')
 }
 [IO.File]::WriteAllText($manifest, ($packages | ConvertTo-Json -Depth 20))
+if ($WeChatSdkPath) {
+    $sdk = Get-Item -LiteralPath $WeChatSdkPath
+    $sdkDefinition = Get-Content -LiteralPath (Join-Path $sdk.FullName 'package.json') -Raw | ConvertFrom-Json
+    if ($sdkDefinition.name -ne 'com.qq.weixin.minigame') { throw 'Expected the WeChat Mini Game SDK package directory.' }
+    $embeddedSdk = Join-Path $isolated 'Packages/com.qq.weixin.minigame'
+    if (Test-Path -LiteralPath $embeddedSdk) { throw 'The verification project already has an embedded WeChat SDK.' }
+    Copy-Item -LiteralPath $sdk.FullName -Destination $embeddedSdk -Recurse
+}
 
 $identityPath = Join-Path $evidence 'verification.json'
 $identity = [ordered]@{
@@ -89,7 +101,7 @@ $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identityPath -En
 
 & (Join-Path $PSScriptRoot 'game.ps1') build -Name $Name
 if ($LASTEXITCODE -ne 0) { throw "Game build failed: $Name" }
-& (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory
+& (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory -SourceGameRoot $root
 
 $probe = Join-Path $isolated 'Assets/AwithGameWorkspaceProbe/Editor'
 [IO.Directory]::CreateDirectory($probe) | Out-Null
@@ -121,13 +133,16 @@ internal static class AwithGameWorkspaceProbe
 
     public static void Build()
     {
+        var target = (BuildTarget)Enum.Parse(typeof(BuildTarget), Read("-awith-game-build-target"));
+        if (target == BuildTarget.WebGL)
+            PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.WebGL, ScriptingImplementation.IL2CPP);
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = new[] { Read("-awith-game-scene") }, locationPathName = Read("-awith-game-player"),
-            target = BuildTarget.StandaloneWindows64, options = BuildOptions.Development
+            target = target, options = BuildOptions.Development
         });
         if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
-            throw new InvalidOperationException("Windows player build: " + report.summary.result);
+            throw new InvalidOperationException(target + " player build: " + report.summary.result);
     }
 
     private static string Read(string key)
@@ -149,6 +164,9 @@ internal static class AwithGameWorkspaceProbe
     }
 }
 '@)
+if ($PlayerTarget -eq 'WeChatMiniGame') {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'UnityFixtures/WeChatMiniGameBuild.cs') -Destination $probe
+}
 
 function Invoke-Unity {
     param([string]$Step, [string[]]$Extra, [switch]$WithGraphics)
@@ -229,18 +247,34 @@ try {
     $player = $null
     $buildLog = $null
     if ($BuildScene) {
-        $player = Join-Path $evidence "Player/$Name.exe"
+        $isWebGL = $PlayerTarget -eq 'WebGL'
+        $isWeChat = $PlayerTarget -eq 'WeChatMiniGame'
+        $nativeTarget = if ($isWebGL) { 'WebGL' } else { 'StandaloneWindows64' }
+        $editorTarget = if ($isWebGL -or $isWeChat) { 'WebGL' } else { 'Win64' }
+        $buildOutput = switch ($PlayerTarget) {
+            'WebGL' { Join-Path $evidence 'Player/WebGL' }
+            'WeChatMiniGame' { Join-Path $evidence 'Player/WeChatMiniGame' }
+            default { Join-Path $evidence "Player/$Name.exe" }
+        }
         $buildLog = Join-Path $evidence 'Player-build.log'
-        Invoke-Unity 'Player-build' @('-quit', '-buildTarget', 'Win64', '-executeMethod', 'AwithGameWorkspaceProbe.Build',
-            '-awith-game-scene', $BuildScene, '-awith-game-player', $player)
-        if (-not (Test-Path -LiteralPath $player -PathType Leaf)) { throw "Unity did not produce the Player. Inspect $buildLog" }
-        Write-Host "Windows Player built: $player"
+        $buildMethod = if ($isWeChat) { 'AwithWeChatMiniGameBuild.Run' } else { 'AwithGameWorkspaceProbe.Build' }
+        Invoke-Unity 'Player-build' @('-quit', '-buildTarget', $editorTarget, '-executeMethod', $buildMethod,
+            '-awith-game-build-target', $nativeTarget,
+            '-awith-game-scene', $BuildScene, '-awith-game-player', $buildOutput)
+        $player = if ($isWeChat) { Join-Path $buildOutput 'minigame' } else { $buildOutput }
+        $entryPoint = if ($isWebGL) { Join-Path $player 'index.html' } else { $player }
+        if ($isWeChat) { $entryPoint = Join-Path $player 'game.js' }
+        if (-not (Test-Path -LiteralPath $entryPoint -PathType Leaf)) {
+            throw "Unity did not produce the $PlayerTarget Player entry point. Inspect $buildLog"
+        }
+        Write-Host "$PlayerTarget Player built: $player"
     }
     $summary = [ordered]@{
         game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
         mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log')
         testsRun = [bool]$RunTests; tests = $testReports
-        buildScene = $BuildScene; buildVerified = [bool]$BuildScene; buildLog = $buildLog; player = $player
+        buildScene = $BuildScene; playerTarget = $(if ($BuildScene) { $PlayerTarget }); buildVerified = [bool]$BuildScene
+        buildLog = $buildLog; player = $player
         verificationProject = $isolated; verificationProjectRetained = [bool]$KeepProject; verificationIdentity = $identityPath
         runtimeVerified = $false; manualReview = 'not-run'
         visual = @{ status = 'not-run' }

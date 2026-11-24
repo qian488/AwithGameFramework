@@ -1,0 +1,7 @@
+{
+  "name": "AwithGameFrame.Unity.HybridCLR",
+  "references": [
+    "HybridCLR.Runtime"
+  ],
+  "autoReferenced": false
+}

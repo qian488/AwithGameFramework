@@ -44,6 +44,7 @@ namespace AutomationValidation
 
         public int revision = 10;
         public Entry[] entries = { new Entry() };
+        public GameObject linkedObject;
 
         public static void CreateFixture()
         {
@@ -54,6 +55,7 @@ namespace AutomationValidation
                     throw new InvalidOperationException("Could not create the fixture prefab.");
             }
             finally { DestroyImmediate(root); }
+            CreateHealthFixture();
         }
 
         public static void StartLive()
@@ -85,6 +87,23 @@ namespace AutomationValidation
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+
+        private static void CreateHealthFixture()
+        {
+            EditorSettings.serializationMode = SerializationMode.ForceText;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var camera = new GameObject("Camera", typeof(Camera));
+            var fixture = new GameObject("Health Fixture", typeof(FixtureValues));
+            fixture.GetComponent<FixtureValues>().linkedObject = camera;
+            const string path = "Assets/Scenes/HealthSmoke.unity";
+            if (!EditorSceneManager.SaveScene(scene, path)) throw new InvalidOperationException("Could not save the health fixture.");
+
+            // Keep the script reference to a non-existent scene object in the saved fixture.
+            var text = File.ReadAllText(path);
+            var modified = System.Text.RegularExpressions.Regex.Replace(text, @"linkedObject: \{fileID: \d+\}", "linkedObject: {fileID: 9000000000000}");
+            if (text == modified) throw new InvalidOperationException("Unity did not serialize the health fixture reference.");
+            File.WriteAllText(path, modified);
         }
     }
 }
@@ -279,8 +298,26 @@ if (!$info.unityVersion -or $info.projectPath -ne $isolatedProject) { throw 'Wro
 $assets = & $commandPath @defaults -Action asset.find -Query 't:Prefab Automation Fixture' | ConvertFrom-Json
 if ($assets.assets -notcontains $prefab) { throw 'The prefab search did not return the fixture asset.' }
 
+$healthScene = 'Assets/Scenes/HealthSmoke.unity'
+$healthPath = Join-Path $isolatedProject $healthScene
+$healthBefore = (Get-FileHash -LiteralPath $healthPath).Hash
+$scan = & $commandPath @defaults -Action scene.health -Scene $healthScene | ConvertFrom-Json
+if ($scan.health.enabledCameraCount -ne 1 -or $scan.health.objectCount -ne 2 -or
+    $scan.health.issueCount -ne 1 -or $scan.health.issues[0].path -ne '/Health Fixture' -or
+    $scan.health.issues[0].kind -ne 'missing-reference' -or $scan.health.issues[0].property -ne 'linkedObject' -or
+    (Get-FileHash -LiteralPath $healthPath).Hash -ne $healthBefore) {
+    throw 'Scene health scan did not report the expected broken reference and camera count without writing.'
+}
+
 $null = & $commandPath @defaults -Action scene.create -Scene $scene
 $null = & $commandPath @defaults -Action object.create -Scene $scene -Save -ObjectName Anchor -Position 1,2,0
+$prefabInspection = & $commandPath @defaults -Action prefab.inspect -Asset $prefab | ConvertFrom-Json
+if ($prefabInspection.asset -cne $prefab -or $prefabInspection.assetGuid -notmatch '^[a-f0-9]{32}$' -or
+    $prefabInspection.prefabKind -ne 'Regular' -or '/Automation Fixture' -cne $prefabInspection.objects[0].path -or
+    'AutomationValidation.FixtureValues' -notin $prefabInspection.objects[0].components -or
+    'Assets/FixtureValues.cs' -notin $prefabInspection.assets) {
+    throw 'Prefab inspection did not read the asset identity, hierarchy and script dependency.'
+}
 $null = & $commandPath @defaults -Action prefab.place -Scene $scene -Save -Asset $prefab -ObjectName Preview -Parent '/Anchor'
 $null = & $commandPath @defaults -Action component.add -Scene $scene -Save -Target '/Anchor' -Kind Light
 $null = & $commandPath @defaults -Action object.transform -Scene $scene -Save -Target '/Anchor/Preview' -Position 2,0,0
@@ -346,7 +383,7 @@ $transactionSteps = @(
     ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $failurePath -Encoding UTF8
 
 $policyFile = Join-Path $isolatedProject 'ProjectSettings/AwithEditorAutomation.json'
-@{ version = 1; live = @(); batch = @('scene.transaction', 'scene.inspect', 'object.create') } |
+@{ version = 1; live = @(); batch = @('scene.transaction', 'scene.inspect', 'object.create', 'audit.list', 'performance.inspect') } |
     ConvertTo-Json | Set-Content -LiteralPath $policyFile -Encoding UTF8
 $batchTransaction = @{ Action = 'scene.transaction'; Scene = $scene; StepsFile = $transactionPath }
 try {
@@ -357,7 +394,7 @@ catch { if ($_.Exception.Message -notlike '*policy denies action: prefab.place*'
 if ((Get-FileHash -LiteralPath $savedFile).Hash -cne $before) { throw 'Denied transaction wrote the scene.' }
 
 $policy = @{ version = 1; live = @('project.info', 'scene.inspect', 'component.inspect', 'scene.transaction', 'object.create', 'object.transform', 'prefab.place', 'component.set', 'component.add');
-    batch = @('scene.inspect', 'scene.transaction', 'object.create', 'object.transform', 'prefab.place', 'component.set', 'component.add', 'component.inspect',
+    batch = @('scene.inspect', 'scene.transaction', 'object.create', 'object.transform', 'prefab.place', 'component.set', 'component.add', 'component.inspect', 'audit.list', 'performance.inspect',
         'checkpoint.capture', 'checkpoint.list', 'checkpoint.inspect', 'checkpoint.restore') }
 $policy | ConvertTo-Json | Set-Content -LiteralPath $policyFile -Encoding UTF8
 
@@ -448,6 +485,16 @@ $sceneCheckpoint = (& $commandPath @defaults -Action checkpoint.capture -Asset $
 $prefabCheckpoint = (& $commandPath @defaults -Action checkpoint.capture -Asset $prefab | ConvertFrom-Json).checkpoint
 $batchApplied = & $commandPath @defaults @batchTransaction -Save | ConvertFrom-Json
 if ($batchApplied.outcome -ne 'applied' -or $batchApplied.dirty -or (Get-FileHash -LiteralPath $savedFile).Hash -ceq $before) { throw 'The batch transaction was not persisted.' }
+$auditEntries = (& $commandPath @defaults -Action audit.list -Limit 20 | ConvertFrom-Json).audit
+if (!$auditEntries -or !($auditEntries | Where-Object { $_.id -eq $batchApplied.id -and $_.action -eq 'scene.transaction' -and $_.ok -and $_.outcome -eq 'applied' })) {
+    throw 'The persisted editor audit did not record the applied transaction.'
+}
+$performance = & $commandPath @defaults -Action performance.inspect | ConvertFrom-Json
+if (!$performance.performance -or $performance.performance.unityVersion -ne $version -or
+    $performance.performance.gameObjects -lt 1 -or $performance.performance.components -lt 1 -or
+    $performance.performance.totalReservedMemory -lt $performance.performance.totalAllocatedMemory) {
+    throw 'The editor performance snapshot did not report valid object, component or memory counters.'
+}
 $particle = & $commandPath @defaults -Action component.inspect -Scene $scene -Target '/Rig' -Kind UnityEngine.ParticleSystem -Query playOnAwake | ConvertFrom-Json
 if ($particle.properties[0].value -ne 'false') { throw 'The native particle setting did not persist.' }
 try {

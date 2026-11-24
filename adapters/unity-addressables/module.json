@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "unity-addressables",
+  "purpose": "Optional Unity Addressables resource loading integration for projects that use the Addressables package.",
+  "optional": true,
+  "sourcePaths": [
+    "adapters/unity-addressables/Runtime"
+  ],
+  "entryPoints": [
+    "adapters/unity-addressables/Runtime/AddressablesResourceLoader.cs",
+    "adapters/unity-addressables/Runtime/AddressablesSceneBackend.cs",
+    "adapters/unity-addressables/Runtime/AddressablesCatalog.cs"
+  ],
+  "readme": "adapters/unity-addressables/README.md",
+  "dependencies": [
+    "core",
+    "gameplay"
+  ],
+  "verificationTools": [
+    "unity-addressables-verify"
+  ]
+}

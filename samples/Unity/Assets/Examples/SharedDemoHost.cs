@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Core.Resources;
-using AwithGameFrame.Foundation;
 using AwithGameFrame.Foundation.DataPersistence;
 using AwithGameFrame.Samples.Shared;
 using AwithGameFrame.Unity.Audio;
@@ -88,9 +87,6 @@ namespace AwithGameFrame.Samples
             int exitCode = 0;
             try
             {
-                FoundationAPI.Initialize();
-                if (ProviderManager.AnimationProvider.GetType().FullName != "AwithGameFrame.Foundation.Providers.DOTweenProvider")
-                    throw new InvalidOperationException("The optional DOTween provider was not registered in this build.");
                 var database = DatabaseFactory.CreateProvider(DatabaseType.SQLite);
                 if (database == null) throw new InvalidOperationException("The optional SQLite provider was not registered in this build.");
                 try
@@ -101,7 +97,7 @@ namespace AwithGameFrame.Samples
                         throw new InvalidOperationException("The optional SQLite provider could not open and query a native database.");
                 }
                 finally { await database.CloseAsync(); }
-                Debug.Log("UNITY_OPTIONAL_PROVIDERS_PASSED");
+                Debug.Log("UNITY_SQLITE_PROVIDER_PASSED");
                 await PresentationSmoke.RunAsync(Host);
                 await InputAudioSmoke.RunAsync(Host);
                 await AssetBundleSmoke.RunAsync(Host);

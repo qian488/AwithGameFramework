@@ -11,7 +11,7 @@
 | 文件、序列化、数据库、配置表 | [Data](../../src/AwithGameFrame.Data/README.md) |
 | 视图/场景、导航、输入/音频、设置/本地化、存档 | [Gameplay](../../src/AwithGameFrame.Gameplay/README.md) 及对应 Runtime 子目录 |
 | HTTP、协议、内容更新、WebSocket | 可选 [Networking](../../src/AwithGameFrame.Networking/README.md) |
-| 引擎 API 或需要引擎类型的接口 | [Unity](../../adapters/unity/README.md) / [Godot](../../adapters/godot/README.md)；旧 Unity 服务见 [compat](../../adapters/unity-compat/README.md) |
+| 引擎 API 或需要引擎类型的接口 | [Unity](../../adapters/unity/README.md) / [Godot](../../adapters/godot/README.md) |
 | 跨宿主应用组合、引擎演示 | [samples](../../samples/README.md) 的 Shared / Headless / Unity / Godot |
 | 配置/协议生成 | [ConfigGen](../../tools/ConfigGen/README.md)，源位于 `samples/Shared/Configuration`、`samples/Protocol` |
 | 复用功能骨架 | [portable-feature](../../templates/portable-feature/README.md) |
@@ -47,6 +47,6 @@
 2. 修改配置/协议源后运行 `tools/generate-config.ps1` / `tools/generate-protocol.ps1`，不手改 Generated；标准验证检查确定性产物及兼容性基线。
 3. 运行 `powershell -File tools/verify.ps1`，先验证通用边界、Release 构建、NUnit 与 Headless。
 4. 影响适配层时用真实引擎检查，记录实际版本、平台、构建与运行范围；命令见[验证参考](../reference/verification.md)。
-5. 同步模块 README；公共 API、程序集或行为变化更新[迁移指南](../migrations/README.md)，实际执行结果与未执行项明确区分。
+5. 同步模块 README 中当前的 API、程序集和行为，记录实际验证结果。
 
 构建和任务产物进入 `artifacts/`，不提交 Unity 缓存或 .NET 输出。交付说明实际变化、验证结果和剩余限制。跨文件或需要交接的工作可使用 AgentKit 保存目标、读写范围、上下文、计划和报告，保留任务前已有修改；已有明确授权按来源继续，机器检查通过保留为待人工评审。

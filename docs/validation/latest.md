@@ -1,5 +1,36 @@
 # 最近验证
 
+## 通用旧入口清理（2026-11-24）
+
+- 标准验证通过框架 **575/575**、模板 **13/13**、AgentKit 契约和 Headless 共享应用。
+- Unity **2022.3.16f1** 通过共享样例的后台导入、PlayMode、Windows x86_64 Mono 构建和 Player 运行。证据在 `artifacts/UnityValidation/6bcad226f365421f8d8a10fb05d213a1`。
+- 同版 Unity 通过 Test DLL 工作区导入、EditMode **16/16** 和 PlayMode **6/6**。证据在 `artifacts/game-unity/Test/20261124-154324-58ef3ac2`。
+- Godot **4.5.2 .NET** 通过 SDK 构建、后台导入、PCK 发布与 HTTP 安装及共享应用运行。证据在 `artifacts/GodotValidation/9fa620e96b934478a84a530136ecfc67`。
+
+## Unity 旧入口退役（2026-11-24）
+
+- `tools/verify.ps1` 通过。框架 **636/636**、模板 **13/13**，AgentKit 契约和 Headless 示例通过。旧 `FrameworkBootstrap` 专项用例随实现退役，实例宿主的启动、回滚和关闭测试继续执行。
+- Unity **2022.3.16f1** 对共享示例完成后台导入、PlayMode、Windows x86_64 Mono 构建与 Player 运行。两种运行模式均通过 UI、场景、输入、音频、AssetBundle、资源租约、共享应用和 SQLite 检查。证据在 `artifacts/UnityValidation/07317d9c56554229b40526f75a79b0d9`。
+- 同版 Unity 对 Test 工作区完成 DLL 构建与同步、导入、EditMode **16/16** 和 PlayMode **6/6**。证据在 `artifacts/game-unity/Test/20261124-152220-05f5a488`。
+
+## Unity 工作区与 Addressables（2026-11-24）
+
+- Unity **2022.3.16f1** 后台验证了本地 UPM 方式单独接入版本化存档。隔离工程仅安装 Core、Data、Gameplay 和 Newtonsoft.Json，原有启动组件进入 `Stage`，通过新建存档服务写入并重开读回 `412`。日志与夹具位于 `artifacts/UnitySelectiveAdoption/c2443ae925b048519148b2ac854ec6f4`。
+- Unity **2022.3.16f1** 后台验证 Test 编辑器烘焙，覆盖旧清单读回、手工编辑、参数过期、重烘焙保留 Prefab 与材质 GUID、按 Profile 清理和输出路径冲突后回滚。验证结果为 EditMode **16/16**、PlayMode **6/6**，报告在 `artifacts/game-unity/Test/20261124-142022-03783aa8`。
+- AgentKit 使用独立 CLI 进程保存 Test 内容草稿并收集上下文。未决问题存在时生成计划返回非零，补全合成验收输入后执行文档检查并生成 `ready-for-review` 报告。证据在 `artifacts/AgentContentDraft/20261124-142931`。
+- Unity **2022.3.16f1** 的 Test 隔离工程通过 EditMode **15/15**、PlayMode **6/6** 和 WebGL IL2CPP 构建。无界面 Chromium **157.0.8103.79** 启动至选关，日志记录 Boss 配置 hash、1 个 Boss 挑战和 2 名试炼对手。浏览器报告与截图在 `artifacts/game-unity/Test/20261124-123909-ad00914a/Browser`。
+- Addressables **1.21.21** 在同版 Unity 验证了 DLL 工作区接入、两份 localhost HTTP Catalog、同地址版本隔离、旧租约保留，以及独立场景加载和卸载。证据在 `artifacts/UnityAddressablesValidation/018830992c1743df8dd2d5bf9326b76e/client/Fixture`。
+- 可选适配器同步调整后，Test 的 Addressables 工作区再次通过资产构建与 PlayMode 回归。证据在 `artifacts/UnityAddressablesValidation/7e54ebe3c65649f8b0a18871894f55fa/client/Fixture/PlayMode.log`。
+- 编辑器自动化后台回归通过。新增断引用夹具验证了对象路径、字段、相机数和场景文件 SHA-256。证据在 `artifacts/UnityAutomationValidation/7b67888b7c3f4cc793ac7bf8109d3b8b`。
+- Test 使用微信小游戏 SDK **0.1.29** 完成后台导出，产物含 `game.js`，证据在 `artifacts/game-unity/Test/20261124-133716-8ed832ca`。微信开发者工具与设备运行待验收。
+- HybridCLR **8.12.0** 的 Windows IL2CPP Player 完成 AOT 补充元数据、更新程序集执行、Player 身份不匹配及篡改拒绝检查。证据在 `artifacts/UnityHybridClrValidation/6c1280dddbc44cb988384ecbd97d2358`。
+- 同版 HybridCLR 通过 `verify-unity-hybridclr.ps1 -Name Test` 验证 DLL 工作区分发和 Windows IL2CPP Player。证据在 `artifacts/UnityHybridClrValidation/8706bddea5c248adb4a9465dcd62b919/client/Fixture`。
+- 签名内容通过本机 HTTP 下载，使用固定公钥验证后安装，报告在 `artifacts/ContentSignatureValidation/103e84e0c13a4a9b9735831fe935507a/proof/Install-report.json`。
+- Test 的 BossStrike XLSX 输入生成 4 个配置产物，与现有样例逐字节相同。Protobuf 使用 Buf **1.75.0** 与 Grpc.Tools **2.72.0** 内置 protoc，生成与检查通过，并检出已登记字段的类型变更。
+- 隔离 Protobuf 工作区经 `game.ps1 protocol` 生成、`sync` 构建和分发后，在 Unity **2022.3.16f1** 执行生成类型的序列化与读回。新增消息后使用旧生成产物、变更既有字段类型，两种错误均在构建前检出，上次成功构建的清单 hash 一致。证据在 `artifacts/ProtobufWorkspace-78141ad016d24fcc827d193e0cbaadfd`。
+- Test 服务端的独立进程通过 HTTP 就绪、WebSocket 心跳与命令响应、关闭连接后的 HTTP 补查和正常关停。证据在 `artifacts/TestOnlineValidation-756c76762d4a469d99ce320277815223`。
+- 标准验证通过框架 **648/648**、模板 **13/13**、AgentKit 契约和 Headless 示例。测试报告在 `artifacts/TestResults`。
+
 ## Unity 画面自动验收（2026-11-20）
 
 - Unity **2022.3.16f1 / Direct3D11** 在隐藏的批处理进程离屏渲染 uGUI。正常场景与复拍基准的像素差异为 **0%**。故障夹具检出了出屏、控件重叠、矩形裁切、文字溢出和异常洋红，差异图标出了 **17.99%** 的变化像素。纯黑 PNG 触发了纯色和近黑比例检查。报告和图像在 `artifacts/UnityValidation/ab0de8a4d4674f108e7a60776ff611f0/VisualSmoke`。

@@ -49,6 +49,9 @@ namespace AwithGameFrame.Unity.Editor
         public bool truncated;
         public AutomationObject[] objects;
         public string[] assets;
+        public string asset;
+        public string assetGuid;
+        public string prefabKind;
         public AutomationProperty[] properties;
         public bool preview;
         public string outcome;
@@ -58,6 +61,9 @@ namespace AwithGameFrame.Unity.Editor
         public AutomationStep[] steps;
         public AutomationCheckpoint checkpoint;
         public AutomationCheckpoint[] checkpoints;
+        public AutomationAuditEntry[] audit;
+        public AutomationPerformance performance;
+        public AutomationSceneHealth health;
     }
 
     [Serializable]
@@ -83,6 +89,44 @@ namespace AwithGameFrame.Unity.Editor
         public string savedHash;
         public string currentHash;
         public string createdUtc;
+    }
+
+    [Serializable]
+    internal sealed class AutomationAuditEntry
+    {
+        public int version = 1;
+        public string id;
+        public string action;
+        public bool batch;
+        public bool preview;
+        public bool save;
+        public bool ok;
+        public string outcome;
+        public string error;
+        public string scene;
+        public string asset;
+        public string target;
+        public int stepCount;
+        public string completedUtc;
+        public string resultFile;
+    }
+
+    [Serializable]
+    internal sealed class AutomationPerformance
+    {
+        public string capturedUtc;
+        public string unityVersion;
+        public bool batchMode;
+        public string scene;
+        public bool sceneDirty;
+        public int rootGameObjects;
+        public int gameObjects;
+        public int components;
+        public long totalAllocatedMemory;
+        public long totalReservedMemory;
+        public long totalUnusedReservedMemory;
+        public long monoUsedMemory;
+        public long monoHeapSize;
     }
 
     [Serializable]

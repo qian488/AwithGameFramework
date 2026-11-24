@@ -3,5 +3,10 @@
     "name":  "Test",
     "engine":  "unity",
     "applicationProject":  "src/Test.Application/Test.Application.csproj",
-    "serverProject":  "server/Test.Server/Test.Server.csproj"
+    "serverProject":  "server/Test.Server/Test.Server.csproj",
+    "unityConfiguration": {
+        "Opponents": "configuration/rain-pass-opponents.json",
+        "BossStrike": "src/Test.Application/Runtime/Generated/Configuration/BossStrike.json",
+        "BossChallenge": "src/Test.Application/Runtime/Generated/Configuration/BossChallenge.json"
+    }
 }

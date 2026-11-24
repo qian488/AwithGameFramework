@@ -4,7 +4,11 @@
 
 AgentKit 把一次人类与 AI 协作开发任务保存为可检查的任务清单、有限上下文、工具执行证据和人工评审记录。工具位于 `tools/AgentKit`，使用 .NET 8，不进入 `src`、UPM 或游戏运行时；无需模型账号或 API 凭据。代码修改仍由开发者及其现有 agent 完成，AgentKit 不自动调用模型、修改源码或提交 Git。
 
-AI 协作的诊断、复利债务判断和代码可理解性要求见 [AI 协作与代码评审](../docs/guides/ai-collaboration.md)。任务说明提供范围和验收，评审者还需确认实现可以从入口追踪、抽象对应真实调用者、异常路径具有诊断上下文，暂缓项具有明确的后续触发条件。
+框架能力目录位于 [`agent/capabilities.json`](capabilities.json)。执行 `powershell -File tools/agent.ps1 capabilities` 可按统一格式查看工作流、Unity 编辑器、构建、验证和内容流水线的负责人、入口、参数、执行模式和所需检查。使用 `--kind`、`--mode` 或 `--query` 缩小范围。AI 开始任务时先查询相关能力，再决定采用对话澄清、后台验证或编辑器操作入口。
+
+AI 协作的需求澄清门、诊断、复利债务判断和代码可理解性要求见 [AI 协作与代码评审](../docs/guides/ai-collaboration.md)。任务说明提供设计来源、玩家体验、内容范围和验收，评审者还需确认实现可以从入口追踪、抽象对应真实调用者、异常路径具有诊断上下文，暂缓项具有明确的后续触发条件。
+
+`game-content`、`content-design` 和 `presentation-content` 任务可先用 `new` 保存草稿，再用 `context` 收集资料。`plan` 和 `run` 要求 `designSource` 与 `experienceScope` 已填写，且 `openDesignDecisions` 为 `[]`。澄清过程中可在 `openDesignDecisions` 登记问题。
 
 按已确认的[产品方向](../docs/product-direction.md)，开发者继续使用自己选择的 AI 编程工具，仓库提供上下文、规范、skill、模板和命令。当前优先完善框架基座与实际游戏接入，复杂 Agent 系统留在范围之外；现有 AgentKit 命令按需使用。尚待编写的 skill 和后续工具能力以[路线图](../docs/roadmap.md)为准。
 

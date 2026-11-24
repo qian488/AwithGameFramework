@@ -2,8 +2,8 @@
 param(
     [Parameter(ParameterSetName = 'Game')][ValidatePattern('^[A-Za-z][A-Za-z0-9_]{0,39}$')][string]$Name,
     [Parameter(Mandatory = $true, ParameterSetName = 'Project')][string]$ProjectPath,
-    [ValidateSet('actions', 'project.info', 'editor.diagnostics', 'asset.find', 'scene.inspect', 'scene.open', 'scene.create', 'scene.save',
-        'object.create', 'object.transform', 'component.add', 'component.inspect', 'component.set', 'prefab.place',
+    [ValidateSet('actions', 'project.info', 'editor.diagnostics', 'audit.list', 'performance.inspect', 'asset.find', 'scene.inspect', 'scene.health', 'scene.open', 'scene.create', 'scene.save',
+        'object.create', 'object.transform', 'component.add', 'component.inspect', 'component.set', 'prefab.place', 'prefab.inspect',
         'scene.transaction', 'checkpoint.capture', 'checkpoint.list', 'checkpoint.inspect', 'checkpoint.restore')][string]$Action = 'actions',
     [string]$EditorPath,
     [string]$Scene,
@@ -33,8 +33,11 @@ if ($Action -eq 'actions') {
         actions = [ordered]@{
             'project.info' = 'Inspect the Unity version and active scene.'
             'editor.diagnostics' = 'Read live console and compiler diagnostics, or probe a closed project with -EditorPath. Optional -Limit.'
+            'audit.list' = 'Read the latest persisted editor automation audit entries, optional -Limit.'
+            'performance.inspect' = 'Read an editor performance snapshot with object, component and memory counts.'
             'asset.find' = '-Query <AssetDatabase filter>, optional -Limit'
             'scene.inspect' = 'Optional -Scene, -Target <hierarchy path>, -Limit'
+            'scene.health' = 'Optional -Scene and -Limit. Read missing scripts, broken references and enabled camera count.'
             'scene.open' = '-Scene <existing Assets/...unity>'
             'scene.create' = '-Scene <new Assets/...unity>'
             'scene.save' = 'Live editor only, optional -Scene guard'
@@ -44,6 +47,7 @@ if ($Action -eq 'actions') {
             'component.inspect' = '-Target, -Kind <full component type>, optional -Query <serialized property path>, -Limit'
             'component.set' = '-Target, -Kind <full component type>, -Properties <path/value map>, optional -Preview'
             'prefab.place' = '-Asset <Assets/...prefab>, optional -ObjectName, -Parent and local transform'
+            'prefab.inspect' = '-Asset <Assets/...prefab>, optional -Limit, returns prefab kind, GUID, hierarchy and dependencies'
             'scene.transaction' = '-Scene, -StepsFile <JSON>, optional -Preview or batch -Save'
             'checkpoint.capture' = '-Asset <Assets/...unity or .prefab>'
             'checkpoint.list' = 'List project-local checkpoints, optional -Limit'

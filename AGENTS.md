@@ -2,45 +2,30 @@
 
 ## 先定位，再读取
 
-- 先读根 README.md 与 GUIDE.md 的目录/依赖图，再读目标包 README。
-- 调整框架结构、能力范围或开发流程时，先读 `docs/product-direction.md` 和 `docs/roadmap.md`，按已确认产品方向界定本次范围；目标目录、服务端和平台能力须区分规划与已实现状态。
-- 通用运行时：src/AwithGameFrame.Core、Data、Gameplay、Networking，各包 Runtime/ 是唯一源码。
-- 具体游戏：`games/<Name>/game.json` 是入口；独立 C# 代码在 `src` 子目录，服务端在 `server`，客户端工程由开发者在 `client/Unity` 或 `client/Godot` 创建。先读本游戏 README/AGENTS，不把 `samples` 当成实际游戏目录。
-- 引擎实现：adapters/unity、adapters/godot；Unity 旧服务位于 adapters/unity-compat，DOTween/SQLite 位于独立可选包 adapters/unity-dotween、adapters/unity-sqlite。演示分别位于 samples/Unity、samples/Godot；共享应用样例在 samples/Shared。
-- 自动测试：tests；无图形入口：samples/Headless；验证入口：tools/README.md。当前文档索引：docs/README.md。
-- docs/legacy 和各包 Documentation~/legacy 是历史资料，不是当前需求或开发规则。
-- 不默认扫描 samples/Unity/Assets/Plugins、samples/Unity/Assets/Packages 或 artifacts；先限制 rg 搜索范围。
+- 定位任务时，先查根 README 的入口和 GUIDE 的依赖图，再读目标模块 README。
+- 调整框架结构、能力范围或开发流程时，以产品方向和路线图界定范围。用源码和实测确认当前能力。 [产品方向](docs/product-direction.md) · [路线图](docs/roadmap.md)
+- 开发具体游戏时，从 `games/<Name>/game.json` 确认工作区，并读本游戏 README 和 AGENTS。`samples` 供共享示例和验证使用。
+- 查找实现时，先把 `rg` 限定在目标源码目录。插件、生成文件和历史文档按任务需要查阅。
 
 ## 依赖规则
 
-- 只允许 Gameplay -> Data/Core、Data -> Core、Networking -> Core；Core 只使用标准库。Networking 是可选包，不进入 Data/Gameplay 的依赖。
-- src 不引用 UnityEngine、UnityEditor、UniTask 或任何引擎程序集，不引用 adapters/samples 中的代码或 DLL。
-- 引擎接口暴露引擎类型时，接口也属于该引擎适配层。通用接口使用 BCL/普通 C# 数据与 Task。
-- 每个 portable 包同时提供 .csproj、package.json 和 noEngineReferences=true 的 Runtime asmdef；两种构建共用 Runtime 源码。
-- 上述包清单规则适用于公共 `src` 包。游戏外部项目通过 `.csproj` 编译 DLL，源码仅位于各项目 `Runtime`；游戏 Domain 不依赖引擎，Application 组合领域与框架，公共框架不反向引用游戏。客户端专用类型与服务端基础设施不进入共享领域代码。
-- 引擎适配和业务运行时分开验证；不要用假引擎类型证明适配已经可用。
-- 移动 Unity 源码、资源时保留 .meta/GUID；新 package 资源补充 .meta。不要提交 Unity 缓存或 .NET 输出。
-- 不为了统一命名批量改旧公共命名空间，API 变化更新 docs/migrations 下的对应指南。
+- 公共包只允许 `Gameplay -> Data/Core`、`Data -> Core`、`Networking -> Core`。Core 使用 BCL。`src` 保持引擎无关，依赖限定在通用层。
+- 公共包的 `.csproj` 和 `noEngineReferences=true` 的 asmdef 共用 `Runtime` 源码，每包提供 `package.json`。通用接口使用普通 C# 数据与 `Task`。引擎类型及暴露它们的接口放在相应适配层。
+- 游戏外部项目由 `.csproj` 将 `Runtime` 源码编译为 DLL。Domain 放纯规则，Application 组合领域与框架，客户端负责引擎接线，服务端负责进程基础设施。公共框架的依赖止于通用层。
+- API 变更时更新模块当前用法，保留与本次变更无关的公共命名空间。核对旧入口的实际调用方和已有数据。只有实际工程或数据需要迁移时才写迁移步骤。已迁移的旧入口连同专用依赖和样例一起删除。
+- 修改 Unity 资产或脚本时，随文件保留 `.meta` 和 GUID，并为新包资源补齐 `.meta`。
 
 ## 验证与交付
 
-- 标准检查：powershell -File tools/verify.ps1（PowerShell 7 使用 pwsh）。脚本从任意工作目录运行。
-- 脚本检查文档本地链接、源码/项目/asmdef/UPM 依赖和模块清单，然后构建 AwithGameFrame.sln、运行 NUnit 和 Headless 示例。
-- 单项命令：dotnet test tests/AwithGameFrame.Core.Tests/AwithGameFrame.Core.Tests.csproj。
-- Unity 工程路径 samples/Unity；记录版本 2022.3.40f1c1。影响 Unity 时使用可用编辑器验证，明确记录实际版本与无法执行的检查。
-- 构建输出集中在 artifacts，避免被 UPM 导入。
-- 游戏构建/接入入口为 `tools/game.ps1`，步骤见 `docs/getting-started/game-workspace.md`；客户端内的 `Packages/com.awithgameframe.workspace` 或 `Framework` 是工具拥有的生成目录，不手改、不混放插件，不同时接入同名源码程序集与 DLL。
-- 为行为变化编写有意义的测试；文档与简单移动使用相应静态检查。
-- 配置/协议源在 samples/Shared/Configuration 与 samples/Protocol；生成命令 tools/generate-config.ps1、tools/generate-protocol.ps1。不要手改 Generated；verify 自动检查产物和兼容性基线。
-- 引擎验证：tools/verify-unity.ps1 -RunSmoke -BuildPlayer（追加 -RunPlayerSmoke 可后台运行 Windows Player）、tools/verify-godot.ps1（-Export 可测试 Windows .NET 导出）。编辑器/模板路径由本机显式提供，命令见 docs/reference/verification.md，实测证据见 docs/validation/latest.md。
-- 自动验证默认使用无图形批处理。需要桌面图形会话的自动化验证在用户明确要求后执行。将需用户亲自操作或观察的项目列为待人工验收，附启动入口、结果位置与检查项。
-- 完成后说明实际变化、验证结果与剩余限制，不把架构可扩展描述成已支持所有引擎。
+- 行为变更先验证受影响的入口，再运行标准检查 `powershell -File tools/verify.ps1`。文档和简单移动使用对应静态检查。 [验证命令](docs/reference/verification.md)
+- 涉及引擎时，另用真实引擎验证原生行为。默认后台批处理，桌面验证按用户要求执行。记录实测版本和结果。待人工验收项附启动入口和检查项。 [实测记录](docs/validation/latest.md)
+- 通过 `tools/game.ps1` 更新游戏客户端接入。每个程序集选择一个来源。`Packages/com.awithgameframe.workspace` 和 `Framework` 由同步命令管理。 [工作区构建与接入](docs/getting-started/game-workspace.md)
+- 修改配置或协议时编辑源文件，再运行生成器。构建输出留在 `artifacts`，提交源码和应追踪的资源。 [生成与验证工具](tools/README.md)
 
 ## 可维护的 Agent 任务
 
-- 开发期工具与模板入口是 `agent/README.md`、`agent/templates`、`templates/portable-feature`；实现位于 `tools/AgentKit`，不加入游戏运行时依赖。
-- 包根及游戏根 `module.json` 提供模块 ID、源码/阅读入口、依赖和验证工具；变更模块路径时同步维护。`tools/agent.ps1 modules` 可发现模块，任务的 `readModules` 只选择清单与阅读入口，不自动展开全部源码或依赖。游戏的 `game-build` 工具使用任务参数 `gameName`，源码上下文不包含客户端缓存与生成 DLL。
-- 复杂或需要交接的任务先明确目标、读写范围、验收及上下文；可用 `tools/agent.ps1 new/context/plan/run/report` 保存过程，命令见入口文档。模板须按本次真实需求和授权调整，不能当作通用授权。
-- 保留任务创建前的未提交修改；检查相对任务基线的变化，不自动 stash/reset，也不自动提交。公共文档上的原有修改仍须保留。
-- 计划和确认绑定具体工具、输入及当前状态；已有明确授权可记录来源并继续执行，不重复询问。不得伪造人工确认或最终评审；机器检查通过报告为待评审，不冒充人类验收。
-- 上下文与任务产物只保存所需数据，不录入凭据。工具清单是执行策略，外部脚本仍有系统实际权限；不要将它描述为 OS 沙箱或模型质量评测平台。
+- 澄清需求时先查仓库和对话。向维护者确认仍缺失且会改变结果的决定。新增地图、Boss、UI 等内容时，先确认玩家体验与验收路径。 [内容澄清](.agents/skills/awith-content-design/SKILL.md)
+- 诊断故障时先从受影响的入口复现。 [诊断技能](.agents/skills/awith-diagnose/SKILL.md)
+- 操作 Unity 时先定位工程和目标资产，再选择实时或后台命令。 [Unity 编辑器技能](.agents/skills/awith-unity-editor/SKILL.md)
+- 任务复杂或需要交接时，记录目标、读写范围和验收。模块入口变更时同步更新 `module.json`。 [AgentKit](agent/README.md)
+- 保留已有工作区修改，按授权决定是否提交。任务上下文只存所需数据，排除凭据。现有授权可继续使用，机器检查与人工评审分别记录。

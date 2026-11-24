@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$SourceDirectory,
     [Parameter(Mandatory = $true)][string]$OutputDirectory,
-    [Parameter(Mandatory = $true)][string]$Version
+    [Parameter(Mandatory = $true)][string]$Version,
+    [string]$SigningKeyPath
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -15,6 +16,14 @@ if ($contentSource -eq $contentOutput -or $contentOutput.StartsWith($contentSour
 }
 if (Test-Path -LiteralPath $contentOutput) { throw 'Use a new output directory for each published version.' }
 if ([string]::IsNullOrWhiteSpace($Version) -or $Version -match '[\x00-\x1F\x7F-\x9F]') { throw 'Version must be non-empty text.' }
+$signingKey = $null
+if ($SigningKeyPath) {
+    $signingKey = Get-Item -LiteralPath $SigningKeyPath
+    if ($signingKey.PSIsContainer -or
+        $signingKey.FullName.StartsWith($contentSource + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Supply a private signing key outside the content source directory.'
+    }
+}
 $contentFiles = @()
 $contentPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 $contentItems = @(Get-ChildItem -LiteralPath $contentSource -Recurse -Force)
@@ -23,7 +32,7 @@ foreach ($contentItem in $contentItems) {
 }
 foreach ($contentItem in @($contentItems | Where-Object { -not $_.PSIsContainer } | Sort-Object FullName)) {
     $contentRelative = $contentItem.FullName.Substring($contentSource.Length + 1).Replace([char]92, [char]47)
-    if ($contentRelative.Split('/')[0] -ieq 'content-manifest.json' -or $contentRelative -match '[:*?"<>|\\\x00-\x1F\x7F-\x9F]' -or
+    if ($contentRelative.Split('/')[0] -iin @('content-manifest.json', 'content-manifest.sig') -or $contentRelative -match '[:*?"<>|\\\x00-\x1F\x7F-\x9F]' -or
         @($contentRelative.Split('/') | Where-Object { $_ -match '[. ]$|^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\.|$)' }).Count -gt 0) {
         throw "Non-portable content path: $contentRelative"
     }
@@ -53,5 +62,10 @@ foreach ($contentFile in $contentFiles) {
 }
 $contentManifest = [ordered]@{ version = $Version; files = @($contentFiles) }
 $contentJson = ConvertTo-Json -InputObject $contentManifest -Depth 8 -Compress
-[IO.File]::WriteAllText((Join-Path $contentOutput 'content-manifest.json'), $contentJson, [Text.UTF8Encoding]::new($false))
+$manifestPath = Join-Path $contentOutput 'content-manifest.json'
+[IO.File]::WriteAllText($manifestPath, $contentJson, [Text.UTF8Encoding]::new($false))
+if ($signingKey) {
+    & dotnet run --project (Join-Path $PSScriptRoot 'ContentVerify/AwithGameFrame.ContentVerify.csproj') --configuration Release -- sign $manifestPath $signingKey.FullName
+    if ($LASTEXITCODE -ne 0) { throw 'Content signing failed. Inspect the unpublished output before retrying.' }
+}
 Write-Host "Published $($contentFiles.Count) files to $contentOutput"

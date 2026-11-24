@@ -25,8 +25,6 @@ graph TD
     Gameplay --> Core
     Data --> Core
     Networking[src/AwithGameFrame.Networking 可选] --> Core
-    Compatibility[adapters/unity-compat 可选] --> Unity
-    DOTween[adapters/unity-dotween 可选] --> Compatibility
     SQLite[adapters/unity-sqlite 可选] --> Data
 ```
 
@@ -36,9 +34,10 @@ graph TD
 | [Data](../../src/AwithGameFrame.Data/README.md) | 持久化、数据库与序列化契约、强类型配置；依赖 Core 和 Newtonsoft.Json，具体数据库驱动由宿主注册 |
 | [Gameplay](../../src/AwithGameFrame.Gameplay/README.md) | 视图/绑定/场景、导航、输入/音频、本地化、用户设置和版本化存档；依赖 Data/Core |
 | [Networking](../../src/AwithGameFrame.Networking/README.md) | 可选 HTTP/协议、内容更新和 WebSocket 会话；只依赖 Core，不进入 Data/Gameplay 依赖 |
-| [适配层](../../adapters/README.md) | 引擎对象、资源和生命周期转换；引擎类型接口也属于这里 |
+| [基础引擎适配](../../adapters/README.md) | Unity、Godot 的原生对象、资源和生命周期接入 |
+| [可选集成](../../adapters/README.md#unity-项目可选集成) | 第三方 SDK 的公共接入，具体项目选择包和配套依赖 |
 | [示例](../../samples/README.md) | 组合真实宿主和共享应用，验证模块怎样一起工作 |
-| [游戏工作区](../../games/README.md) | 游戏专属规则与应用、开发者创建的客户端、独立 .NET 服务端、配置与协议源 |
+| [游戏工作区](../../games/README.md) | 游戏专属规则、应用与启动接线，已有系统的衔接，独立 .NET 服务端、配置与协议源 |
 | [开发工具](../../tools/README.md) | 生成、构建和验证；AgentKit 与模板用于开发，不进入游戏运行时 |
 
 通用包以 .NET Standard 2.1、C# 9 为基线。每包的 `Runtime/` 是唯一源码，由 `.csproj` 和 UPM asmdef 共用；asmdef 设置 `noEngineReferences=true`。`src` 不引用引擎程序集、适配包、示例或其中的第三方 DLL。编译产物统一进入忽略提交的 `artifacts/`。其他语言需要独立桥接或实现，不能直接由 C# 边界推定已支持。
@@ -57,11 +56,10 @@ graph TD
 
 ## 引擎接入与兼容
 
-现代 [Unity 包](../../adapters/unity/README.md) 提供实例宿主、Resources/AssetBundle、视图、场景、输入、音频、日志和时间接入，无 UniTask、DOTween 或 SQLite 依赖。旧配置、引擎接口、Foundation 服务、调试面板和旧本地化入口位于 [unity-compat](../../adapters/unity-compat/README.md)；DOTween 与 SQLite 各自位于可选包。
+Unity 包提供实例宿主、Resources/AssetBundle、视图、场景、输入、音频、日志和时间接入。项目按需选择 SQLite、Addressables 或 HybridCLR 集成。 [Unity 包](../../adapters/unity/README.md) · [可选集成](../../adapters/README.md#unity-项目可选集成)
 
 [Godot 包](../../adapters/godot/README.md) 实现 .NET Node 宿主、资源/PCK、Control、场景、输入与音频，不复用 Unity 类型接口。每树退出协调器等待全部宿主清理后退出并恢复退出策略；启动期前后台状态在启动后回放。
 
-旧 Core 全局 API 保留于 `Runtime/Compatibility`，命名空间与程序集保持兼容。旧全局表、单例与新实例宿主独立，使用新宿主不会自动隔离旧静态管理器。静态检查限制现代模块回流全局门面；具体 API 和程序集变化见[迁移指南](../migrations/framework-modernization.md)。
 
 ## 数据与交付
 

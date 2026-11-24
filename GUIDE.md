@@ -1,8 +1,6 @@
 ﻿# 开发指引
 
-先读 [协作约定](AGENTS.md)，再按任务进入目标区域和包 README。这里提供导航和共同边界；API 条件、资源所有权及线程要求由对应模块说明维护。
-
-结构、能力范围与开发流程的调整以[产品方向](docs/product-direction.md)为依据，实施顺序见[路线图](docs/roadmap.md)。自己的游戏在 `games/<Name>` 开发，客户端由开发者在指定目录创建；当前路径、构建与接入步骤见[游戏工作区入门](docs/getting-started/game-workspace.md)。
+按任务找到源码、模块说明和最接近变更的检查。跨模块约束见 [仓库协作约定](AGENTS.md)。
 
 ## 定位修改范围
 
@@ -33,24 +31,11 @@ graph TD
     Godot --> Core
 ```
 
-`src` 的依赖只向图中方向流动。Networking 不进入 Data/Gameplay；样例可以组合多个包。引擎适配可依赖通用包，通用包不引用适配、样例或其中的 DLL。完整包关系及可选 Unity 兼容/插件包见 [架构概览](docs/architecture/overview.md)。
-
-具体游戏的 Domain 保持引擎无关；Application 组合领域和框架，客户端与服务端按需引用 Application。引擎类型留在客户端或适配层，服务端专用实现留在服务端。游戏外部项目使用 `.csproj` 构建为 DLL，不要求复制公共包的 UPM 清单与 asmdef。
-
-每个通用包的 `.csproj` 与 UPM asmdef 共用 `Runtime` 源码，输出进入根 `artifacts`。引擎接口暴露原生类型时，接口也属于该引擎适配层。
+完整包关系与游戏工作区的数据流见 [架构概览](docs/architecture/overview.md)。
 
 ## 实现与交付
 
-仓库级技能位于 `.agents/skills`。维护框架使用 [awith-framework-development](.agents/skills/awith-framework-development/SKILL.md)，开发具体游戏使用 [awith-game-development](.agents/skills/awith-game-development/SKILL.md)，需要观察或修改 Unity 场景时使用 [awith-unity-editor](.agents/skills/awith-unity-editor/SKILL.md)。三个技能可以按任务组合。
-
-职责或契约有歧义时核对领域用词和已有决策。修复故障时先建立可复现的检查。功能已明确时按可观察的切片实现和评审。步骤与 AgentKit 模板见[开发工作流](.agents/skills/awith-framework-development/references/workflows.md)。
-
-通用编辑器命令及验证归引擎适配与开发工具。具体游戏的组件类型、资产路径、编辑流程与行为验收归对应的 `games/<Name>`。框架级验收使用独立工程和自己的验证资源。
-
-可独立计算的领域规则使用显式输入和输出，应用服务负责采集事实、提交状态及执行效果。用户设置和视图布局已有这种分工，边界与成本见 [函数式核心指南](docs/guides/functional-core.md)。生命周期、资源租约和原生后端仍按各自所有权建模。
-
-新增功能按 [开发步骤](docs/guides/add-feature.md) 操作；需要独立包时可复制 [portable-feature](templates/portable-feature/README.md)。公共 API、程序集或目录迁移同步更新 [迁移指南](docs/migrations/README.md)。
-
-复杂或需要交接的工作使用具体目标、读写范围和验收条件；[AgentKit](agent/README.md) 可以按模块生成有限上下文，保存工具计划和执行证据。它的路径策略不提供操作系统沙箱，机器检查通过仍需真实评审。
-
-交付前运行 `powershell -File tools/verify.ps1`（PowerShell 7 使用 `pwsh`），按影响执行真实引擎检查，并记录实际版本和未执行项。命令统一见 [验证参考](docs/reference/verification.md)，执行结果与历史证据见 [验证记录](docs/validation/latest.md)。
+- 修改公共 API 或框架工具时，沿真实调用入口验证变更。新增通用功能可从已有模块或功能模板开始。 [框架开发技能](.agents/skills/awith-framework-development/SKILL.md) · [开发步骤](docs/guides/add-feature.md) · [功能模板](templates/portable-feature/README.md)
+- 开发游戏玩法时，从所在游戏的 `game.json` 和 README 找到入口。可独立计算的规则使用显式输入和输出，应用层负责提交状态并执行效果。 [游戏开发技能](.agents/skills/awith-game-development/SKILL.md) · [函数式核心](docs/guides/functional-core.md)
+- 排查或编辑 Unity 场景时，用编辑器命令检查实际组件和序列化字段。通用命令的验收使用独立夹具，具体游戏行为使用游戏工程验证。 [Unity 编辑器自动化](docs/reference/unity-editor-automation.md)
+- 工作需要跨会话交接时，用 AgentKit 保存范围、检查和结果。 [AgentKit](agent/README.md)

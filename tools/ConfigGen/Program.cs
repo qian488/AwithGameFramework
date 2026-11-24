@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace AwithGameFrame.Tools.Configuration
 {
-    /// <summary>A deterministic, dependency-free configuration compiler used by CI and hosts.</summary>
+    /// <summary>A deterministic configuration compiler used by CI and hosts.</summary>
     public static partial class ConfigurationCompiler
     {
         public static void AssertOutputSet(string directory, IEnumerable<string> names)

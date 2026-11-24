@@ -126,6 +126,51 @@ namespace AwithGameFrame.Networking.Content
             finally { gate.Release(); }
         }
 
+        /// <summary>Deletes unneeded installed versions while retaining active, rollback and caller-pinned versions.</summary>
+        public async Task<IReadOnlyList<string>> PruneVersionsAsync(IEnumerable<string> pinnedFingerprints = null,
+            CancellationToken cancellationToken = default)
+        {
+            var pinned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (pinnedFingerprints != null)
+            {
+                foreach (var fingerprint in pinnedFingerprints)
+                {
+                    if (!ContentManifest.IsHash(fingerprint)) throw new ArgumentException("Pinned content versions must be SHA-256 fingerprints.", nameof(pinnedFingerprints));
+                    pinned.Add(fingerprint);
+                }
+            }
+
+            using var linked = Link(cancellationToken);
+            await gate.WaitAsync(linked.Token).ConfigureAwait(false);
+            try
+            {
+                AddPointerVersion(pinned, "active");
+                AddPointerVersion(pinned, "active.bak");
+                var removed = new List<string>();
+                var versions = System.IO.Path.Combine(root, "versions");
+                if (!System.IO.Directory.Exists(versions)) return removed.AsReadOnly();
+                foreach (var directory in System.IO.Directory.EnumerateDirectories(versions))
+                {
+                    linked.Token.ThrowIfCancellationRequested();
+                    var fingerprint = System.IO.Path.GetFileName(directory);
+                    if (!ContentManifest.IsHash(fingerprint) || pinned.Contains(fingerprint)) continue;
+                    System.IO.Directory.Delete(directory, recursive: true);
+                    removed.Add(fingerprint);
+                }
+                return removed.AsReadOnly();
+            }
+            finally { gate.Release(); }
+
+            void AddPointerVersion(HashSet<string> versionsToKeep, string pointerName)
+            {
+                var pointer = System.IO.Path.Combine(root, pointerName);
+                if (!File.Exists(pointer)) return;
+                var fingerprint = ReadPointer(pointer);
+                if (!ContentManifest.IsHash(fingerprint)) throw new InvalidDataException("Invalid content pointer: " + pointerName);
+                versionsToKeep.Add(fingerprint);
+            }
+        }
+
         private async Task DownloadAsync(Uri uri, ContentFile file, string partial, CancellationToken token)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);

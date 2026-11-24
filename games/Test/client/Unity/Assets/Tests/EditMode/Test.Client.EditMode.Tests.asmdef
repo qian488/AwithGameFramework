@@ -1,6 +1,6 @@
 {
   "name": "Test.Client.EditMode.Tests",
-  "references": ["Test.Client", "Test.Client.Editor", "AwithGameFrame.Unity"],
+  "references": ["Test.Client", "Test.Client.Editor", "Test.Client.Combat.Editor", "AwithGameFrame.Unity"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

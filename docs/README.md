@@ -8,7 +8,7 @@
 | 建立自己的游戏、接入客户端和启动服务端 | [游戏工作区入门](getting-started/game-workspace.md)、[games](../games/README.md) |
 | 第一次运行，不安装引擎 | [Headless 入门](getting-started/headless.md) |
 | 运行双引擎示例 | [Unity](../samples/Unity/README.md)、[Godot](../samples/Godot/README.md) |
-| 查找模块和依赖 | [架构概览](architecture/overview.md)、[通用运行时](../src/README.md)、[引擎适配](../adapters/README.md) |
+| 查找模块、依赖和数据流 | [架构概览](architecture/overview.md)、[当前架构和数据流](architecture/current-system.md)、[通用运行时](../src/README.md)、[引擎适配](../adapters/README.md) |
 | 新增或修改功能 | [开发指引](../GUIDE.md)、[开发步骤](guides/add-feature.md)、[模板](../templates/README.md) |
 | 分离领域规则与应用效果 | [函数式核心](guides/functional-core.md) |
 | 构建、分发并加载资源包 | [内容流水线](guides/content-pipeline.md) |
@@ -16,7 +16,6 @@
 | 为人类与 AI 准备任务和上下文 | [AgentKit](../agent/README.md) |
 | 进行 AI 协作、诊断和代码评审 | [AI 协作与代码评审](guides/ai-collaboration.md) |
 | 编写和维护文档 | [写作约定](guides/documentation.md) |
-| 从旧版升级 | [迁移指南](migrations/README.md) |
 | 执行检查，确认检查范围 | [验证参考](reference/verification.md) |
 | 维护 Unity 程序化资产 | [程序化资产工作流](reference/unity-procedural-assets.md) |
 | 查看实际验证过的版本与平台 | [最近验证](validation/latest.md)、[代码规范审查](validation/2026-10-30-code-compliance.md)、[仓库重组检查](validation/2026-10-29-repository-organization.md)、[2026-10 历史记录](validation/history/2026-10.md) |
@@ -27,6 +26,5 @@
 - [引擎无关运行时的架构决定](architecture/decisions/0001-engine-independent-runtime.md)保留背景与后果。
 - [游戏工作区与外部程序集接入](architecture/decisions/0002-game-workspace-and-binary-integration.md)记录游戏、客户端、服务端和生成产物的边界。
 - [仓库组织调研](research/repository-organization.md)记录参考项目、固定版本及采纳范围。
-- [legacy](legacy/README.md)保存旧 Unity 框架资料，不作为当前开发规则。
 
-模块 API 和限制在各包 README 维护，根文档负责引导。旧 `architecture.md`、`migration.md`、`validation.md` 等地址保留导航，新链接应指向上表的具体文档。
+模块 API 和限制在各包 README 维护。新链接指向上表对应的文档。

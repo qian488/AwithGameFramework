@@ -9,3 +9,9 @@
 Tick 使用固定秒数并有限追赶；严重卡顿时丢弃积压并写警告，避免无限追赶阻塞关闭。这是进程技术骨架，不是确定性实时联机模拟器。模块必须响应取消并完成清理；进程不会强杀忽略取消的模块。
 
 `TestModule` 是共享组合入口。服务端自己的模块和基础设施写在本项目 `Runtime`，启动前注册；不要把数据库或部署实现反向放入 Domain/Application。生命周期日志含宿主、模块和耗时，外部日志采集与服务管理按实际部署需求接入。
+
+本机联调使用 `OnlineProbePort` 启用 ASP.NET Core 端点。它监听回环地址，提供 `/status`、`/session` 和 `/recovery`。验证脚本自动启动进程并检查心跳、命令、按序推送和断线后补查。使用 Node 22+，传入已构建的 Test.Server DLL 和新报告目录。
+
+```powershell
+node games/Test/verify-online.mjs artifacts/bin/Test.Server/Debug/net8.0/Test.Server.dll artifacts/TestOnlineCheck
+```

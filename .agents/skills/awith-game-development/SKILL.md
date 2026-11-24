@@ -5,6 +5,8 @@ description: Build or diagnose a concrete game using AwithGameFrame. Use for gam
 
 # Develop a Game with AwithGameFrame
 
+For an unresolved player-facing decision, invoke `awith-content-design`. For a reported failure, invoke `awith-diagnose`. If a framework entry point is unfamiliar, use `tools/agent.ps1 capabilities --query <term>`.
+
 1. Start from the selected game's `game.json`, README and AGENTS. Use its module manifest to find framework services and identify which engine and scenarios the game actually supports.
 2. Describe one observable outcome in the game's vocabulary. Check ownership up front. Domain holds deterministic rules, Application orchestrates them, the client owns native assets and device or scene integration, and the server owns process infrastructure. Share contracts and pure rules through project references.
 3. Build a small slice from rule to application to the real client. Use the selected game's README for concrete examples and asset paths. Test calculations with .NET and check native authoring and playback through the selected editor. Keep art-side parameters in engine assets and pass values to portable calculations.

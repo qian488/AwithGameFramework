@@ -28,6 +28,7 @@ public static class Program
                 "board-tracker --board <id> --snapshot <repo-relative GitHub issue export>\n" +
                 "ticket-start|ticket-handoff --board <id> --ticket <id>\n" +
                 "ticket-triage --board <id> --ticket <id> --owner <owner> --priority <0-3> --note <text>\n" +
+                "capabilities [--kind <kind>] [--mode <mode>] [--query <text>] (list executable capability entries)\n" +
                 "modules [--id <module id>] (list maintained package entry points)\n" +
                 "contracts (validate maintained module/tool/task/template contracts)");
             return 0;
@@ -49,6 +50,20 @@ public static class Program
             return result.Handoff?.Status is "failed" or "rejected" ? 1 : 0;
         }
         if (command == "contracts") { Contracts(workspace); return 0; }
+        if (command == "capabilities")
+        {
+            Print(new
+            {
+                schemaVersion = 1,
+                capabilities = CapabilityCatalog.Find(workspace, new CapabilityQuery
+                {
+                    Kind = options.GetValueOrDefault("kind"),
+                    Mode = options.GetValueOrDefault("mode"),
+                    Query = options.GetValueOrDefault("query")
+                })
+            });
+            return 0;
+        }
         if (command == "modules")
         {
             var modules = ModuleCatalog.Read(workspace);
@@ -133,6 +148,7 @@ public static class Program
     {
         var catalog = ToolRunner.Catalog(workspace);
         ModuleCatalog.Read(workspace);
+        CapabilityCatalog.Read(workspace);
         foreach (string path in Directory.EnumerateFiles(workspace.Resolve("agent/templates/tasks", true), "*.json"))
         {
             var task = TaskFiles.ReadTask(workspace, path);

@@ -6,12 +6,8 @@
     "AwithGameFrame.Data",
     "AwithGameFrame.Gameplay",
     "AwithGameFrame.Samples.Shared",
-    "AwithGameFrame.Foundation",
     "AwithGameFrame.Extensions",
-    "UniTask",
-    "UnityEngine.UI",
-    "AwithGameFrame.Unity.Legacy",
-    "AwithGameFrame.Unity.Compatibility"
+    "UnityEngine.UI"
   ],
   "autoReferenced": false
 }

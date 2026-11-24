@@ -48,6 +48,36 @@
       "timeoutSeconds": 300
     },
     {
+      "id": "unity-editor-verify",
+      "description": "Verify editor commands in an isolated Unity project using hidden batch processes.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-unity-editor-automation.ps1", "-EditorPath", "{editorPath}"],
+      "parameters": ["editorPath"],
+      "inputs": ["tools/verify-unity-editor-automation.ps1", "tools/unity-editor.ps1"],
+      "requiresApproval": false,
+      "timeoutSeconds": 900
+    },
+    {
+      "id": "unity-addressables-verify",
+      "description": "Build an Addressables catalog and exercise resource leases in an isolated Unity PlayMode session.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-unity-addressables.ps1", "-EditorPath", "{editorPath}"],
+      "parameters": ["editorPath"],
+      "inputs": ["tools/verify-unity-addressables.ps1", "tools/UnityFixtures/AddressablesSmoke.cs"],
+      "requiresApproval": false,
+      "timeoutSeconds": 900
+    },
+    {
+      "id": "unity-hybridclr-verify",
+      "description": "Build an isolated Windows IL2CPP Player and verify HybridCLR startup and update identity checks.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-unity-hybridclr.ps1", "-EditorPath", "{editorPath}", "-HybridClrPackagePath", "{hybridClrPackagePath}", "-PatchedIl2CppPath", "{patchedIl2CppPath}"],
+      "parameters": ["editorPath", "hybridClrPackagePath", "patchedIl2CppPath"],
+      "inputs": ["tools/verify-unity-hybridclr.ps1", "tools/UnityFixtures/HybridCLR/HybridSmoke.cs", "tools/UnityFixtures/HybridCLR/Editor/HybridBuild.cs"],
+      "requiresApproval": false,
+      "timeoutSeconds": 3600
+    },
+    {
       "id": "unity-verify",
       "description": "Real Unity import, content build/install and PlayMode. Human reviews the editor path and cost.",
       "executable": "$powershell",

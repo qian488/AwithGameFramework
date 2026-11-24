@@ -15,13 +15,16 @@ namespace Test.Client.Combat
         private readonly List<Object> owned = new List<Object>();
         private readonly Dictionary<PrimitiveType, Mesh> meshes = new Dictionary<PrimitiveType, Mesh>();
         private readonly Shader surface;
+        private readonly bool keepTextureData;
         private readonly Random random;
         private readonly Material stone, paver, wood, roof, grass, water, iron, paper, flame;
         private Transform geometry;
 
-        internal PassWorld(Transform parent, Shader surface, int seed, int density, bool preview, CombatMap map = null)
+        internal PassWorld(Transform parent, Shader surface, int seed, int density, bool preview, CombatMap map = null,
+            bool keepTextureData = false)
         {
             this.surface = surface != null ? surface : throw new ArgumentNullException(nameof(surface));
+            this.keepTextureData = keepTextureData;
             random = new Random(seed);
             Map = map;
             Root = new GameObject(map?.Name ?? (preview ? "Rain Pass Preview" : "Rain Pass Generated"));
@@ -269,7 +272,7 @@ namespace Test.Client.Combat
                     pixels[index] = new Color32(shade, shade, shade, 255);
                 }
                 texture.SetPixels32(pixels);
-                texture.Apply(true, true);
+                texture.Apply(true, !keepTextureData);
                 material.mainTexture = texture;
                 owned.Add(texture);
             }

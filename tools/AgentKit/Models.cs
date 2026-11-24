@@ -10,6 +10,14 @@ public sealed class TaskSpec
     public string Id { get; set; } = "";
     public string Objective { get; set; } = "";
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RequestType { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DesignSource { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ExperienceScope { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? OpenDesignDecisions { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string[]? ReadModules { get; set; }
     public string[] ReadPaths { get; set; } = Array.Empty<string>();
     public string[] WritePaths { get; set; } = Array.Empty<string>();

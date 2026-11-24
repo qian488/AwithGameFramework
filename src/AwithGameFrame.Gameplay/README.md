@@ -13,7 +13,7 @@
 | 管理播放、音量、并发和资源 | `AudioService` / `AudioModule` | [音频](Runtime/Audio/README.md) |
 | 原子保存进度、恢复备份和逐版迁移 | `VersionedSaveService<T>` | 下文版本化存档 |
 
-存档显式传入目录、`ISerializer` 和数据结构版本，不依赖全局 `DataPersistenceAPI`。设置与视图布局采用纯规则计算、服务提交和执行效果的分工，见 [函数式核心指南](../../docs/guides/functional-core.md)。共享组合示例见 [Shared](../../samples/Shared/README.md)，验证入口见 [参考](../../docs/reference/verification.md)。
+存档显式传入目录、`ISerializer` 和数据结构版本。设置与视图布局采用纯规则计算、服务提交和执行效果的分工，见 [函数式核心指南](../../docs/guides/functional-core.md)。共享组合示例见 [Shared](../../samples/Shared/README.md)，验证入口见 [参考](../../docs/reference/verification.md)。
 
 ## 视图与布局
 
@@ -111,14 +111,10 @@ var savesV2 = new VersionedSaveService<PlayerProgress>(saveDirectory, codec, 2, 
 var upgraded = await savesV2.LoadAsync(0, cancellationToken);
 ```
 
-迁移完成并反序列化成功后才提交新档，保留原始保存时间与描述；`WasMigrated` 表示本次执行了迁移，重开后无需重复迁移。迁移委托不应产生外部副作用；升级链或最终反序列化失败时保留原文件。旧 `SaveGameManager` 的分离文件格式不会被自动识别，需显式读取旧 DTO，再由新服务保存。
+迁移完成并反序列化成功后才提交新档，保留原始保存时间与描述；`WasMigrated` 表示本次执行了迁移，重开后无需重复迁移。迁移委托不应产生外部副作用；升级链或最终反序列化失败时保留原文件。
 
 同进程的服务实例按规范路径协调同槽的保存、读取、迁移和删除，等待锁可取消；不同槽位可能并发使用同一个序列化器，因此编码实现应支持并发或由宿主隔离。`ISerializer` 没有取消参数，服务在其前后检查取消，迁移委托直接接收令牌。临时文件提交前取消会清理临时文件并保留主档；原子替换完成后返回成功。跨进程写入、符号链接别名、浏览器虚拟文件系统及断电后磁盘持久性需要宿主另外验证。异常退出遗留的 `.awith-slot-*.tmp` 不会作为存档读取。
 
-## 兼容入口
+## 本地化
 
-- `LocalizationManager.LoadDataset(LocalizationDataset)` 接收普通 C# 数据；文件或资源加载通过 `ILocalizationSource` 接入。Unity 的 ScriptableObject 和 Resources 实现在 Unity 适配包。
-- `SaveGameManager` 是保留旧 API 的兼容入口，通过 DataPersistenceAPI 分别保存游戏数据与元信息，未提供自动存档、版本迁移或原子提交。先初始化 Data，再初始化管理器；等待 `Initialization` 后读取槽位列表。可调用 `ReloadSlotsAsync()` 刷新。
-- 原 `AwithGameFrame.Extensions.*` 命名空间保留，程序集改为 `AwithGameFrame.Gameplay`。
-
-新应用使用上文的实例服务。旧管理器不与它们同步状态或事件，迁移时显式处理格式和生命周期，见 [迁移说明](../../docs/migrations/README.md)。
+`LocalizationService.ReplaceDatasets` 接收普通 C# 数据。`LocalizationModule` 可在宿主启动时调用加载函数。Unity 客户端可使用 ScriptableObject 和 Resources 数据源。 [本地化服务](Runtime/Localization/README.md)

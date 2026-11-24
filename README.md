@@ -1,8 +1,6 @@
 ﻿# AwithGameFrame
 
-以纯 C# 为基础的游戏框架，提供独立于引擎的运行时，以及 Unity、Godot .NET 的适配和共享应用示例。
-
-产品目标是让开发者克隆仓库后，在框架规定的区域开发具体游戏、选定引擎的客户端和 .NET 服务端，游戏逻辑尽量在引擎工程外维护。已确认的范围、后续调整顺序及待定事项见[产品方向](docs/product-direction.md)；当前实现仍以各模块说明和验证记录为准。
+在 `games/<Name>` 开发游戏，使用独立 C# 运行时、Unity 或 Godot .NET 客户端，以及按需接入的 .NET 服务端。涉及框架能力范围时查阅 [产品方向](docs/product-direction.md)。
 
 ## 开始使用
 
@@ -37,10 +35,7 @@ Unity 打开 `samples/Unity`，运行 `Assets/SharedDemo.unity`；Godot **4.5.2 
 | 修改框架或增加功能 | [开发指引](GUIDE.md)、[功能模板](templates/README.md) |
 | 生成配置/协议、构建资源、执行验证 | [工具](tools/README.md) |
 | 与 AI 协作并保存任务上下文和验证证据 | [AgentKit](agent/README.md)、[协作约定](AGENTS.md) |
-| 从旧版升级 | [迁移指南](docs/migrations/README.md) |
 | 查找全部当前文档 | [文档索引](docs/README.md) |
-
-通用包使用 .NET Standard 2.1 / C# 9，运行时源码统一位于各包的 `Runtime`。`src` 不引用引擎程序集；引擎类型与生命周期位于 `adapters`。开发期 AgentKit、工具和模板不进入游戏运行时依赖。
 
 ## 验证
 

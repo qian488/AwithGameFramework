@@ -26,7 +26,37 @@ namespace AwithGameFrame.Unity.Editor
                 return response;
             }
 
+            if (request.action == "audit.list")
+            {
+                var response = Result(scene);
+                response.audit = EditorAutomationAudit.Read(request.limit);
+                return response;
+            }
+
+            if (request.action == "performance.inspect")
+            {
+                var response = Result(scene);
+                response.performance = new AutomationPerformance
+                {
+                    capturedUtc = DateTimeOffset.UtcNow.ToString("O"),
+                    unityVersion = Application.unityVersion,
+                    batchMode = Application.isBatchMode,
+                    scene = scene.path,
+                    sceneDirty = scene.isDirty,
+                    rootGameObjects = scene.IsValid() && scene.isLoaded ? scene.rootCount : 0,
+                    gameObjects = Resources.FindObjectsOfTypeAll<GameObject>().Length,
+                    components = Resources.FindObjectsOfTypeAll<Component>().Length,
+                    totalAllocatedMemory = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong(),
+                    totalReservedMemory = UnityEngine.Profiling.Profiler.GetTotalReservedMemoryLong(),
+                    totalUnusedReservedMemory = UnityEngine.Profiling.Profiler.GetTotalUnusedReservedMemoryLong(),
+                    monoUsedMemory = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong(),
+                    monoHeapSize = UnityEngine.Profiling.Profiler.GetMonoHeapSizeLong()
+                };
+                return response;
+            }
+
             if (request.action == "asset.find") return FindAssets(request, scene);
+            if (request.action == "prefab.inspect") return InspectPrefab(request, scene);
             if (request.action == "scene.transaction") return Transaction(request, scene);
             if (request.action.StartsWith("checkpoint.", StringComparison.Ordinal)) return EditorAutomationCheckpoints.Execute(request, scene);
             if (request.action == "scene.open") return Result(OpenScene(request.scene));
@@ -42,7 +72,7 @@ namespace AwithGameFrame.Unity.Editor
             var modifies = request.action == "object.create" || request.action == "object.transform" ||
                            request.action == "prefab.place" || request.action == "component.add" ||
                            (request.action == "component.set" && !request.preview);
-            var reads = request.action == "scene.inspect" || request.action == "component.inspect" ||
+            var reads = request.action == "scene.inspect" || request.action == "scene.health" || request.action == "component.inspect" ||
                         (request.action == "component.set" && request.preview);
             if (!modifies && !reads) throw new ArgumentException("Unknown editor action: " + request.action);
             if (modifies && request.batch && (!request.save || string.IsNullOrEmpty(request.scene)))
@@ -51,6 +81,8 @@ namespace AwithGameFrame.Unity.Editor
             if (request.batch && !string.IsNullOrEmpty(request.scene)) scene = OpenScene(request.scene);
             RequireScene(scene, request.scene, true);
             if (request.action == "scene.inspect") return Inspect(request, scene);
+            if (request.action == "scene.health")
+                return EditorAutomationSceneHealth.Inspect(scene, ResultLimit(request.limit));
             if (!modifies) return ComponentProperties(request, scene);
 
             Undo.IncrementCurrentGroup();
@@ -246,13 +278,37 @@ namespace AwithGameFrame.Unity.Editor
 
         private static AutomationResponse Inspect(AutomationRequest request, Scene scene)
         {
-            var response = Result(scene);
-            var limit = ResultLimit(request.limit);
             var queue = new Queue<(GameObject Item, string Path)>();
             if (string.IsNullOrEmpty(request.target))
                 foreach (var root in scene.GetRootGameObjects()) queue.Enqueue((root, "/" + root.name));
             else queue.Enqueue((FindObject(scene, request.target), request.target));
+            return InspectHierarchy(Result(scene), queue, ResultLimit(request.limit));
+        }
 
+        private static AutomationResponse InspectPrefab(AutomationRequest request, Scene scene)
+        {
+            var path = ValidateAssetPath(request.asset, ".prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) throw new FileNotFoundException("Prefab asset was not found: " + path);
+
+            var response = Result(scene);
+            response.asset = path;
+            response.assetGuid = AssetDatabase.AssetPathToGUID(path);
+            response.prefabKind = PrefabUtility.GetPrefabAssetType(prefab).ToString();
+            var limit = ResultLimit(request.limit);
+            var dependencies = AssetDatabase.GetDependencies(path, true)
+                .Where(dependency => dependency != path)
+                .OrderBy(dependency => dependency, StringComparer.Ordinal).Take(limit + 1).ToArray();
+            response.assets = dependencies.Take(limit).ToArray();
+            response.truncated = dependencies.Length > limit;
+            var queue = new Queue<(GameObject Item, string Path)>();
+            queue.Enqueue((prefab, "/" + prefab.name));
+            return InspectHierarchy(response, queue, limit);
+        }
+
+        private static AutomationResponse InspectHierarchy(AutomationResponse response,
+            Queue<(GameObject Item, string Path)> queue, int limit)
+        {
             var items = new List<AutomationObject>();
             while (queue.Count > 0 && items.Count < limit)
             {
@@ -384,7 +440,7 @@ namespace AwithGameFrame.Unity.Editor
             return parent.gameObject;
         }
 
-        private static string GetHierarchyPath(Transform item)
+        internal static string GetHierarchyPath(Transform item)
         {
             var segments = new Stack<string>();
             for (var current = item; current != null; current = current.parent) segments.Push(current.name);

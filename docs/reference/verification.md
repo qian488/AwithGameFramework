@@ -41,9 +41,9 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 
 完整脚本在隔离工程导入样例。`-RunSmoke` 启用 PlayMode 冒烟测试，以及测试所需的 AssetBundle 构建、发布和 HTTP 安装。`-BuildPlayer` 生成 Player 产物。追加 `-RunPlayerSmoke` 可用 `-batchmode -nographics` 运行 Windows x86_64 Player 冒烟测试。默认 Mono，IL2CPP 通过 `-ScriptingBackend IL2CPP` 选择。构建报告保存实际编辑器版本、后端、是否运行、源码 commit、工作区修改状态与产物 SHA-256。
 
-必需标记包括 `FOUNDATION_CORE_PASSED`、`SHARED_SCENARIO_PASSED`、`COMPOSED_APPLICATION_PASSED`、`UNITY_PRESENTATION_SCENES_PASSED`、`UNITY_INPUT_AUDIO_PASSED`、`UNITY_ASSET_BUNDLE_PASSED`、`UNITY_SHARED_HOST_PASSED`、`UNITY_OPTIONAL_PROVIDERS_PASSED`，运行以 0 退出。可选提供者断言覆盖 DOTween 注册和 SQLite 原生内存数据库；Player 也再次检查注册。
+成功日志包含 `FOUNDATION_CORE_PASSED`、`SHARED_SCENARIO_PASSED`、`COMPOSED_APPLICATION_PASSED`、`UNITY_PRESENTATION_SCENES_PASSED`、`UNITY_INPUT_AUDIO_PASSED`、`UNITY_ASSET_BUNDLE_PASSED`、`UNITY_SHARED_HOST_PASSED` 和 `UNITY_SQLITE_PROVIDER_PASSED`，运行以 0 退出。SQLite 验证在编辑器与 Player 中检查提供者注册、内存数据库建表和查询。
 
-最小脚本创建仅安装现代通用包与 Unity 包的新工程，不复制 Plugins 或兼容服务，验证真实模块生命周期、可选程序集没有编译/加载，要求 `UNITY_MINIMAL_ADAPTER_PASSED`。
+最小脚本在只安装基础适配和所需通用包的新工程验证模块生命周期，成功标记为 `UNITY_MINIMAL_ADAPTER_PASSED`。
 
 编辑器自动化脚本在独立工程导入现代 UPM 包，生成验证 Prefab 和序列化组件。默认用批处理通过公共 CLI 验证查找与放置、字段读写与预览、白名单、原生粒子字段落盘，以及场景与 Prefab 的重启恢复。成功标记为 `UNITY_EDITOR_AUTOMATION_BATCH_PASSED`。
 
@@ -51,7 +51,14 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 
 追加 `-VisualSpec '<visual-cases.json>'` 可执行[画面自动验收](unity-visual-verification.md)。用例支持后台离屏截图和已有 PNG 检查，并保存实际画面、差异图与逐项报告。
 
-`-PlayerTarget Android` / `WebGL` 提供构建入口，WebGL 要求 IL2CPP。这些目标只构建并报告 `runtimeVerified:false`，需另行设备/浏览器运行；PlayMode 使用的 Windows bundles 不能代替目标平台资源。Windows IL2CPP 样例只证明所执行代码的 AOT 路径。
+`verify-unity.ps1` 可用 `-PlayerTarget Android` 或 `WebGL` 构建示例。WebGL 使用 IL2CPP。验证具体游戏时，为 `verify-game-unity.ps1` 添加 `-BuildScene <Assets/...unity> -PlayerTarget WebGL`，在 `summary.json` 中找到 Player 路径。
+
+```powershell
+npm install --prefix artifacts/UnityWebGLTools --no-save playwright-core@1.65.1
+node tools/verify-unity-webgl.mjs --player '<WebGL 输出目录>' --browser '<Chromium 可执行文件>' --output '<新的证据目录>' --ready-log 'Rain Pass stage=selection-ready'
+```
+
+浏览器检查使用本机 HTTP 服务与无界面 Chromium。报告保存启动结果、日志、错误和截图。对其他游戏，传入它自己的启动标记。命令适用于带 Unity 默认加载进度元素的 WebGL 模板。
 
 ### 桌面会话与人工验收
 
@@ -78,4 +85,4 @@ powershell -File tools/verify-godot.ps1 -EditorPath '<Godot .NET console executa
 
 无图形检查不能代替画面、实际声音、物理键布局、桌面焦点、手柄/触屏或移动前后台验证。普通后端测试不替代引擎适配；引擎样例也不证明任意项目 DTO、反射插件或平台 SDK 的 AOT 兼容性。
 
-资源缓存预算只统计空闲项估算。AssetBundle/PCK 不是 Addressables；PCK 不能进程内卸载或替换同 namespace。大小/hash/checksum 校验保证一致性，不提供发布者真实性；CDN、签名密钥、历史版本回收和实际联网服务由项目接入。旧 XOR 是混淆，不是加密；跨进程存储事务、云 SDK、代码热更新及其他平台不在当前验证范围。
+原始内容清单可通过独立 RSA 签名验证发布者。Addressables 使用独立的 Catalog 回归，HybridCLR 使用 Windows IL2CPP Player 回归。版本和实际结果见各适配包和验证记录。 [Addressables](../../adapters/unity-addressables/README.md) · [HybridCLR](../../adapters/unity-hybridclr/README.md) · [最近验证](../validation/latest.md)

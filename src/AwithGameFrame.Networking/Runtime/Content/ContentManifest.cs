@@ -79,6 +79,19 @@ namespace AwithGameFrame.Networking.Content
             return new ContentManifest(document.Version, document.Files);
         }
 
+        /// <summary>Verifies the exact published JSON bytes using a caller-trusted RSA public key.</summary>
+        public static ContentManifest FromSignedJson(byte[] bytes, byte[] signature, RSA publicKey)
+        {
+            if (bytes == null) throw new ArgumentNullException(nameof(bytes));
+            if (signature == null) throw new ArgumentNullException(nameof(signature));
+            if (publicKey == null) throw new ArgumentNullException(nameof(publicKey));
+            if (publicKey.KeySize < 2048) throw new ArgumentException("Use an RSA key of at least 2048 bits.", nameof(publicKey));
+            var snapshot = (byte[])bytes.Clone();
+            if (!publicKey.VerifyData(snapshot, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+                throw new CryptographicException("Content manifest signature is invalid.");
+            return FromJson(snapshot);
+        }
+
         [DataContract]
         private sealed class Document
         {
@@ -100,7 +113,8 @@ namespace AwithGameFrame.Networking.Content
             ValidateText(path, nameof(path));
             if (path.IndexOfAny(new[] { '\\', ':', '*', '?', '"', '<', '>', '|', '\0' }) >= 0 ||
                 path.Split('/').Any(x => x.Length == 0 || x == "." || x == ".." || x.EndsWith(" ", StringComparison.Ordinal) || x.EndsWith(".", StringComparison.Ordinal)) ||
-                path.Split('/')[0].Equals("content-manifest.json", StringComparison.OrdinalIgnoreCase))
+                path.Split('/')[0].Equals("content-manifest.json", StringComparison.OrdinalIgnoreCase) ||
+                path.Split('/')[0].Equals("content-manifest.sig", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Expected a portable relative file path.", nameof(path));
             foreach (var part in path.Split('/'))
             {
@@ -124,6 +138,7 @@ namespace AwithGameFrame.Networking.Content
         }
         public string Directory { get; }
         public ContentManifest Manifest { get; }
+        public string Fingerprint => Manifest.Fingerprint;
         public string GetPath(string key) => paths.TryGetValue(key, out var path) ? path : throw new KeyNotFoundException("Unknown content key: " + key);
         public Stream OpenRead(string key) => File.OpenRead(GetPath(key));
     }

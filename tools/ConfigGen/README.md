@@ -1,13 +1,13 @@
 # 配置编译工具
 
-ConfigGen 是无第三方依赖的 .NET 8 命令行工具。它验证配置源并生成普通 C# DTO、枚举和带 schema hash 的 JSON 表。产物可由 Unity、Godot、无图形宿主使用，工具自身无需进入引擎工程。
+ConfigGen 是 .NET 8 命令行工具。它验证配置源并生成普通 C# DTO、枚举和带 schema hash 的 JSON 表。Unity、Godot 与无图形宿主使用这些产物。
 
 ```powershell
 dotnet run --project tools/ConfigGen -- schema.json Data Generated
 dotnet run --project tools/ConfigGen -- schema.json Data Generated --check
 ```
 
-数据目录是平面目录；每张表必须恰好有一个 `<Table>.json` 或 `<Table>.csv`，可以在不同表间混用。重复来源、未知表、缺失表会失败。`--check` 检查全部预期产物的内容，并拒绝残留的 `.cs` / `.json` 旧产物；生成时也要求显式清理旧产物。协议生成仍使用原有 `--protocol` 入口。
+每张表在平面数据目录存一个同名 JSON、CSV 或 XLSX 文件。`--check` 检查预期产物和过期文件。HTTP 协议生成使用 `--protocol`。
 
 ## Schema
 
@@ -52,11 +52,13 @@ Id,Title,Rarity,Tags,Rewards
 
 string 列直接使用单元格文本；枚举列填写名称或数字；bool 接受 `true` / `false`，大小写均可。其余标量填写与区域设置无关的 JSON 数字。数组和结构单元格填写 JSON 字面量，再按 CSV 规则转义内部双引号。空数值/结构/数组单元格无效；空列表应填写 `[]`。引号结束后的空格也会被视为格式错误。
 
-无需 Excel 库；Excel/表格软件请导出 UTF-8 CSV。示例包含相同内容的 JSON 和 CSV 来源：
+同一份示例数据提供 JSON 和 CSV 来源。
 
 ```powershell
 dotnet run --project tools/ConfigGen -- tools/ConfigGen/Fixtures/Complex/schema.json tools/ConfigGen/Fixtures/Complex/DataCsv artifacts/ConfigExample
 dotnet run --project tools/ConfigGen -- tools/ConfigGen/Fixtures/Complex/schema.json tools/ConfigGen/Fixtures/Complex/DataJson artifacts/ConfigExample --check
 ```
 
-工具不生成运行时序列化器、Excel 导入器或配置热更新传输层；它输出已验证的静态配置产物。CI 应先运行生成检查，再通过资源/内容更新流程发布。
+## XLSX
+
+工作簿使用一张表，第一行是字段名。布尔和数字使用原始单元格值，数组与结构使用 JSON 文本。公式使用工作簿保存的计算值。输出沿用相同的 schema、外键检查及生成格式。

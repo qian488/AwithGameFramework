@@ -1,6 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "docs-only",
+  "requestType": "documentation",
+  "designSource": "Confirmed documentation scope",
+  "experienceScope": "The reader path and facts that the documentation must make verifiable",
+  "openDesignDecisions": [],
   "objective": "在明确授权的文档范围内完善一项说明，使其与可核对的代码和验证证据一致。",
   "readPaths": [
     "AGENTS.md",
@@ -8,7 +12,6 @@
     "GUIDE.md",
     "docs/architecture/overview.md",
     "docs/roadmap.md",
-    "docs/migrations/README.md",
     "docs/reference/verification.md",
     "docs/validation/latest.md"
   ],
@@ -17,9 +20,7 @@
     "GUIDE.md",
     "docs"
   ],
-  "protectedPaths": [
-    "docs/legacy"
-  ],
+  "protectedPaths": [],
   "allowedTools": [
     "agent-contracts",
     "docs-verify"

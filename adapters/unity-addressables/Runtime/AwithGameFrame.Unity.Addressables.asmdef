@@ -1,0 +1,11 @@
+{
+  "name": "AwithGameFrame.Unity.Addressables",
+  "references": [
+    "AwithGameFrame.Core",
+    "AwithGameFrame.Gameplay",
+    "Unity.Addressables",
+    "Unity.ResourceManager"
+  ],
+  "autoReferenced": false,
+  "noEngineReferences": false
+}

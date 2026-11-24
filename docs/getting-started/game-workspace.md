@@ -57,6 +57,8 @@ powershell -File tools/game.ps1 new-module -Name MyGame -Module MyFeature
 ```powershell
 powershell -File tools/game.ps1 config -Name MyGame
 powershell -File tools/game.ps1 config -Name MyGame -Check
+powershell -File tools/game.ps1 protocol -Name MyGame
+powershell -File tools/game.ps1 protocol -Name MyGame -Check
 ```
 
 生成的 C# DTO 与 JSON 位于 Application 的 `Runtime/Generated/Configuration`，随游戏源码提交并由生成命令维护。存在 `configuration/schema.json` 时，`build`、`run-server` 和仓库标准验证会只读检查产物。项目按需将 JSON 声明为程序集资源，再用生成 DTO 的 `SchemaHash` 加载。完整接线见 [Test 的 Boss 配置](../../games/Test/configuration/README.md)。协议继续使用显式输入和输出。
@@ -79,11 +81,11 @@ powershell -File tools/game.ps1 build -Name MyGame -Configuration Debug
 powershell -File tools/game.ps1 sync -Name MyGame -Configuration Debug
 ```
 
-`sync` 会先执行同一配置的 `build`，再更新 Unity 的工作区包。这样源码变化不会被旧 DLL 遮蔽。单独使用 `workspace-client.ps1` 属于工具内部入口，项目开发应使用 `game.ps1 sync`。
+`sync` 会先执行同一配置的 `build`，再更新 Unity 的工作区包。构建产物中的 `build.json` 会记录源码提交号、源码输入指纹、目标框架和引擎版本。同步时重新计算这些值，并校验 DLL/PDB hash，发现源码、引擎版本或产物来源不一致就拒绝接入。这样源码变化不会被旧 DLL 遮蔽。单独使用 `workspace-client.ps1` 属于工具内部入口，项目开发应使用 `game.ps1 sync`。
 
 工具要求目标位置已有完整 Unity 工程，然后写入嵌入式 UPM 包 `Packages/com.awithgameframe.workspace`。其中包括游戏与框架 DLL/PDB、现代 Unity 适配源码及其元数据。Unity 原生适配仍由编辑器编译；生成的 asmdef 使用 DLL 引用，不再引用同名便携源码程序集。
 
-该包依赖 Unity 官方 `com.unity.ugui` 和 `com.unity.nuget.newtonsoft-json`，不会再复制 NuGet 的 Newtonsoft.Json DLL。此接入方式应独立使用；不要同时安装便携框架源码包或原 Unity 适配包，避免同名程序集和类型重复。旧兼容、DOTween、SQLite 包未纳入该自动接入流程。
+该包使用 Unity 官方 `com.unity.ugui` 和 `com.unity.nuget.newtonsoft-json`。同一个客户端应选择源码包或 DLL 工作区，确保每个框架程序集只导入一次。项目可选的自带 SDK 和适配入口见 [可选集成](../../adapters/README.md#unity-项目可选集成)。
 
 在 Unity 工程的 `Assets/Scripts/Bootstrap` 下添加接线程序集 `MyGame.Client.asmdef`；适配程序集关闭了自动引用，因此接线需要显式引用：
 
@@ -113,6 +115,22 @@ public sealed class GameBootstrap : GameHostBehaviour
 ```
 
 需要其他模块时继续增加相应程序集引用。设备、资源、视图等后端按[Unity 适配说明](../../adapters/unity/README.md)注册。销毁宿主对象前等待 `ShutdownAsync`，不要绕过宿主异步清理。
+
+Unity 游戏可在 `game.json` 的 `unityConfiguration` 中将逻辑名称映射到 `configuration/` 的 JSON 或外部 Application 的 `Runtime/Generated/Configuration/` 产物。同步将相同字节接入生成包。客户端通过 `Resources.Load<TextAsset>("AwithConfiguration/<Game>/<Key>")` 读取配置并把字节交给 Application。
+
+## 已有 Unity 工程渐进接入
+
+将 `Assets`、`Packages` 和 `ProjectSettings` 保持为一个完整 Unity 工程，保留场景、Prefab 和脚本的 `.meta`。项目可以先在原工程用本地 UPM 包验证单项能力，也可在加入工作区后采用相同方式。开始前在工程记录的 Unity 版本上保存一条可复跑的原有游戏流程。
+
+| 本次采用范围 | 接入入口 |
+| --- | --- |
+| 只采用存档或其他独立 C# 服务 | 添加所需的本地 UPM 包与其依赖，由原游戏入口创建服务。例如版本化存档使用 Gameplay、Data、Core，调用方传入存档目录和序列化器 |
+| 采用 AwithGameFrame 的宿主或 Unity 原生后端 | 添加现代 Unity 包，由游戏客户端在需要接管的功能入口组合宿主和具体后端 |
+| 外部游戏代码由框架工具构建并分发 | 使用 `game.ps1 sync` 接入 DLL 工作区。现有命令构建 Application 和 Server，并同步便携程序集与现代 Unity 适配，而单项采用可直接用本地 UPM |
+
+使用本地 UPM 时，在调用代码所属的 `.asmdef` 中显式引用所用程序集。若项目原先使用 Unity 默认程序集，可以先为本游戏新增的接入脚本建立独立 `.asmdef`，对该程序集公开所需入口，再从默认程序集调用。版本化存档的接入脚本可引用 `AwithGameFrame.Gameplay`、`AwithGameFrame.Data` 和 `AwithGameFrame.Core`。
+
+迁移一个已有服务时，在本游戏目录实现衔接，由客户端的启动入口选定该服务的实现。场景、输入和资源等有生命周期的子系统，每一项都由一个入口负责实例创建、事件订阅和释放。存档替换时，先把旧格式读取和新格式写入接通，核对同一份玩家数据，再切换写入方。
 
 ## 将产物接入 Godot
 
@@ -162,6 +180,6 @@ powershell -File tools/game.ps1 run-server -Name MyGame -ServerConfig games/MyGa
 
 服务端骨架提供进程配置、日志、单线程宿主驱动和正常退出。主循环在 GameHost 创建线程泵送异步延续与 Dispatcher，停止时等待模块清理。它是独立进程入口；账号、战斗同步、数据库接入和生产部署按游戏需求实现，不预置业务接口。
 
-`configuration` 和 `protocol` 当前只定义游戏源文件归属。已有 `generate-config.ps1`、`generate-protocol.ps1` 仍面向 `samples`；不会自动读取本游戏目录。需要生成时按[生成工具](../../tools/ConfigGen/README.md)配置游戏自己的输入、输出和兼容性基线，不手改 Generated 文件。
+`configuration` 和 `protocol` 是游戏源文件归属。`game.ps1 config` 和 `game.ps1 protocol` 会读取当前游戏的源文件，并在构建前使用检查模式确认生成产物没有过期。配置生成产物位于 Application 的 `Runtime/Generated/Configuration`，协议生成产物位于 `Runtime/Generated/Protocol`。不手改 Generated 文件。共享示例仍可使用独立的 `generate-config.ps1` 和 `generate-protocol.ps1` 入口。
 
 实际检查范围见[验证记录](../validation/latest.md)。客户端工程由开发者创建后，还需在选定编辑器中完成导入、启动、调试与目标平台发布验证；H5、UE5 不属于当前接入实现。

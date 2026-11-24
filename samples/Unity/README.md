@@ -1,24 +1,22 @@
 ﻿# Unity 示例
 
-此目录保留旧 Unity 工程的 Assets、Packages、ProjectSettings。Unity Hub 应打开这里。
+在 Unity Hub 打开此目录，运行共享应用示例。
 
-框架源码由 `Packages/manifest.json` 通过本地 UPM 引用；勿在 Assets 再复制一份框架。`Assets/Examples` 为演示，`Assets/Test` 为交互验证脚本；自动化单元测试位于仓库根 `tests`。
+框架源码由 `Packages/manifest.json` 通过本地 UPM 引用。`Assets/Examples` 保存应用接线和引擎验证，仓库根 `tests` 保存自动化单元测试。
 
 ## 选择接入包
 
-完整示例安装下列组合，既运行现代共享应用，也继续验证旧入口：
+共享应用及其验证使用以下包。
 
 | 本地包 | 作用 | 依赖或前置插件 |
 | --- | --- | --- |
 | [Core](../../src/AwithGameFrame.Core/README.md)、[Data](../../src/AwithGameFrame.Data/README.md)、[Gameplay](../../src/AwithGameFrame.Gameplay/README.md) | 通用逻辑 | 同一份 `Runtime` 源码，无引擎引用 |
 | [Networking](../../src/AwithGameFrame.Networking/README.md) | 协议、内容安装与连接能力 | 可选，不进入 Data/Gameplay 依赖 |
-| [现代 Unity 适配包](../../adapters/unity/README.md) | 实例宿主、资源、视图/场景、输入/音频后端 | uGUI、Newtonsoft.Json；不需要旧插件 |
-| [Unity 兼容包](../../adapters/unity-compat/README.md) | 旧配置/Mono、Foundation 静态服务、PlayerPrefs | 真实 UniTask |
-| [DOTween 接入](../../adapters/unity-dotween/README.md) | 兼容动画默认提供者 | 兼容包和真实 DOTween |
+| [Unity 适配包](../../adapters/unity/README.md) | 实例宿主、资源、视图/场景、输入/音频后端 | uGUI、Newtonsoft.Json |
 | [SQLite 接入](../../adapters/unity-sqlite/README.md) | 数据库连接工厂 | 真实 Mono.Data.Sqlite 与目标平台 SQLite 原生库 |
 | [Shared](../Shared/README.md) | 与 Godot/Headless 共用应用流程 | Core/Data/Gameplay |
 
-新工程使用实例 API 时，只安装现代适配及其依赖即可。示例内 vendored 的 UniTask、DOTween 和 SQLite 插件由示例工程提供，UPM 不自动为外部项目安装它们。旧项目的程序集、namespace 和句柄 API 变化见 [迁移说明](../../docs/migrations/README.md)。
+示例附带 SQLite 插件，用于原生数据库验证。项目按需安装对应目标平台的驱动。 [SQLite 接入](../../adapters/unity-sqlite/README.md)
 
 ## 运行与验证
 

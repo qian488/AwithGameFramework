@@ -1,0 +1,1 @@
+namespace AwithHybridFixture { public static class HotLogic { public static int Check() => 42; } }

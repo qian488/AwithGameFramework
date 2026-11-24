@@ -190,13 +190,11 @@ namespace AwithGameFrame.Tests.Unit
             Assert.That(await provider.ExecuteAsync("PRAGMA foreign_keys=ON; CREATE TABLE parent (id INTEGER PRIMARY KEY); " +
                 "CREATE TABLE child (parent_id INTEGER REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED)"),
                 Is.EqualTo(DataOperationResult.Success));
-            var logging = LoggingManager.GetInstance();
-            var originalConfig = logging.Config;
             var originalOutput = LoggingHost.Output;
             var outputAttempts = 0;
-            logging.Config = new LoggingConfig { Level = LogLevel.Error, Mode = LogMode.FrameworkLog };
-            LoggingHost.Output = (_, _, _) =>
+            LoggingHost.Output = (level, _, _) =>
             {
+                if (level < LogLevel.Error) return;
                 outputAttempts++;
                 throw new InvalidOperationException("Host log output failed.");
             };
@@ -218,7 +216,6 @@ namespace AwithGameFrame.Tests.Unit
             finally
             {
                 LoggingHost.Output = originalOutput;
-                logging.Config = originalConfig;
             }
         }
 

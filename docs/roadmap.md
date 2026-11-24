@@ -17,16 +17,18 @@
 | 配置与协议 | 可审查 schema、枚举/列表/嵌套结构、UTF-8 JSON/CSV、强类型生成、结构校验及兼容性基线 |
 | 资源与内容 | 资源 scope/共享加载/取消清理、有限空闲 LRU/预加载；AssetBundle/PCK 构建、发布、HTTP 校验下载/续传与原子版本激活 |
 | 可选网络 | HTTP 错误/超时/取消、正文大小限制与会话隔离；WebSocket 心跳/有限重连/显式连续推送恢复契约，localhost 真实连接测试 |
-| 适配与演示 | 现代 Unity、独立旧兼容服务与 DOTween/SQLite 包；Godot .NET；两端和 Headless 共用的完整交互应用 |
+| 适配与演示 | Unity 与 Godot .NET 实例宿主、按需集成、两端和 Headless 共用的完整交互应用 |
 | 可维护性 | 纯设置与布局规则、命令式应用服务、实例/兼容边界检查、包元数据/GUID 检查、生成结果检查与结构化生命周期诊断 |
 
-Godot 宿主实现每树退出协调和启动期暂停回放。持久化会话捕获配置，视图/场景句柄保持服务清理权限，旧单例有同步保护。旧全局 API 仍独立于实例宿主，迁移契约见[迁移指南](migrations/README.md)。
+Godot 宿主实现每树退出协调和启动期暂停回放。存储实例捕获配置，视图和场景服务负责原生对象清理。
 
 这些能力有明确边界：缓存预算仅统计空闲资产的后端估算；Godot PCK 属于进程挂载，不能卸载或替换同 namespace；内容链分发原始文件和已构建引擎资源；推送恢复要求产品实现服务端补查契约。具体接入见各包 README 与[资源流水线](guides/content-pipeline.md)。
 
 ## 开发期工具与模板
 
 Unity 工作区提供[画面自动验收](reference/unity-visual-verification.md)。项目可定义控件布局断言、画面异常阈值和基准图，后台输出实际画面、差异图和报告。
+
+Unity 编辑器自动化还提供持久化操作审计和 `performance.inspect` 快照，可记录编辑器操作结果、对象/组件数量和 Profiler 内存计数。它们用于发现明显异常，不能替代目标设备上的持续性能和人工画面验收。
 
 已有 [AgentKit](../agent/README.md)：任务读写范围与脏工作区基线、模块发现与按模块选择的有限上下文/预算、固定工具目录、具体计划与真实确认、执行日志/耗时、机器检查与人工评审分离、本地事件监看。提供任务/评审/交接模板及可编译的[Domain/Application 功能模板](../templates/portable-feature/README.md)，标准验证包含工具契约、文档本地链接、行为回归和模板。
 
@@ -43,7 +45,7 @@ Unity 工作区提供[画面自动验收](reference/unity-visual-verification.md
 - [x] 提供 .NET 服务端模板，包含配置、日志、宿主驱动和正常退出；共享契约/规则与宿主基础设施分别维护。
 - [x] 提供 `new`、`paths`、`new-module`、`build`、`sync`、`run-server` 命令，脚手架不创建实际引擎工程。
 - [x] 通过 `game.ps1 config` 接入游戏级配置生成和产物检查，Test 使用 JSON 与 CSV 验证招式引用和 Unity 接入。
-- [ ] 为实际游戏接入协议生成输入与兼容性基线，现有协议生成脚本面向样例。
+- [x] 为游戏工作区提供协议源、兼容性基线和 `game.ps1 protocol` 生成/检查入口；共享协议示例继续保留独立入口。
 - [ ] 在开发者创建的客户端中确认完整导入、调试和所选平台发布；按真实需要选型服务端通信、存储与部署组件。
 - [ ] 将模块边界、首选实现范例、设计说明与有限上下文用于真实游戏；在现有 Domain/Application 模板上逐步完善适用 skill，支持开发者选择的 AI 工具。测试专项及其 skill 后续独立安排。
 
@@ -51,12 +53,20 @@ Unity 工作区提供[画面自动验收](reference/unity-visual-verification.md
 
 ## 按实际项目补充基础与平台能力
 
-- [ ] Addressables、CDN/清单认证与历史版本磁盘回收；保留当前 AssetBundle/PCK 的明确所有权与版本隔离。
+- [x] 独立 Unity Addressables 适配包接入 ResourceStore 与 SceneService，完成真实资源构建和 PlayMode 验证。
+- [x] 外部 Addressables Catalog 使用独立资源存储与场景后端，通过两份 HTTP Catalog 验证版本隔离与回退。
+- [x] 原始文件发布支持独立 RSA 签名，已验证公钥校验和 HTTP 安装。
+- [x] HybridCLR 可选包通过 UPM 或 DLL 工作区接入，导出 AOT 元数据与更新程序集，两条入口均已运行 Windows IL2CPP Player。
+- [x] 游戏工作区支持 WebGL 构建与无界面浏览器验证，以及微信小游戏 SDK 导出。
+- [x] 配置编译支持 XLSX。Protobuf 模块使用 Buf 与 protoc 检查兼容并生成 C#。
+- [x] Networking 提供 WebSocket 服务端会话，Test 通过本机 ASP.NET Core 宿主验证命令、心跳和补查。
+- [ ] 按目标发布流程接入 Catalog 发布认证、CDN 与缓存维护。
+- [x] 原始内容更新链路提供 hash 校验、续传、原子激活、回滚和显式历史版本清理；清理会保留当前版本、回滚版本和调用方指定的旧快照版本。
+- [x] Data 的程序化资产 manifest 已接入 Test Rain Pass 的实际烘焙。旧清单可读，重烘焙保留 GUID，验证可区分参数过期和烘焙后的手工编辑。
 - [ ] 产品页面、加载/转场动画、布局主题、手柄/触屏与目标设备焦点策略、3D/流式音频。
 - [ ] 在线业务与实时联机所需的技术基础：通信、连接生命周期、协议和恢复接入；具体同步策略与服务端组件按真实游戏确定，HTTP 和业务发送继续不隐式重放。
 - [ ] 平台 SDK、分析、崩溃上报与云存储等基础设施接入；具体账号、支付、广告和存档业务在项目中实现并验证。
 - [ ] 移动前后台、Web/其他导出目标的设备运行、具体 SDK/AOT 兼容性；Unity 许可证 CI 与 Godot Linux CI 的真实远端证据。
-- [ ] 按实际接入需要逐步将旧静态管理器迁移到实例 API，评估有明确需求的代码热更新。
 
 ## 从真实游戏沉淀业务模块
 

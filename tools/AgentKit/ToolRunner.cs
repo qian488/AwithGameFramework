@@ -83,6 +83,7 @@ public static class ToolRunner
 
     public static ExecutionPlan Plan(Workspace workspace, TaskSpec task, string directory, string toolId, string? id = null)
     {
+        TaskFiles.ValidateForImplementation(workspace, task);
         var baseline = TaskFiles.Load<Baseline>(Path.Combine(directory, "baseline.json"));
         if (workspace.Head() != baseline.Head || workspace.Changes(task, baseline).Any(c => !c.InScope || c.Protected))
             throw new InvalidOperationException("Task HEAD or write boundary violated. Resolve the task scope before running tools.");

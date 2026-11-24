@@ -1,0 +1,12 @@
+{
+  "name": "AwithGameFrame.Unity.HybridCLR.Editor",
+  "references": [
+    "HybridCLR.Editor",
+    "HybridCLR.Runtime",
+    "AwithGameFrame.Unity.HybridCLR"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false
+}
