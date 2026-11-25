@@ -50,9 +50,9 @@ namespace Test.Client.Tests
             yield return Await(() => HasButton("Accept contract"), "commission card");
             AssertCampReleased();
             Assert.That(camp.GetComponentInChildren<Canvas>().renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
-            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(8));
+            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(9));
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("Accept contract").gameObject));
-            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "01-camp", "Accept contract");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "01-camp", "Accept contract", "Settings");
         }
 
         [UnityTest]
@@ -79,7 +79,7 @@ namespace Test.Client.Tests
                 Assert.That(battle.GetComponentsInChildren<Camera>().Count(camera => camera.isActiveAndEnabled), Is.EqualTo(1));
                 battle.Run.TogglePause();
                 yield return Await(() => HasButton("Retreat to camp"), "pause menu");
-                if (attempt == 0) yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "04-paused", "Retreat to camp");
+                if (attempt == 0) yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "04-paused", "Retreat to camp", "Settings");
                 Click("Retreat to camp");
                 yield return Await(() => HasButton("Accept contract"), "camp after retreat");
                 AssertCampReleased();
@@ -138,7 +138,7 @@ namespace Test.Client.Tests
             yield return null;
             yield return OpenCamp();
             Assert.That(camp.Completed, Is.True);
-            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "08-reopened", "Accept contract");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "08-reopened", "Accept contract", "Settings");
         }
 
         private IEnumerator OpenCamp(string battleScenePath = CombatShowcase.ScenePath)

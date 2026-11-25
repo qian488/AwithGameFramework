@@ -21,22 +21,37 @@ namespace Test.Client.Combat
         [SerializeField] private Button returnToCamp;
         [SerializeField] private Button retryRead;
         [SerializeField] private Button retryReturn;
+        [SerializeField] private Button settings;
         private Button[] buttons;
         private ContractAction primary;
         private ContractAction secondary;
         private bool showingOffer;
         private Text acceptLabel, retreatLabel;
-        private string acceptText, retreatText;
+        private string offerText;
+        private string[] buttonText;
+        private Text[] buttonLabels;
+        private Func<string, string> translate;
+        private Font localizedFont;
 
-        internal void Bind(Action onPrimary, Action onSecondary)
+        internal void Bind(Action onPrimary, Action onSecondary, Action onSettings = null,
+            Func<string, string> lookup = null, Font font = null)
         {
+            translate = lookup ?? (value => value);
+            localizedFont = font;
             buttons = new[] { accept, cancel, retryCheckpoint, retreat, retrySave, returnToCamp, retryRead, retryReturn };
             if (heading == null || status == null || error == null || Array.Exists(buttons, button => button == null))
                 throw new InvalidOperationException("The contract panel prefab has missing control references.");
             acceptLabel = accept.GetComponentInChildren<Text>(true);
             retreatLabel = retreat.GetComponentInChildren<Text>(true);
-            acceptText = acceptLabel.text;
-            retreatText = retreatLabel.text;
+            buttonLabels = Array.ConvertAll(buttons, button => button.GetComponentInChildren<Text>(true));
+            buttonText = Array.ConvertAll(buttonLabels, label => label.text);
+            if (settings != null)
+            {
+                settings.gameObject.SetActive(false);
+                if (onSettings != null) settings.onClick.AddListener(() => onSettings());
+            }
+            if (localizedFont != null)
+                foreach (var label in GetComponentsInChildren<Text>(true)) label.font = localizedFont;
 
             for (int index = 0; index < buttons.Length; index++)
             {
@@ -51,14 +66,9 @@ namespace Test.Client.Combat
         }
 
         internal void Render(ContractPhase phase, bool completed, bool cancelling, RunStatus? battleStatus,
-            bool saved, string error, string contractTitle = null, string pauseMessage = null)
+            bool saved, string error, string contractTitle = null, string pauseMessage = null, string pauseKey = "Esc")
         {
-            if (showingOffer)
-            {
-                acceptLabel.text = acceptText;
-                retreatLabel.text = retreatText;
-                showingOffer = false;
-            }
+            showingOffer = false;
             switch (phase)
             {
                 case ContractPhase.Opening:
@@ -67,7 +77,7 @@ namespace Test.Client.Combat
                     break;
                 case ContractPhase.Camp:
                     var state = completed ? "Completed. You can challenge Cedar Sentinel again." :
-                        "Defeat Cedar Sentinel in Cedar Grove. Press Esc in battle to pause or retreat.";
+                        string.Format(translate("Defeat Cedar Sentinel in Cedar Grove. Press {0} in battle to pause or retreat."), pauseKey);
                     Show("Rain Pass Contract", state, ContractAction.Accept, errorMessage: error);
                     break;
                 case ContractPhase.Loading:
@@ -76,13 +86,15 @@ namespace Test.Client.Combat
                     break;
                 case ContractPhase.Battle:
                     if (battleStatus == RunStatus.Paused)
-                        Show("Paused", "Press Esc to resume. " + pauseMessage, secondaryAction: ContractAction.Retreat, errorMessage: error);
+                        Show("Paused", string.Format(translate("Press {0} to resume."), pauseKey) +
+                            (pauseMessage == null ? "" : " " + translate(pauseMessage)), secondaryAction: ContractAction.Retreat, errorMessage: error);
                     else if (battleStatus == RunStatus.Defeated)
                         Show("Defeated", "Retry from the current checkpoint or return to camp.", ContractAction.RetryCheckpoint, ContractAction.Retreat);
                     else Hide();
                     break;
                 case ContractPhase.Result:
-                    Show(contractTitle == null ? "Cedar Sentinel defeated" : contractTitle + " complete", saved ? "Completion saved." : error == null ? "Saving completion…" : "",
+                    Show(contractTitle == null ? "Cedar Sentinel defeated" : string.Format(translate("{0} complete"), translate(contractTitle)),
+                        saved ? "Completion saved." : error == null ? "Saving completion…" : "",
                         saved ? ContractAction.Return : error != null ? ContractAction.RetrySave : ContractAction.None,
                         errorMessage: error);
                     break;
@@ -96,10 +108,16 @@ namespace Test.Client.Combat
         internal void ShowOffer(string title, string message, string primaryLabel, bool busy, bool canCycle, string issue)
         {
             showingOffer = true;
-            acceptLabel.text = primaryLabel;
-            retreatLabel.text = "Next contract";
+            offerText = primaryLabel;
             Show(title, message, busy ? ContractAction.None : ContractAction.Accept,
                 busy || !canCycle ? ContractAction.None : ContractAction.Retreat, issue);
+        }
+
+        internal void SetSettingsAvailable(bool available)
+        {
+            if (settings == null) return;
+            settings.gameObject.SetActive(available);
+            if (available) settings.GetComponentInChildren<Text>().text = translate("Settings");
         }
 
         private void Show(string title, string message, ContractAction primaryAction = ContractAction.None,
@@ -107,10 +125,17 @@ namespace Test.Client.Combat
         {
             bool refocus = !gameObject.activeSelf || primary != primaryAction || secondary != secondaryAction;
             gameObject.SetActive(true);
-            heading.text = title;
-            status.text = message;
-            error.text = errorMessage ?? "";
+            heading.text = translate(title);
+            status.text = translate(message);
+            error.text = translate(errorMessage ?? "");
             error.gameObject.SetActive(errorMessage != null);
+            for (int index = 0; index < buttons.Length; index++)
+                buttonLabels[index].text = translate(buttonText[index]);
+            if (showingOffer)
+            {
+                acceptLabel.text = translate(offerText);
+                retreatLabel.text = translate("Next contract");
+            }
             if (!refocus) return;
 
             primary = primaryAction;

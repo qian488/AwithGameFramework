@@ -1,5 +1,9 @@
 #if UNITY_WEBGL && !UNITY_EDITOR
 using System.Collections;
+using AwithGameFrame.Core.Hosting;
+using AwithGameFrame.Extensions.Localization;
+using AwithGameFrame.Gameplay.Settings;
+using NUnit.Framework;
 using Test.Application.Combat;
 using Test.Client.Combat;
 using UnityEngine;
@@ -53,6 +57,26 @@ namespace Test.Client.Tests
                 panel.ShowOffer("Salt Causeway", "Installed v1 · Available v2. U updates. Backspace rolls back.",
                     "Accept contract", false, true, "Content size or SHA-256 mismatch: salt-causeway-v2-scene");
                 yield return RainPassContractFrames.Check(canvas, "11-update-failure", "Accept contract", "Next contract");
+                panel.gameObject.SetActive(false);
+                var font = Resources.Load<Font>("RainPassContract/RainPassUI");
+                var settingsPrefab = Resources.Load<GameObject>(PlayerSettingsPanel.Key);
+                var settings = Object.Instantiate(settingsPrefab, root.transform, false).GetComponent<PlayerSettingsPanel>();
+                var localization = new LocalizationService(new GameHost().Context, "en");
+                RainPassPreferences.LoadLanguages(localization);
+                settings.Bind(UserSettingsRules.CreateDefaults(RainPassPreferences.Defaults()),
+                    key => string.IsNullOrEmpty(key) ? key : localization.GetText(key), font, () => {}, () => {});
+                yield return RainPassContractFrames.Check(canvas, "12-settings-en", "English", "Esc", "Apply and save", "Close");
+                localization.SwitchLanguage("zh-CN");
+                settings.Draft.Language = "zh-CN";
+                settings.Report("Settings saved.");
+                foreach (var label in settings.GetComponentsInChildren<Text>())
+                    foreach (char character in label.text)
+                        Assert.That(font.HasCharacter(character), Is.True, label.text);
+                Assert.That(localization.GetText("The feed is unavailable. Cached offers are shown."),
+                    Is.EqualTo("The feed is unavailable. Cached offers are shown."));
+                yield return RainPassContractFrames.Check(canvas, "13-settings-zh", "简体中文", "Esc", "应用并保存", "关闭");
+                settings.Report("Settings could not be saved. Your changes are active. Retry to keep them after restart.", retry: true);
+                yield return RainPassContractFrames.Check(canvas, "14-settings-save-failure", "简体中文", "Esc", "重试保存", "关闭");
             }
             finally
             {

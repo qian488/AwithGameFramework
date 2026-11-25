@@ -1,5 +1,10 @@
 # 最近验证
 
+## Test 玩家设置（2026-11-25）
+
+- Unity **2022.3.16f1** 隔离导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建通过。后台 Player 验证了暂停键冲突、保存失败及重试、模态窗口释放并抑制持键、播放中的音乐增益、音效独立音量、两个委托应用同一设置和离线重开。报告在 `artifacts/game-unity/Test/20261125-173900-0e13bd35/SettingsSmokeRetry/report.json`。下载委托回归也通过，报告在同一目录下的 `ContractRegression/report.json`。
+- 玩家设置由营地宿主持有。进入委托时把偏好应用到独立战斗宿主的输入及程序化音轨。输入验证使用后台可控设备，音频验证读取 Unity 音源增益。实体键鼠和实际听感的检查入口见 [玩家设置](../../games/Test/README.md#玩家设置)。
+
 ## Test 可下载委托（2026-11-25）
 
 - Unity **2022.3.16f1** 的隔离导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建通过。Test Application 测试 **24/24**，覆盖旧档迁移以及同一委托不同内容版本的最佳用时。

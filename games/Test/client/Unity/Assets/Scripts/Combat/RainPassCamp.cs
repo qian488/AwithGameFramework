@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Core.Resources;
 using AwithGameFrame.Extensions.Presentation;
+using AwithGameFrame.Extensions.GameSave;
+using AwithGameFrame.Extensions.Localization;
 using AwithGameFrame.Extensions.Scenes;
+using AwithGameFrame.Foundation.DataPersistence;
+using AwithGameFrame.Gameplay.Settings;
 using AwithGameFrame.Networking.Content;
 using AwithGameFrame.Unity.Hosting;
 using AwithGameFrame.Unity.Presentation;
@@ -25,6 +29,13 @@ namespace Test.Client.Combat
         private SceneService scenes;
         private ViewService views;
         private ContractPanel panel;
+        private LocalizationService language;
+        private UserSettingsService settings;
+        private PlayerSettingsPanel settingsPanel;
+        private ViewHandle settingsView;
+        private Task settingsOperation = Task.CompletedTask;
+        private string pauseKey;
+        private Font settingsFont;
         private SceneHandle battle;
         private CombatShowcase showcase;
         private Task operation = Task.CompletedTask;
@@ -52,6 +63,9 @@ namespace Test.Client.Combat
         internal DownloadableContractOffer SelectedOffer => selection == 0 ? null : offers[selection - 1];
         internal string ActiveContractVersion => activeContract?.Snapshot.Manifest.Version;
         internal CombatShowcase ActiveShowcase => showcase;
+        internal UserSettingsService PlayerSettings => settings;
+        internal Task SettingsOperation => settingsOperation;
+        internal bool SettingsOpen => settingsView != null;
         internal Task ContentOperation => contentOperation;
         internal string ContentIssue => contentIssue;
         internal bool WasMigrated => session.WasMigrated;
@@ -76,16 +90,32 @@ namespace Test.Client.Combat
             if (!string.IsNullOrWhiteSpace(feed))
                 downloads = new DownloadableContracts(new Uri(feed), Path.Combine(userRoot, "ContractDownloads"));
             var resources = new ResourceStore(new UnityResourceLoader(), host.Dispatcher);
+            language = new LocalizationService(host.Context, "en");
+            RainPassPreferences.LoadLanguages(language);
+            var settingsRoot = SaveDirectory == null ? userRoot : Path.GetDirectoryName(Path.GetFullPath(SaveDirectory));
+            var saves = new VersionedSaveService<UserSettingsData>(Path.Combine(settingsRoot, "RainPassSettings"), new JsonSerializer(), 1);
+            settings = new UserSettingsService(host.Context, new VersionedUserSettingsStore(saves), RainPassPreferences.Defaults(), language);
+            settingsFont = Resources.Load<Font>("RainPassContract/RainPassUI");
+            if (settingsFont == null) throw new InvalidOperationException("Missing Rain Pass UI font.");
+            host.Events.Subscribe<UserSettingsChanged>(change => ApplyPlayerSettings(change.Settings));
             scenes = new SceneService(host.Context, new UnitySceneBackend(), resources);
             views = new ViewService(host.Context, new UnityViewFactory((RectTransform)contractCanvas.transform,
-                (_, content) =>
+                (request, content) =>
                 {
+                    if (request.Key == PlayerSettingsPanel.Key)
+                    {
+                        settingsPanel = content.GetComponent<PlayerSettingsPanel>();
+                        settingsPanel.Bind(settings.Snapshot, Translate, settingsFont, SaveSettings, CloseSettings);
+                        return;
+                    }
                     panel = content.GetComponent<ContractPanel>();
                     if (panel == null) throw new InvalidOperationException("The contract panel prefab needs a ContractPanel component.");
-                    panel.Bind(Primary, Secondary);
+                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont);
                 }), resources);
             host.AddModule(new ResourceModule(resources));
             host.AddModule(new SceneModule(scenes));
+            host.AddModule(new LocalizationModule(language));
+            host.AddModule(new UserSettingsModule(settings));
             host.AddModule(new PresentationModule(views));
             host.AddModule(new ContractLifetime(this));
         }
@@ -97,7 +127,78 @@ namespace Test.Client.Combat
             await operation;
             if (downloads != null) await BeginContent(RefreshOffersAsync);
             if (Argument("-contract-evidence") != null) gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
+            if (Argument("-settings-evidence") != null) gameObject.AddComponent<PlayerSettingsEvidence>().Run(this);
         }
+
+        private void OpenSettings()
+        {
+            if (settingsView != null || !settingsOperation.IsCompleted) return;
+            settingsOperation = ChangeSettingsViewAsync(open: true);
+        }
+
+        private void CloseSettings()
+        {
+            if (settingsView == null || !settingsOperation.IsCompleted) return;
+            settingsOperation = ChangeSettingsViewAsync(open: false);
+        }
+
+        private async Task ChangeSettingsViewAsync(bool open)
+        {
+            try
+            {
+                if (open) settingsView = await views.OpenAsync(new ViewRequest(PlayerSettingsPanel.Key, layer: 10, modal: true));
+                else
+                {
+                    await views.CloseAsync(settingsView);
+                    settingsView = null;
+                    settingsPanel = null;
+                }
+            }
+            catch (Exception exception) { Report("Could not change the settings window.", exception); }
+        }
+
+        private void SaveSettings()
+        {
+            if (settingsOperation.IsCompleted) settingsOperation = SaveSettingsAsync();
+        }
+
+        private async Task SaveSettingsAsync()
+        {
+            var draft = settingsPanel.Draft;
+            var pause = draft.InputBindings.Find(binding => binding.Action == "pause");
+            if (draft.InputBindings.Exists(binding => binding != pause && binding.ContextId == pause.ContextId && binding.Control == pause.Control))
+            {
+                settingsPanel.Report("This key is assigned to another action.");
+                return;
+            }
+            try { settings.Update(draft); }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Rain Pass settings apply failed: {exception}", this);
+                settingsPanel.Report("Settings could not be applied.");
+                return;
+            }
+            settingsPanel.Report("Saving…", saving: true);
+            try
+            {
+                await settings.SaveAsync();
+                settingsPanel.Report("Settings saved.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Rain Pass settings save failed: {exception}", this);
+                settingsPanel.Report("Settings could not be saved. Your changes are active. Retry to keep them after restart.", retry: true);
+            }
+        }
+
+        private void ApplyPlayerSettings(UserSettingsData snapshot)
+        {
+            pauseKey = PlayerSettingsPanel.KeyLabel(snapshot.InputBindings.Find(binding => binding.Action == "pause").Control);
+            if (showcase != null) showcase.ApplyPlayerSettings(snapshot);
+        }
+
+        private string Translate(string key) => string.IsNullOrEmpty(key) ? key : language.GetText(key);
+        private string Format(string key, params object[] values) => language.GetFormat(key, values);
 
         private async Task OpenAsync()
         {
@@ -113,7 +214,7 @@ namespace Test.Client.Combat
             if (showcase != null && showcase.Run != null && operation.IsCompleted &&
                 session.TryRecordVictory(showcase.Run.Status, showcase.CommissionTicks))
                 operation = SaveAsync();
-            if (downloads != null && (Phase == ContractPhase.Camp ||
+            if (downloads != null && !SettingsOpen && settingsOperation.IsCompleted && (Phase == ContractPhase.Camp ||
                 Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused))
             {
                 if (Input.GetKeyDown(KeyCode.F5)) _ = BeginContent(RefreshOffersAsync);
@@ -194,6 +295,8 @@ namespace Test.Client.Combat
                 {
                     bool started = offer == null ? showcase.StartCommission() : showcase.StartCommission(activeContract, banner);
                     if (!started) throw new InvalidOperationException("The contract battle could not start.");
+                    showcase.BattleInput.SetRouter(new ViewInputRouter(views));
+                    showcase.ApplyPlayerSettings(settings.Snapshot);
                     session.TryBeginBattle();
                     return;
                 }
@@ -254,15 +357,16 @@ namespace Test.Client.Combat
         private void UpdatePanel()
         {
             var offer = SelectedOffer;
+            panel.SetSettingsAvailable(Phase == ContractPhase.Camp || Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused);
             if (Phase == ContractPhase.Camp && downloads != null)
             {
                 var version = offer == null ? null : InstalledVersion(offer.Id);
                 var status = !contentOperation.IsCompleted ? "Checking or downloading content…" :
                     offer == null ? "Local contract. Use F5 to refresh the published offers." :
-                    version == null ? $"Available {offer.Version}." :
-                    $"Installed {version} · Available {offer.Version}. U updates. Backspace rolls back.";
+                    version == null ? Format("Available {0}.", offer.Version) :
+                    Format("Installed {0} · Available {1}. U updates. Backspace rolls back.", version, offer.Version);
                 if (offer != null && session.HasCompleted(offer.Id))
-                    status += BestTicks(offer.Id, version ?? "") is int ticks ? $" Best {ticks / 60f:0.0}s." : " Completed.";
+                    status = Translate(status) + (BestTicks(offer.Id, version ?? "") is int ticks ? Format(" Best {0:0.0}s.", ticks / 60f) : Translate(" Completed."));
                 panel.ShowOffer(offer?.Title ?? "Cedar Sentinel", status,
                     offer != null && version == null ? "Download" : "Accept contract",
                     !contentOperation.IsCompleted, offers.Count != 0, error ?? contentIssue);
@@ -271,7 +375,8 @@ namespace Test.Client.Combat
             panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult,
                 error ?? (Phase == ContractPhase.Battle ? contentIssue : null), offer?.Title,
                 offer != null && showcase?.Run?.Status == RunStatus.Paused ?
-                    (contentOperation.IsCompleted ? "F5 refreshes offers. U downloads the latest release." : "Downloading the latest release…") : null);
+                    (contentOperation.IsCompleted ? "F5 refreshes offers. U downloads the latest release." : "Downloading the latest release…") : null,
+                pauseKey);
         }
 
         internal Task RefreshOffers() => BeginContent(RefreshOffersAsync);
@@ -346,13 +451,14 @@ namespace Test.Client.Combat
             public ContractLifetime(RainPassCamp camp) => this.camp = camp;
             public override string Id => "rain-pass-contract";
             public override System.Collections.Generic.IReadOnlyCollection<string> Dependencies { get; } =
-                new[] { "scenes", "presentation" };
+                new[] { "scenes", "presentation", "settings" };
 
             public override async Task StopAsync(GameContext context, System.Threading.CancellationToken token)
             {
                 camp.cancelRequested = true;
                 camp.contentCancellation?.Cancel();
                 await camp.contentOperation;
+                await camp.settingsOperation;
                 await camp.operation;
                 await camp.ReleaseBattleAsync();
                 camp.downloads?.Dispose();

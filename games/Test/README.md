@@ -48,7 +48,15 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 powershell -File games/Test/verify-rain-pass-ui.ps1 -VerificationSummary '<本次证据目录>/summary.json' -EditorPath '<Unity.exe>' -BrowserPath '<Chromium.exe>'
 ```
 
-Unity 测试验证正常场景接线、转场和存档。截图使用独立 Overlay Canvas 驱动营地、加载、取消、暂停、战败、存档失败、胜利、读回及下载状态。PNG 和报告写入同一证据目录下的 `Overlay-*/Browser`。转场观感和真实鼠标焦点可从营地场景进入 Play 后人工检查。
+Unity 测试验证正常场景接线、转场和存档。截图使用独立 Overlay Canvas 驱动营地、加载、暂停、战败、结算、下载和玩家设置等状态。PNG 和报告写入同一证据目录下的 `Overlay-*/Browser`。转场观感和真实鼠标焦点可从营地场景进入 Play 后人工检查。
+
+### 玩家设置
+
+在营地或委托暂停时点击「设置」。语言可切换中英文，音乐和音效可分别调整。点击暂停键的当前值后输入字母键、`Esc` 或空格，再点击「应用并保存」。设置会用于当前战斗和之后载入的委托。若按键已被占用，窗口显示冲突。若写盘失败，当前会话继续使用已应用的值，可在窗口内重试保存。
+
+偏好存放在 `Application.persistentDataPath/RainPassSettings`，使用 `-contract-data` 时随隔离数据目录保存。营地持有设置服务，战斗宿主接收偏好并应用到输入和程序化音轨。文案在 [RainPassPreferences](src/Test.Application/Runtime/Combat/RainPassPreferences.cs) 中维护，缺少的中文词条回退到英文。布局在 `Assets/Resources/RainPassContract/Settings.prefab` 中维护。字体是 Noto Sans SC Regular 的 OFL 子集，新增中文文案时需检查子集字符覆盖。
+
+Windows Player 回归沿用下方下载委托的构建和发布步骤，在 `verify-contract-downloads.mjs` 命令末尾追加 `--settings`。它使用隔离存档，验证保存失败重试、跨场景应用、离线重开、输入模态和音轨增益。人工检查从营地进入 Play，试听暂停前后各音轨，实际操作重绑和长按移动键。
 
 ### 下载委托
 

@@ -49,6 +49,7 @@ namespace Test.Client.Combat
         private Camera lens;
         private InputService input;
         private UnityInputBackend backend;
+        private SettingsEvidenceInput evidenceInput;
         private IDisposable inputEvents;
         private bool forwardHeld, backHeld, leftHeld, rightHeld;
         private bool guard, paused, debug, fixedCamera, previousFocus;
@@ -240,24 +241,43 @@ namespace Test.Client.Combat
             backend.MapKey("keyboard/2", KeyCode.Alpha2);
             backend.MapKey("keyboard/f2", KeyCode.F2);
             backend.MapKey("keyboard/f3", KeyCode.F3);
-            var context = input.CreateContext("rain-pass");
-            context.Bind("forward", "keyboard/w");
-            context.Bind("back", "keyboard/s");
-            context.Bind("left", "keyboard/a");
-            context.Bind("right", "keyboard/d");
-            context.Bind("attack", "mouse/left");
-            context.Bind("guard", "mouse/right");
-            context.Bind("sword", "keyboard/1");
-            context.Bind("bow", "keyboard/2");
-            context.Bind("dodge", "keyboard/space");
-            context.Bind("lock", "mouse/middle");
-            context.Bind("pause", "keyboard/escape");
-            context.Bind("retry", "keyboard/r");
-            context.Bind("restart", "keyboard/enter");
-            context.Bind("debug", "keyboard/f2");
-            context.Bind("fixed", "keyboard/f3");
+            for (KeyCode key = KeyCode.A; key <= KeyCode.Z; key++)
+                backend.MapKey("keyboard/" + key.ToString().ToLowerInvariant(), key);
+            RainPassPreferences.BindBattle(input);
             inputEvents = host.Events.Subscribe<InputActionEvent>(Receive);
-            host.AddModule(new InputModule(input, backend));
+            if (RainPassCamp.Argument("-settings-evidence") != null) evidenceInput = new SettingsEvidenceInput();
+            host.AddModule(new InputModule(input, evidenceInput ?? (IInputBackend)backend));
+        }
+
+        internal InputService BattleInput => input;
+        internal bool ForwardHeld => forwardHeld;
+        internal (float Music, float Effects) Mix => audio.Mix;
+        internal void FeedEvidenceInput(string control)
+        {
+            evidenceInput.Control = control;
+            input.Poll(evidenceInput).ThrowIfFailed();
+        }
+
+        internal void ApplyPlayerSettings(AwithGameFrame.Gameplay.Settings.UserSettingsData settings)
+        {
+            var current = input.CaptureBindings();
+            var next = AwithGameFrame.Gameplay.Settings.UserSettingsRules.BuildInputBindings(settings, current);
+            for (int index = 0; index < current.Count; index++)
+            {
+                if (current[index].Control == next[index].Control) continue;
+                input.ApplyBindings(next);
+                break;
+            }
+            float master = settings.MasterMuted ? 0 : settings.MasterVolume;
+            audio.SetMix(master * (settings.BusMuted["music"] ? 0 : settings.BusVolumes["music"]),
+                master * (settings.BusMuted["sfx"] ? 0 : settings.BusVolumes["sfx"]));
+        }
+
+        private sealed class SettingsEvidenceInput : IInputBackend
+        {
+            public bool IsFocused => true;
+            internal string Control;
+            public float ReadControl(string control) => control == Control ? 1 : 0;
         }
 
         protected override async Task OnStartedAsync()
@@ -389,7 +409,7 @@ namespace Test.Client.Combat
         {
             base.Update();
             if (run == null || Failure != null || !IsReady) return;
-            bool automation = PassEvidence.Requested;
+            bool automation = PassEvidence.Requested || evidenceInput != null;
             bool focused = UnityEngine.Application.isFocused;
             if (!automation && !focused && previousFocus && Playing) run.TogglePause();
             previousFocus = focused;

@@ -14,6 +14,8 @@ namespace Test.Client.Combat
         private readonly AttackPhase[] phases = new AttackPhase[4];
         private readonly int[] segments = new int[4];
         private readonly float musicVolume, ambientVolume;
+        private readonly float effectsVolume;
+        private float musicGain = 1, effectsGain = 1;
         private RunStatus lastStatus = RunStatus.Fighting;
         private int nextFootstep, previousArrows;
         private bool dodged, loopsStarted;
@@ -24,6 +26,7 @@ namespace Test.Client.Combat
             volume = Mathf.Clamp01(volume);
             musicVolume = volume * Mathf.Clamp01(musicLevel);
             ambientVolume = volume * .63f;
+            effectsVolume = volume;
             var audio = PassWorld.Group("Procedural audio", world.Root.transform);
             theme = Source(audio, "Music theme", 0, true);
             percussion = Source(audio, "Combat percussion", 0, true);
@@ -48,6 +51,16 @@ namespace Test.Client.Combat
                 clips[index] = new AudioClip[count];
                 for (int variant = 0; variant < count; variant++) clips[index][variant] = PassSound.Foley(world, sound, variant);
             }
+        }
+
+        internal (float Music, float Effects) Mix => (theme.volume, foley.volume);
+
+        internal void SetMix(float music, float effects)
+        {
+            musicGain = music;
+            effectsGain = effects;
+            foley.volume = effectsVolume * effectsGain;
+            result.volume = musicVolume * musicGain;
         }
 
         private static AudioSource Source(Transform parent, string name, float volume, bool loop)
@@ -167,11 +180,11 @@ namespace Test.Client.Combat
             bool boss = fighting && run.Encounter == Encounter.Gate;
             float target = fighting && run.AttackOwner != 0 ? (boss ? 1f : .68f) : boss ? .38f : 0;
             tension = Mathf.MoveTowards(tension, target, delta * (target > tension ? 1.6f : .35f));
-            float music = musicVolume * (status == RunStatus.Victory || status == RunStatus.Defeated ? .23f : menu || status == RunStatus.Paused ? .55f : 1);
+            float music = musicVolume * musicGain * (status == RunStatus.Victory || status == RunStatus.Defeated ? .23f : menu || status == RunStatus.Paused ? .55f : 1);
             float blend = 1 - Mathf.Exp(-delta * 3.5f);
             theme.volume = Mathf.Lerp(theme.volume, music, blend);
-            percussion.volume = Mathf.Lerp(percussion.volume, musicVolume * tension, blend);
-            ambient.volume = Mathf.Lerp(ambient.volume, ambientVolume * (menu || status == RunStatus.Paused ? .48f : 1), blend);
+            percussion.volume = Mathf.Lerp(percussion.volume, musicVolume * musicGain * tension, blend);
+            ambient.volume = Mathf.Lerp(ambient.volume, ambientVolume * effectsGain * (menu || status == RunStatus.Paused ? .48f : 1), blend);
         }
 
         private void Play(PassSoundId sound, float gain)

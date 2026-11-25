@@ -6,7 +6,8 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const [playerPath, publicationPath, legacySave, evidencePath] = process.argv.slice(2);
+const [playerPath, publicationPath, legacySave, evidencePath, mode] = process.argv.slice(2);
+const settings = mode === '--settings';
 if (!evidencePath || !legacySave || !publicationPath || !playerPath)
     throw new Error('Pass the Windows Player, publication directory, legacy slot-1.save and a new evidence directory.');
 const player = await realpath(playerPath);
@@ -24,7 +25,7 @@ const offers = JSON.parse(await readFile(join(publication, 'index.json'), 'utf8'
 const salt = offers.find(offer => offer.id === 'salt-causeway');
 const saltV2 = 'salt-causeway/v2/salt-causeway-v2-scene';
 const requests = [];
-let phase = 'initial';
+let phase = settings ? 'healthy' : 'initial';
 let attempts = 0;
 const server = createServer(async (request, response) => {
     try {
@@ -88,8 +89,8 @@ async function run(name, offline = false) {
     const output = join(evidence, name);
     await mkdir(output);
     const args = ['-batchmode', '-nographics', '-contract-feed', feed, '-contract-data', data,
-        '-contract-evidence', output, '-logFile', join(output, 'Player.log')];
-    if (offline) args.push('-contract-offline', 'true');
+        settings ? '-settings-evidence' : '-contract-evidence', output, '-logFile', join(output, 'Player.log')];
+    if (offline) args.push(settings ? '-settings-reopen' : '-contract-offline', 'true');
     const child = spawn(player, args, { cwd: dirname(player), windowsHide: true, stdio: 'ignore' });
     const outcome = once(child, 'exit').then(([code]) => code);
     let exited = false;
@@ -129,10 +130,10 @@ function closeFeed() {
     server.closeAllConnections();
 }
 
-const report = { passed: false, feed, player, data, requests };
+const report = { passed: false, feed, player, data, requests, scenario: settings ? 'player-settings' : 'contract-downloads' };
 try {
     report.online = await run('Online');
-    if (attempts !== 2 || !requests.some(request => request.fault === 'corrupt' && request.range))
+    if (!settings && (attempts !== 2 || !requests.some(request => request.fault === 'corrupt' && request.range)))
         throw new Error('Expected an interrupted download, a Range retry, and an integrity failure.');
     closeFeed();
     report.offline = await run('Offline', true);
