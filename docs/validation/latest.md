@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 雨夜委托界面资产化（2026-11-25）
+
+- Unity **2022.3.16f1** 隔离后台导入通过，EditMode **16/16**、PlayMode **10/10**。PlayMode 从正式营地场景验证相机、Canvas 和按钮接线，并覆盖加载取消、暂停撤退、战败重试、胜利存档、存档故障重试和重新读取。报告位于 `artifacts/game-unity/Test/20261125-161324-ce9cb4fe/summary.json`。
+- 无头 Chromium 用实际 Panel Prefab 和界面显示逻辑在 Screen Space Overlay Canvas 上渲染八张 **960×600** 截图。测试检查按钮可用性、可见区域、按钮重叠、文字高度和画面像素。PNG、拼图和报告位于 `artifacts/game-unity/Test/20261125-152705-0a7b6654/Overlay-final-browser`。
+- 截图夹具提供显示状态和固定相机背景。完整委托流程在无头 WebGL 试跑时于营地主机关闭处超时，玩法与存档以 Unity PlayMode 结果为依据。真实鼠标焦点和转场观感的验收入口见 [雨夜委托](../../games/Test/README.md#雨夜委托)。
+
 ## Test 雨夜委托与营地画面（2026-11-25）
 
 - Test 领域测试 **15/15**、应用测试 **23/23**，仓库标准验证通过。Unity **2022.3.16f1** 后台导入通过，EditMode **16/16**、PlayMode **10/10**。回归覆盖营地显示相机、加载取消、进战与回营的相机切换，以及胜利、存档失败重试和读回。

@@ -39,7 +39,16 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 `ContractSession` 管理委托状态和版本化存档。营地通过场景服务加载已有战斗场景，回营时关闭战斗宿主并释放场景。营地界面经视图服务加载。战斗继续使用现有杉林配置、规则和检查点。
 
-修改外部程序集后运行 `tools/game.ps1 sync -Name Test`。后台验收用 `tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests`。实际试玩从营地场景进入，检查加载反馈、按 `Esc` 后的鼠标操作和回营后的按钮焦点。
+在 Project 窗口打开 `Assets/Resources/RainPassContract/Panel.prefab`，可在 Inspector 调整卡片布局、字体、配色和各按钮。打开 `Assets/Scenes/RainPassCamp.unity` 可调整营地相机、Canvas Scaler 和 EventSystem。界面脚本根据委托状态填充标题、状态和错误信息，并选择当前可用按钮。
+
+修改外部程序集后运行 `tools/game.ps1 sync -Name Test`。以下命令在隔离工程中跑 Unity 测试，再用无头 Chromium 对同一个 Prefab 和显示逻辑采集八种 Screen Space Overlay 画面。先安装与 [WebGL 验证](../../docs/reference/verification.md) 相同的 Playwright 依赖，并填写本机可执行文件路径。
+
+```powershell
+powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests -KeepProject
+powershell -File games/Test/verify-rain-pass-ui.ps1 -VerificationSummary '<本次证据目录>/summary.json' -EditorPath '<Unity.exe>' -BrowserPath '<Chromium.exe>'
+```
+
+Unity 测试验证正常场景接线、转场和存档。截图使用独立 Overlay Canvas 驱动营地、加载、取消、暂停、战败、存档失败、胜利和读回状态，PNG 和报告写入同一证据目录下的 `Overlay-*/Browser`。转场观感和真实鼠标焦点可从营地场景进入 Play 后人工检查。
 
 ## Rain Pass 近战演示
 

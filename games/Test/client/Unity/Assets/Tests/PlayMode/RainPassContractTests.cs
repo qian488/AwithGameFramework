@@ -49,7 +49,10 @@ namespace Test.Client.Tests
             Assert.That(camp, Is.Not.Null);
             yield return Await(() => HasButton("Accept contract"), "commission card");
             AssertCampReleased();
+            Assert.That(camp.GetComponentInChildren<Canvas>().renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
+            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(8));
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("Accept contract").gameObject));
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "01-camp", "Accept contract");
         }
 
         [UnityTest]
@@ -60,7 +63,9 @@ namespace Test.Client.Tests
             accept.onClick.Invoke();
             accept.onClick.Invoke();
             yield return Await(() => HasButton("Cancel loading"), "cancel button");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "02-loading", "Cancel loading");
             Click("Cancel loading");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "03-cancelling");
             yield return Await(() => HasButton("Accept contract"), "camp after cancellation");
             AssertCampReleased();
             for (int attempt = 0; attempt < 3; attempt++)
@@ -74,6 +79,7 @@ namespace Test.Client.Tests
                 Assert.That(battle.GetComponentsInChildren<Camera>().Count(camera => camera.isActiveAndEnabled), Is.EqualTo(1));
                 battle.Run.TogglePause();
                 yield return Await(() => HasButton("Retreat to camp"), "pause menu");
+                if (attempt == 0) yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "04-paused", "Retreat to camp");
                 Click("Retreat to camp");
                 yield return Await(() => HasButton("Accept contract"), "camp after retreat");
                 AssertCampReleased();
@@ -105,6 +111,7 @@ namespace Test.Client.Tests
             var driver = battle.gameObject.AddComponent<PassEvidence>();
             yield return DriveUntil(driver, battle, RunStatus.Defeated, defend: false);
             yield return Await(() => HasButton("Retry checkpoint"), "defeat menu");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "05-defeated", "Retry checkpoint", "Retreat to camp");
             Click("Retry checkpoint");
             Assert.That(battle.Run.Status, Is.EqualTo(RunStatus.Fighting));
             Assert.That(battle.SimulationTick, Is.Zero);
@@ -113,11 +120,13 @@ namespace Test.Client.Tests
             LogAssert.Expect(LogType.Error, new Regex("Completion could not be saved"));
             yield return DriveUntil(driver, battle, RunStatus.Victory, defend: true);
             yield return Await(() => HasButton("Retry save"), "retry save after victory");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "06-save-failed", "Retry save");
             Assert.That(camp.Completed, Is.False);
             Assert.That(HasButton("Return to camp"), Is.False);
             File.Delete(camp.SaveDirectory);
             Click("Retry save");
             yield return Await(() => HasButton("Return to camp"), "saved completion");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "07-victory", "Return to camp");
             Click("Return to camp");
             yield return Await(() => HasButton("Accept contract"), "return after settlement");
             AssertCampReleased();
@@ -129,6 +138,7 @@ namespace Test.Client.Tests
             yield return null;
             yield return OpenCamp();
             Assert.That(camp.Completed, Is.True);
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "08-reopened", "Accept contract");
         }
 
         private IEnumerator OpenCamp(string battleScenePath = CombatShowcase.ScenePath)
@@ -137,7 +147,16 @@ namespace Test.Client.Tests
             root.SetActive(false);
             var camera = new GameObject("Camp Camera", typeof(Camera));
             camera.transform.SetParent(root.transform, false);
+            var canvas = new GameObject("Contract Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvas.transform.SetParent(root.transform, false);
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvas.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(960, 540);
+            var events = new GameObject("Camp EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            events.transform.SetParent(root.transform, false);
             camp = root.AddComponent<RainPassCamp>();
+            camp.UsePresentation(camera.GetComponent<Camera>(), canvas.GetComponent<Canvas>());
             camp.SaveDirectory = Path.Combine(saveRoot, "contract");
             camp.BattleScenePath = battleScenePath;
             root.SetActive(true);

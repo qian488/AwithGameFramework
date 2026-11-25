@@ -10,9 +10,7 @@ using AwithGameFrame.Unity.Presentation;
 using AwithGameFrame.Unity.Scenes;
 using Test.Application.Combat;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 namespace Test.Client.Combat
 {
@@ -30,32 +28,34 @@ namespace Test.Client.Combat
         private bool cancelRequested;
         private string error;
         [SerializeField] private Camera campCamera;
+        [SerializeField] private Canvas contractCanvas;
 
         public ContractPhase Phase => session?.Phase ?? ContractPhase.Opening;
         public bool Completed => session?.Completed == true;
         internal string SaveDirectory { get; set; }
         internal string BattleScenePath { get; set; } = CombatShowcase.ScenePath;
         internal int LoadedBattleCount => scenes.Loaded.Count;
+        internal void UsePresentation(Camera camera, Canvas canvas)
+        {
+            campCamera = camera;
+            contractCanvas = canvas;
+        }
 
         protected override void ConfigureHost(GameHost host)
         {
-            if (campCamera == null) campCamera = GetComponentInChildren<Camera>();
-            if (campCamera != null) campCamera.enabled = true;
+            if (campCamera == null || contractCanvas == null)
+                throw new InvalidOperationException("Assign the camp camera and contract canvas in the scene.");
+            campCamera.enabled = true;
             session = new ContractSession(SaveDirectory ?? Path.Combine(UnityEngine.Application.persistentDataPath, "RainPassContract"));
-            var canvas = new GameObject("Contract views", typeof(RectTransform), typeof(Canvas),
-                typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvas.transform.SetParent(transform, false);
-            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            var scaler = canvas.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(960, 540);
-            var events = new GameObject("Camp input", typeof(EventSystem), typeof(StandaloneInputModule));
-            events.transform.SetParent(transform, false);
-
             var resources = new ResourceStore(new UnityResourceLoader(), host.Dispatcher);
             scenes = new SceneService(host.Context, new UnitySceneBackend(), resources);
-            views = new ViewService(host.Context, new UnityViewFactory((RectTransform)canvas.transform,
-                (_, content) => panel = new ContractPanel((RectTransform)content.transform, Primary, Secondary)), resources);
+            views = new ViewService(host.Context, new UnityViewFactory((RectTransform)contractCanvas.transform,
+                (_, content) =>
+                {
+                    panel = content.GetComponent<ContractPanel>();
+                    if (panel == null) throw new InvalidOperationException("The contract panel prefab needs a ContractPanel component.");
+                    panel.Bind(Primary, Secondary);
+                }), resources);
             host.AddModule(new ResourceModule(resources));
             host.AddModule(new SceneModule(scenes));
             host.AddModule(new PresentationModule(views));
@@ -103,7 +103,11 @@ namespace Test.Client.Combat
 
         private void Secondary()
         {
-            if (Phase == ContractPhase.Loading) cancelRequested = true;
+            if (Phase == ContractPhase.Loading)
+            {
+                cancelRequested = true;
+                UpdatePanel();
+            }
             else if (Phase == ContractPhase.Battle && operation.IsCompleted &&
                 (showcase.Run.Status == RunStatus.Paused || showcase.Run.Status == RunStatus.Defeated))
                 StartReturn();
@@ -134,6 +138,7 @@ namespace Test.Client.Combat
                     return;
                 }
             }
+            catch (OperationCanceledException) when (cancelRequested) { }
             catch (Exception exception) { Report("Could not enter Cedar Grove.", exception); }
 
             if (session.TryReturn()) await ReturnAsync(error);
@@ -183,35 +188,7 @@ namespace Test.Client.Combat
 
         private void UpdatePanel()
         {
-            switch (Phase)
-            {
-                case ContractPhase.Opening:
-                    panel.Show("Rain Pass Contract", error ?? "Reading the completion record…", error != null ? "Retry" : null);
-                    break;
-                case ContractPhase.Camp:
-                    var state = Completed ? "Completed. You can challenge Cedar Sentinel again." :
-                        "Defeat Cedar Sentinel in Cedar Grove. Press Esc in battle to pause or retreat.";
-                    panel.Show("Rain Pass Contract", error == null ? state : error + "\n" + state, "Accept contract");
-                    break;
-                case ContractPhase.Loading:
-                    panel.Show("Cedar Grove", cancelRequested ? "Cancelling…" : "Loading the route…",
-                        secondaryAction: cancelRequested ? null : "Cancel loading");
-                    break;
-                case ContractPhase.Battle:
-                    if (showcase.Run.Status == RunStatus.Paused)
-                        panel.Show("Paused", "Press Esc to resume.", secondaryAction: "Retreat to camp");
-                    else if (showcase.Run.Status == RunStatus.Defeated)
-                        panel.Show("Defeated", "Retry from the current checkpoint or return to camp.", "Retry checkpoint", "Retreat to camp");
-                    else panel.Hide();
-                    break;
-                case ContractPhase.Result:
-                    panel.Show("Cedar Sentinel defeated", error ?? (session.SavedResult ? "Completion saved." : "Saving completion…"),
-                        session.SavedResult ? "Return to camp" : error != null ? "Retry save" : null);
-                    break;
-                case ContractPhase.Returning:
-                    panel.Show("Returning to camp", error ?? "Closing the battle…", error != null ? "Retry return" : null);
-                    break;
-            }
+            panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult, error);
         }
 
         private sealed class ContractLifetime : GameModule

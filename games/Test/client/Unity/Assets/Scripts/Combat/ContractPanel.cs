@@ -1,97 +1,112 @@
 using System;
+using Test.Application.Combat;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Test.Client.Combat
 {
-    internal sealed class ContractPanel
+    internal enum ContractAction { None, Accept, Cancel, RetryCheckpoint, Retreat, RetrySave, Return, RetryRead, RetryReturn }
+
+    internal sealed class ContractPanel : MonoBehaviour
     {
-        private readonly RectTransform root;
-        private readonly Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        private readonly Text heading;
-        private readonly Text body;
-        private readonly Button primary;
-        private readonly Button secondary;
+        [SerializeField] private Text heading;
+        [SerializeField] private Text status;
+        [SerializeField] private Text error;
+        [SerializeField] private Button accept;
+        [SerializeField] private Button cancel;
+        [SerializeField] private Button retryCheckpoint;
+        [SerializeField] private Button retreat;
+        [SerializeField] private Button retrySave;
+        [SerializeField] private Button returnToCamp;
+        [SerializeField] private Button retryRead;
+        [SerializeField] private Button retryReturn;
+        private Button[] buttons;
+        private ContractAction primary;
+        private ContractAction secondary;
 
-        public ContractPanel(RectTransform root, Action onPrimary, Action onSecondary)
+        internal void Bind(Action onPrimary, Action onSecondary)
         {
-            this.root = root;
-            root.gameObject.AddComponent<Image>().color = new Color(.025f, .045f, .05f, .88f);
-            var card = Box(root, "Contract card", new Vector2(.12f, .5f), new Vector2(.88f, .5f),
-                new Vector2(0, -132), new Vector2(0, 132));
-            card.gameObject.AddComponent<Image>().color = new Color(.075f, .115f, .13f);
-            heading = Label(card, "Heading", 34, new Vector2(28, -85), new Vector2(-28, -22));
-            heading.fontStyle = FontStyle.Bold;
-            body = Label(card, "Status", 22, new Vector2(28, -173), new Vector2(-28, -91));
-            body.color = new Color(.78f, .86f, .85f);
-            primary = ActionButton(card, "Primary", 0f, .5f, onPrimary);
-            secondary = ActionButton(card, "Secondary", .5f, 1f, onSecondary);
-            primary.gameObject.SetActive(false);
-            secondary.gameObject.SetActive(false);
+            buttons = new[] { accept, cancel, retryCheckpoint, retreat, retrySave, returnToCamp, retryRead, retryReturn };
+            if (heading == null || status == null || error == null || Array.Exists(buttons, button => button == null))
+                throw new InvalidOperationException("The contract panel prefab has missing control references.");
+
+            for (int index = 0; index < buttons.Length; index++)
+            {
+                var action = (ContractAction)(index + 1);
+                buttons[index].gameObject.SetActive(false);
+                buttons[index].onClick.AddListener(() =>
+                {
+                    if (primary == action) onPrimary();
+                    else if (secondary == action) onSecondary();
+                });
+            }
         }
 
-        public void Show(string title, string message, string primaryAction = null, string secondaryAction = null)
+        internal void Render(ContractPhase phase, bool completed, bool cancelling, RunStatus? battleStatus,
+            bool saved, string error)
         {
-            bool refocus = !root.gameObject.activeSelf || primary.gameObject.activeSelf != (primaryAction != null)
-                || secondary.gameObject.activeSelf != (secondaryAction != null);
-            root.gameObject.SetActive(true);
+            switch (phase)
+            {
+                case ContractPhase.Opening:
+                    Show("Rain Pass Contract", "Reading the completion record…",
+                        error != null ? ContractAction.RetryRead : ContractAction.None, errorMessage: error);
+                    break;
+                case ContractPhase.Camp:
+                    var state = completed ? "Completed. You can challenge Cedar Sentinel again." :
+                        "Defeat Cedar Sentinel in Cedar Grove. Press Esc in battle to pause or retreat.";
+                    Show("Rain Pass Contract", state, ContractAction.Accept, errorMessage: error);
+                    break;
+                case ContractPhase.Loading:
+                    Show("Cedar Grove", cancelling ? "Cancelling…" : "Loading the route…",
+                        secondaryAction: cancelling ? ContractAction.None : ContractAction.Cancel);
+                    break;
+                case ContractPhase.Battle:
+                    if (battleStatus == RunStatus.Paused)
+                        Show("Paused", "Press Esc to resume.", secondaryAction: ContractAction.Retreat);
+                    else if (battleStatus == RunStatus.Defeated)
+                        Show("Defeated", "Retry from the current checkpoint or return to camp.", ContractAction.RetryCheckpoint, ContractAction.Retreat);
+                    else Hide();
+                    break;
+                case ContractPhase.Result:
+                    Show("Cedar Sentinel defeated", saved ? "Completion saved." : error == null ? "Saving completion…" : "",
+                        saved ? ContractAction.Return : error != null ? ContractAction.RetrySave : ContractAction.None,
+                        errorMessage: error);
+                    break;
+                case ContractPhase.Returning:
+                    Show("Returning to camp", "Closing the battle…",
+                        error != null ? ContractAction.RetryReturn : ContractAction.None, errorMessage: error);
+                    break;
+            }
+        }
+
+        private void Show(string title, string message, ContractAction primaryAction = ContractAction.None,
+            ContractAction secondaryAction = ContractAction.None, string errorMessage = null)
+        {
+            bool refocus = !gameObject.activeSelf || primary != primaryAction || secondary != secondaryAction;
+            gameObject.SetActive(true);
             heading.text = title;
-            body.text = message;
-            SetAction(primary, primaryAction);
-            SetAction(secondary, secondaryAction);
-            if (refocus && EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(primaryAction != null ? primary.gameObject :
-                    secondaryAction != null ? secondary.gameObject : null);
+            status.text = message;
+            error.text = errorMessage ?? "";
+            error.gameObject.SetActive(errorMessage != null);
+            if (!refocus) return;
+
+            primary = primaryAction;
+            secondary = secondaryAction;
+            for (int index = 0; index < buttons.Length; index++)
+            {
+                var action = (ContractAction)(index + 1);
+                buttons[index].gameObject.SetActive(action == primary || action == secondary);
+            }
+            var events = EventSystem.current;
+            if (events == null) return;
+            var focused = primary != ContractAction.None ? primary : secondary;
+            events.SetSelectedGameObject(focused == ContractAction.None ? null : buttons[(int)focused - 1].gameObject);
         }
 
-        public void Hide()
+        private void Hide()
         {
-            if (root.gameObject.activeSelf) root.gameObject.SetActive(false);
-        }
-
-        private Button ActionButton(RectTransform card, string name, float left, float right, Action click)
-        {
-            var rect = Box(card, name, new Vector2(left, 0), new Vector2(right, 0),
-                new Vector2(left == 0 ? 28 : 6, 25), new Vector2(right == 1 ? -28 : -6, 70));
-            var image = rect.gameObject.AddComponent<Image>();
-            image.color = name == "Primary" ? new Color(.17f, .41f, .37f) : new Color(.19f, .25f, .28f);
-            var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = image;
-            button.onClick.AddListener(() => click());
-            var label = Label(rect, "Label", 19, Vector2.zero, Vector2.zero);
-            label.rectTransform.anchorMin = Vector2.zero;
-            label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
-            label.alignment = TextAnchor.MiddleCenter;
-            return button;
-        }
-
-        private Text Label(RectTransform parent, string name, int size, Vector2 min, Vector2 max)
-        {
-            var label = Box(parent, name, new Vector2(0, 1), Vector2.one, min, max).gameObject.AddComponent<Text>();
-            label.font = font;
-            label.fontSize = size;
-            label.color = new Color(.93f, .96f, .92f);
-            label.raycastTarget = false;
-            return label;
-        }
-
-        private static void SetAction(Button button, string label)
-        {
-            button.gameObject.SetActive(label != null);
-            if (label != null) button.GetComponentInChildren<Text>().text = label;
-        }
-
-        private static RectTransform Box(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax,
-            Vector2 offsetMin, Vector2 offsetMax)
-        {
-            var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
-            rect.SetParent(parent, false);
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
-            return rect;
+            if (gameObject.activeSelf) gameObject.SetActive(false);
         }
     }
 }
