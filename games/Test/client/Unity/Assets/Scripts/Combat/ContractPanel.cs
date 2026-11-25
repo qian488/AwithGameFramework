@@ -24,12 +24,19 @@ namespace Test.Client.Combat
         private Button[] buttons;
         private ContractAction primary;
         private ContractAction secondary;
+        private bool showingOffer;
+        private Text acceptLabel, retreatLabel;
+        private string acceptText, retreatText;
 
         internal void Bind(Action onPrimary, Action onSecondary)
         {
             buttons = new[] { accept, cancel, retryCheckpoint, retreat, retrySave, returnToCamp, retryRead, retryReturn };
             if (heading == null || status == null || error == null || Array.Exists(buttons, button => button == null))
                 throw new InvalidOperationException("The contract panel prefab has missing control references.");
+            acceptLabel = accept.GetComponentInChildren<Text>(true);
+            retreatLabel = retreat.GetComponentInChildren<Text>(true);
+            acceptText = acceptLabel.text;
+            retreatText = retreatLabel.text;
 
             for (int index = 0; index < buttons.Length; index++)
             {
@@ -44,8 +51,14 @@ namespace Test.Client.Combat
         }
 
         internal void Render(ContractPhase phase, bool completed, bool cancelling, RunStatus? battleStatus,
-            bool saved, string error)
+            bool saved, string error, string contractTitle = null, string pauseMessage = null)
         {
+            if (showingOffer)
+            {
+                acceptLabel.text = acceptText;
+                retreatLabel.text = retreatText;
+                showingOffer = false;
+            }
             switch (phase)
             {
                 case ContractPhase.Opening:
@@ -58,18 +71,18 @@ namespace Test.Client.Combat
                     Show("Rain Pass Contract", state, ContractAction.Accept, errorMessage: error);
                     break;
                 case ContractPhase.Loading:
-                    Show("Cedar Grove", cancelling ? "Cancelling…" : "Loading the route…",
+                    Show(contractTitle ?? "Cedar Grove", cancelling ? "Cancelling…" : "Loading the route…",
                         secondaryAction: cancelling ? ContractAction.None : ContractAction.Cancel);
                     break;
                 case ContractPhase.Battle:
                     if (battleStatus == RunStatus.Paused)
-                        Show("Paused", "Press Esc to resume.", secondaryAction: ContractAction.Retreat);
+                        Show("Paused", "Press Esc to resume. " + pauseMessage, secondaryAction: ContractAction.Retreat, errorMessage: error);
                     else if (battleStatus == RunStatus.Defeated)
                         Show("Defeated", "Retry from the current checkpoint or return to camp.", ContractAction.RetryCheckpoint, ContractAction.Retreat);
                     else Hide();
                     break;
                 case ContractPhase.Result:
-                    Show("Cedar Sentinel defeated", saved ? "Completion saved." : error == null ? "Saving completion…" : "",
+                    Show(contractTitle == null ? "Cedar Sentinel defeated" : contractTitle + " complete", saved ? "Completion saved." : error == null ? "Saving completion…" : "",
                         saved ? ContractAction.Return : error != null ? ContractAction.RetrySave : ContractAction.None,
                         errorMessage: error);
                     break;
@@ -78,6 +91,15 @@ namespace Test.Client.Combat
                         error != null ? ContractAction.RetryReturn : ContractAction.None, errorMessage: error);
                     break;
             }
+        }
+
+        internal void ShowOffer(string title, string message, string primaryLabel, bool busy, bool canCycle, string issue)
+        {
+            showingOffer = true;
+            acceptLabel.text = primaryLabel;
+            retreatLabel.text = "Next contract";
+            Show(title, message, busy ? ContractAction.None : ContractAction.Accept,
+                busy || !canCycle ? ContractAction.None : ContractAction.Retreat, issue);
         }
 
         private void Show(string title, string message, ContractAction primaryAction = ContractAction.None,

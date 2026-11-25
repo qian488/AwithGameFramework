@@ -1,0 +1,5 @@
+[
+  {"id":"salt-causeway","title":"Salt Causeway","version":"v1","map":"SaltCauseway","bossId":201,"boss":"Breakwater Marshal","weapon":"Poleaxe","windup":46,"banner":[0.14,0.62,0.68]},
+  {"id":"salt-causeway","title":"Salt Causeway","version":"v2","map":"SaltCauseway","bossId":201,"boss":"Breakwater Marshal","weapon":"Poleaxe","windup":54,"banner":[0.88,0.60,0.17]},
+  {"id":"ember-foundry","title":"Ember Foundry","version":"v1","map":"EmberFoundry","bossId":301,"boss":"Cinder Smith","weapon":"Maul","windup":56,"banner":[0.70,0.25,0.15]}
+]

@@ -46,7 +46,8 @@ $result = 'RAIN_PASS_UI_RESULT Passed 1 0'
 $reportPath = Join-Path $output 'report.json'
 if ($LASTEXITCODE -ne 0) { throw "WebGL Overlay test failed. Inspect $reportPath" }
 $report = [IO.File]::ReadAllText($reportPath) | ConvertFrom-Json
-$expected = @('01-camp', '02-loading', '03-cancelling', '04-paused', '05-defeated', '06-save-failed', '07-victory', '08-reopened')
+$expected = @('01-camp', '02-loading', '03-cancelling', '04-paused', '05-defeated', '06-save-failed', '07-victory',
+    '08-reopened', '09-download-offer', '10-downloading', '11-update-failure')
 $frames = @{}
 $completed = @()
 foreach ($message in $report.messages) {
@@ -70,4 +71,4 @@ foreach ($message in $report.messages) {
     }
 }
 if (($completed -join ',') -cne ($expected -join ',')) { throw "Missing or out-of-order screenshots. Inspect $reportPath" }
-Write-Host "Captured all eight Overlay states: $output"
+Write-Host "Captured $($completed.Count) Overlay states: $output"

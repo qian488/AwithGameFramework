@@ -41,14 +41,28 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 在 Project 窗口打开 `Assets/Resources/RainPassContract/Panel.prefab`，可在 Inspector 调整卡片布局、字体、配色和各按钮。打开 `Assets/Scenes/RainPassCamp.unity` 可调整营地相机、Canvas Scaler 和 EventSystem。界面脚本根据委托状态填充标题、状态和错误信息，并选择当前可用按钮。
 
-修改外部程序集后运行 `tools/game.ps1 sync -Name Test`。以下命令在隔离工程中跑 Unity 测试，再用无头 Chromium 对同一个 Prefab 和显示逻辑采集八种 Screen Space Overlay 画面。先安装与 [WebGL 验证](../../docs/reference/verification.md) 相同的 Playwright 依赖，并填写本机可执行文件路径。
+修改外部程序集后运行 `tools/game.ps1 sync -Name Test`。以下命令在隔离工程中跑 Unity 测试，再用无头 Chromium 对同一个 Prefab 和显示逻辑采集 Screen Space Overlay 画面。先安装与 [WebGL 验证](../../docs/reference/verification.md) 相同的 Playwright 依赖，并填写本机可执行文件路径。
 
 ```powershell
 powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests -KeepProject
 powershell -File games/Test/verify-rain-pass-ui.ps1 -VerificationSummary '<本次证据目录>/summary.json' -EditorPath '<Unity.exe>' -BrowserPath '<Chromium.exe>'
 ```
 
-Unity 测试验证正常场景接线、转场和存档。截图使用独立 Overlay Canvas 驱动营地、加载、取消、暂停、战败、存档失败、胜利和读回状态，PNG 和报告写入同一证据目录下的 `Overlay-*/Browser`。转场观感和真实鼠标焦点可从营地场景进入 Play 后人工检查。
+Unity 测试验证正常场景接线、转场和存档。截图使用独立 Overlay Canvas 驱动营地、加载、取消、暂停、战败、存档失败、胜利、读回及下载状态。PNG 和报告写入同一证据目录下的 `Overlay-*/Browser`。转场观感和真实鼠标焦点可从营地场景进入 Play 后人工检查。
+
+### 下载委托
+
+营地可以从发布目录读取盐风堤和余烬铸造厂委托。点 `Next contract` 切换委托，首次点 `Download` 安装，再点 `Accept contract` 进入。用 `F5` 刷新目录，`U` 安装所选委托的发布版本，`Backspace` 回退至前一版。战斗暂停时也可以刷新和更新，继续战斗时沿用进场版本。每张委托独立记录完成状态及各版本的最佳用时。旧版杉林完成档在首次打开时迁移。
+
+版本、地图、Boss 参数和旗帜颜色在 `configuration/contracts.json` 中。发布脚本在隔离 Unity 工程中生成 Boss 表与场景、材质 AssetBundle，并为每个版本输出内容清单。目录最后一条同 ID 记录成为当前发布版本。
+
+```powershell
+./tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests -BuildScene Assets/Scenes/RainPassCamp.unity -AdditionalBuildScenes Assets/Scenes/CombatShowcase.unity -ReleasePlayer -KeepProject
+./games/Test/publish-contracts.ps1 -EditorPath '<Unity.exe>' -VerificationSummary '<证据目录>/summary.json' -OutputDirectory '<新发布目录>'
+node games/Test/verify-contract-downloads.mjs '<Player>/Test.exe' '<发布目录>' '<旧版 slot-1.save>' '<新证据目录>'
+```
+
+后台验证启动本机 HTTP，并用同一 Windows Player 执行在线更新与离线重开。旧档参数使用旧版杉林委托完成后生成的 `slot-1.save`，脚本会复制到隔离数据目录。人工检查时可把发布目录通过本机 HTTP 提供，用 `-contract-feed http://127.0.0.1:<端口>/` 启动营地 Player，查看两个委托卡片、下载提示以及盐风堤更新后的旗帜和招式节奏。可额外传入 `-contract-data <独立目录>` 隔离试玩数据。
 
 ## Rain Pass 近战演示
 

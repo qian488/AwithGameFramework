@@ -97,6 +97,8 @@ namespace AwithGameFrame.Unity.Hosting
 
         private async Task QuitAsync()
         {
+            // Unity must finish the current wantsToQuit callback before a second quit request.
+            await Task.Yield();
             try { await ShutdownAsync(); }
             catch (Exception exception) { Failure = exception; Debug.LogException(exception); }
             finally { allowQuit = true; Application.Quit(); }

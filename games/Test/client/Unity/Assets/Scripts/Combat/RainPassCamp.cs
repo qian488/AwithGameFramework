@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Core.Resources;
 using AwithGameFrame.Extensions.Presentation;
 using AwithGameFrame.Extensions.Scenes;
+using AwithGameFrame.Networking.Content;
 using AwithGameFrame.Unity.Hosting;
 using AwithGameFrame.Unity.Presentation;
 using AwithGameFrame.Unity.Scenes;
@@ -27,6 +30,17 @@ namespace Test.Client.Combat
         private Task operation = Task.CompletedTask;
         private bool cancelRequested;
         private string error;
+        private DownloadableContracts downloads;
+        private IReadOnlyList<DownloadableContractOffer> offers = Array.Empty<DownloadableContractOffer>();
+        private readonly Dictionary<string, ContentSnapshot> installed = new Dictionary<string, ContentSnapshot>();
+        private int selection;
+        private Task contentOperation = Task.CompletedTask;
+        private CancellationTokenSource contentCancellation;
+        private string contentIssue;
+        private InstalledContract activeContract;
+        private ResourceScope battleAssets;
+        private ResourceStore battleStore;
+        [SerializeField] private string contractFeedUrl;
         [SerializeField] private Camera campCamera;
         [SerializeField] private Canvas contractCanvas;
 
@@ -34,7 +48,16 @@ namespace Test.Client.Combat
         public bool Completed => session?.Completed == true;
         internal string SaveDirectory { get; set; }
         internal string BattleScenePath { get; set; } = CombatShowcase.ScenePath;
-        internal int LoadedBattleCount => scenes.Loaded.Count;
+        internal int LoadedBattleCount => battle == null ? 0 : 1;
+        internal DownloadableContractOffer SelectedOffer => selection == 0 ? null : offers[selection - 1];
+        internal string ActiveContractVersion => activeContract?.Snapshot.Manifest.Version;
+        internal CombatShowcase ActiveShowcase => showcase;
+        internal Task ContentOperation => contentOperation;
+        internal string ContentIssue => contentIssue;
+        internal bool WasMigrated => session.WasMigrated;
+        internal bool HasCompleted(string id) => session.HasCompleted(id);
+        internal int? BestTicks(string id, string version) => session.BestTicks(id, version);
+        internal string InstalledVersion(string id) => installed.TryGetValue(id, out var snapshot) ? snapshot.Manifest.Version : null;
         internal void UsePresentation(Camera camera, Canvas canvas)
         {
             campCamera = camera;
@@ -46,7 +69,12 @@ namespace Test.Client.Combat
             if (campCamera == null || contractCanvas == null)
                 throw new InvalidOperationException("Assign the camp camera and contract canvas in the scene.");
             campCamera.enabled = true;
-            session = new ContractSession(SaveDirectory ?? Path.Combine(UnityEngine.Application.persistentDataPath, "RainPassContract"));
+            var dataRoot = Argument("-contract-data");
+            var userRoot = dataRoot ?? UnityEngine.Application.persistentDataPath;
+            session = new ContractSession(SaveDirectory ?? Path.Combine(userRoot, "RainPassContract"));
+            var feed = Argument("-contract-feed") ?? contractFeedUrl;
+            if (!string.IsNullOrWhiteSpace(feed))
+                downloads = new DownloadableContracts(new Uri(feed), Path.Combine(userRoot, "ContractDownloads"));
             var resources = new ResourceStore(new UnityResourceLoader(), host.Dispatcher);
             scenes = new SceneService(host.Context, new UnitySceneBackend(), resources);
             views = new ViewService(host.Context, new UnityViewFactory((RectTransform)contractCanvas.transform,
@@ -67,6 +95,8 @@ namespace Test.Client.Combat
             await views.OpenAsync(new ViewRequest("RainPassContract/Panel"));
             operation = OpenAsync();
             await operation;
+            if (downloads != null) await BeginContent(RefreshOffersAsync);
+            if (Argument("-contract-evidence") != null) gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
         }
 
         private async Task OpenAsync()
@@ -81,8 +111,15 @@ namespace Test.Client.Combat
             base.Update();
             if (panel == null || !IsReady) return;
             if (showcase != null && showcase.Run != null && operation.IsCompleted &&
-                session.TryRecordVictory(showcase.Run.Status))
+                session.TryRecordVictory(showcase.Run.Status, showcase.CommissionTicks))
                 operation = SaveAsync();
+            if (downloads != null && (Phase == ContractPhase.Camp ||
+                Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused))
+            {
+                if (Input.GetKeyDown(KeyCode.F5)) _ = BeginContent(RefreshOffersAsync);
+                if (Input.GetKeyDown(KeyCode.U) && SelectedOffer != null) _ = InstallSelected();
+                if (Input.GetKeyDown(KeyCode.Backspace) && Phase == ContractPhase.Camp && SelectedOffer != null) _ = RollbackSelected();
+            }
             UpdatePanel();
         }
 
@@ -90,7 +127,15 @@ namespace Test.Client.Combat
         {
             if (!operation.IsCompleted) return;
             if (Phase == ContractPhase.Opening) operation = OpenAsync();
-            else if (session.TryAccept()) operation = LoadAsync();
+            else if (Phase == ContractPhase.Camp)
+            {
+                if (!contentOperation.IsCompleted) return;
+                var offer = SelectedOffer;
+                if (offer != null && !installed.ContainsKey(offer.Id))
+                    _ = InstallSelected();
+                else if (session.TryAccept(offer?.Id ?? ContractSession.CedarId, offer == null ? "built-in" : installed[offer.Id].Manifest.Version))
+                    operation = LoadAsync(offer);
+            }
             else if (Phase == ContractPhase.Result)
             {
                 if (session.SavedResult) StartReturn();
@@ -103,7 +148,9 @@ namespace Test.Client.Combat
 
         private void Secondary()
         {
-            if (Phase == ContractPhase.Loading)
+            if (Phase == ContractPhase.Camp && downloads != null && contentOperation.IsCompleted && offers.Count != 0)
+                selection = (selection + 1) % (offers.Count + 1);
+            else if (Phase == ContractPhase.Loading)
             {
                 cancelRequested = true;
                 UpdatePanel();
@@ -113,15 +160,27 @@ namespace Test.Client.Combat
                 StartReturn();
         }
 
-        private async Task LoadAsync()
+        private async Task LoadAsync(DownloadableContractOffer offer)
         {
             cancelRequested = false;
             error = null;
             try
             {
                 // The activated scene creates its own host. Await it so retreat can stop that host before native unload.
-                battle = await scenes.LoadAsync(BattleScenePath, SceneLoadMode.Additive);
-                var scene = SceneManager.GetSceneByPath(battle.Key);
+                Material banner = null;
+                if (offer == null) battle = await scenes.LoadAsync(BattleScenePath, SceneLoadMode.Additive);
+                else
+                {
+                    activeContract = await downloads.ResolveAsync(offer.Id, installed[offer.Id]);
+                    var snapshot = activeContract.Snapshot;
+                    var catalog = UnityBundleCatalog.FromJson(File.ReadAllText(snapshot.GetPath("bundle-catalog.json")));
+                    battleStore = new ResourceStore(new UnityAssetBundleLoader(catalog, snapshot.GetPath), Host.Dispatcher);
+                    battleAssets = new ResourceScope(battleStore);
+                    banner = (await battleAssets.LoadAsync<Material>("contract-banner")).Value;
+                    var downloadedScenes = new SceneService(Host.Context, new UnityBundleSceneBackend(), battleStore);
+                    battle = await downloadedScenes.LoadAsync("contract-scene", SceneLoadMode.Additive);
+                }
+                var scene = SceneManager.GetActiveScene();
                 foreach (var root in scene.GetRootGameObjects())
                 {
                     showcase = root.GetComponentInChildren<CombatShowcase>();
@@ -133,13 +192,14 @@ namespace Test.Client.Combat
                     await Task.Yield();
                 if (!cancelRequested)
                 {
-                    if (!showcase.StartCommission()) throw new InvalidOperationException("Cedar Sentinel could not start.");
+                    bool started = offer == null ? showcase.StartCommission() : showcase.StartCommission(activeContract, banner);
+                    if (!started) throw new InvalidOperationException("The contract battle could not start.");
                     session.TryBeginBattle();
                     return;
                 }
             }
             catch (OperationCanceledException) when (cancelRequested) { }
-            catch (Exception exception) { Report("Could not enter Cedar Grove.", exception); }
+            catch (Exception exception) { Report(offer == null ? "Could not enter Cedar Grove." : "Could not enter " + offer.Title + ".", exception); }
 
             if (session.TryReturn()) await ReturnAsync(error);
         }
@@ -175,6 +235,11 @@ namespace Test.Client.Combat
             if (battle != null) await battle.UnloadAsync();
             battle = null;
             showcase = null;
+            if (battleAssets != null) await battleAssets.DisposeAsync();
+            battleAssets = null;
+            if (battleStore != null) await battleStore.DisposeAsync();
+            battleStore = null;
+            activeContract = null;
             if (campCamera != null) campCamera.enabled = true;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -188,7 +253,91 @@ namespace Test.Client.Combat
 
         private void UpdatePanel()
         {
-            panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult, error);
+            var offer = SelectedOffer;
+            if (Phase == ContractPhase.Camp && downloads != null)
+            {
+                var version = offer == null ? null : InstalledVersion(offer.Id);
+                var status = !contentOperation.IsCompleted ? "Checking or downloading content…" :
+                    offer == null ? "Local contract. Use F5 to refresh the published offers." :
+                    version == null ? $"Available {offer.Version}." :
+                    $"Installed {version} · Available {offer.Version}. U updates. Backspace rolls back.";
+                if (offer != null && session.HasCompleted(offer.Id))
+                    status += BestTicks(offer.Id, version ?? "") is int ticks ? $" Best {ticks / 60f:0.0}s." : " Completed.";
+                panel.ShowOffer(offer?.Title ?? "Cedar Sentinel", status,
+                    offer != null && version == null ? "Download" : "Accept contract",
+                    !contentOperation.IsCompleted, offers.Count != 0, error ?? contentIssue);
+                return;
+            }
+            panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult,
+                error ?? (Phase == ContractPhase.Battle ? contentIssue : null), offer?.Title,
+                offer != null && showcase?.Run?.Status == RunStatus.Paused ?
+                    (contentOperation.IsCompleted ? "F5 refreshes offers. U downloads the latest release." : "Downloading the latest release…") : null);
+        }
+
+        internal Task RefreshOffers() => BeginContent(RefreshOffersAsync);
+
+        internal Task InstallSelected()
+        {
+            var offer = SelectedOffer;
+            if (offer == null) return Task.CompletedTask;
+            return BeginContent(async token => installed[offer.Id] = (await downloads.InstallAsync(offer, token)).Snapshot);
+        }
+
+        internal Task RollbackSelected()
+        {
+            var offer = SelectedOffer;
+            if (offer == null) return Task.CompletedTask;
+            return BeginContent(async token => installed[offer.Id] = (await downloads.RollbackAsync(offer.Id, token)).Snapshot);
+        }
+
+        private async Task RefreshOffersAsync(CancellationToken token)
+        {
+            var id = SelectedOffer?.Id;
+            Exception refreshError = null;
+            try { offers = await downloads.ReadOffersAsync(token); }
+            catch (Exception exception) when (!token.IsCancellationRequested)
+            {
+                refreshError = exception;
+                offers = await downloads.ReadCachedOffersAsync();
+            }
+            selection = 0;
+            for (int index = 0; index < offers.Count; index++)
+            {
+                var offer = offers[index];
+                if (offer.Id == id) selection = index + 1;
+                var snapshot = await downloads.OpenAsync(offer.Id);
+                if (snapshot != null) installed[offer.Id] = snapshot;
+                else installed.Remove(offer.Id);
+            }
+            if (refreshError != null) throw new IOException("The feed is unavailable. Cached offers are shown.", refreshError);
+        }
+
+        private Task BeginContent(Func<CancellationToken, Task> execute)
+        {
+            if (!contentOperation.IsCompleted) return contentOperation;
+            return contentOperation = RunContentAsync(execute);
+        }
+
+        private async Task RunContentAsync(Func<CancellationToken, Task> execute)
+        {
+            contentIssue = null;
+            using var cancellation = new CancellationTokenSource();
+            contentCancellation = cancellation;
+            try { await execute(cancellation.Token); }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+            catch (Exception exception)
+            {
+                contentIssue = exception.Message;
+                Debug.LogWarning($"Rain Pass contract content operation failed: {exception}", this);
+            }
+            finally { contentCancellation = null; }
+        }
+
+        internal static string Argument(string key)
+        {
+            var args = Environment.GetCommandLineArgs();
+            int index = Array.IndexOf(args, key);
+            return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
         }
 
         private sealed class ContractLifetime : GameModule
@@ -202,8 +351,11 @@ namespace Test.Client.Combat
             public override async Task StopAsync(GameContext context, System.Threading.CancellationToken token)
             {
                 camp.cancelRequested = true;
+                camp.contentCancellation?.Cancel();
+                await camp.contentOperation;
                 await camp.operation;
                 await camp.ReleaseBattleAsync();
+                camp.downloads?.Dispose();
             }
         }
     }

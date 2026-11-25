@@ -250,6 +250,7 @@ namespace Test.Client.Combat
         {
             reset = defend;
             target.Space.Gates(target.Run.Status == RunStatus.Proceed, 1);
+            target.StepCommissionTimer();
             Drive(target.Run, target.Space);
         }
 

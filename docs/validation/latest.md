@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 可下载委托（2026-11-25）
+
+- Unity **2022.3.16f1** 的隔离导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建通过。Test Application 测试 **24/24**，覆盖旧档迁移以及同一委托不同内容版本的最佳用时。
+- 本机 HTTP 发布三份真实 AssetBundle 内容。用同一份后台 Player 完成盐风堤 v1、v2 和余烬铸造厂 v1。测试观察到中断后发出的 HTTP Range 请求，验证坏包不会取代旧版、战斗继续持有旧快照、回营后释放资源，以及回退后可离线重开。旧档由 `b6bf5db` 的委托会话代码生成。报告在 `artifacts/game-unity/Test/20261125-170415-f0cb4dca/ContractSmoke/report.json`。
+- Unity 的退出重试延后到 `wantsToQuit` 回调返回后，上述在线和离线 Player 均正常退出。Unity Mono 在深层数据目录创建续传文件时触发 Windows 路径长度限制，验证入口使用较短的独立数据目录。实体键鼠、旗帜实际观感和招式节奏的人工检查入口见 [下载委托](../../games/Test/README.md#下载委托)。
+
 ## Test 雨夜委托界面资产化（2026-11-25）
 
 - Unity **2022.3.16f1** 隔离后台导入通过，EditMode **16/16**、PlayMode **10/10**。PlayMode 从正式营地场景验证相机、Canvas 和按钮接线，并覆盖加载取消、暂停撤退、战败重试、胜利存档、存档故障重试和重新读取。报告位于 `artifacts/game-unity/Test/20261125-161324-ce9cb4fe/summary.json`。

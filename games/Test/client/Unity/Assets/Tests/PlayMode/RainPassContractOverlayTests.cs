@@ -45,6 +45,14 @@ namespace Test.Client.Tests
                 yield return RainPassContractFrames.Check(canvas, "07-victory", "Return to camp");
                 panel.Render(ContractPhase.Camp, true, false, null, false, null);
                 yield return RainPassContractFrames.Check(canvas, "08-reopened", "Accept contract");
+
+                panel.ShowOffer("Salt Causeway", "Available v1.", "Download", false, true, null);
+                yield return RainPassContractFrames.Check(canvas, "09-download-offer", "Download", "Next contract");
+                panel.ShowOffer("Salt Causeway", "Checking or downloading content…", "Accept contract", true, true, null);
+                yield return RainPassContractFrames.Check(canvas, "10-downloading");
+                panel.ShowOffer("Salt Causeway", "Installed v1 · Available v2. U updates. Backspace rolls back.",
+                    "Accept contract", false, true, "Content size or SHA-256 mismatch: salt-causeway-v2-scene");
+                yield return RainPassContractFrames.Check(canvas, "11-update-failure", "Accept contract", "Next contract");
             }
             finally
             {

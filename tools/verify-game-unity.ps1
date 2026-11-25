@@ -8,7 +8,9 @@ param(
     [switch]$RunTests,
     [ValidateRange(60, 3600)][int]$TimeoutSeconds = 600,
     [string]$VisualSpec,
-    [switch]$KeepProject
+    [switch]$KeepProject,
+    [string[]]$AdditionalBuildScenes = @(),
+    [switch]$ReleasePlayer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,8 +37,17 @@ if ($VisualSpec) {
     $visualCases = ([IO.File]::ReadAllText($VisualSpec) | ConvertFrom-Json).cases
     $visualWithGraphics = @($visualCases | Where-Object { $_ -and $_.PSObject.Properties['scene'] -and $_.scene }).Count -gt 0
 }
-if ($BuildScene -and ($BuildScene -notmatch '^Assets/[A-Za-z0-9 /_.-]+\.unity$' -or $BuildScene -match '(^|/)\.\.(/|$)' -or
-    -not (Test-Path -LiteralPath (Join-Path $project $BuildScene) -PathType Leaf))) { throw "Expected a scene under Assets: $BuildScene" }
+if ($AdditionalBuildScenes.Count -and (!$BuildScene -or $PlayerTarget -eq 'WeChatMiniGame')) {
+    throw '-AdditionalBuildScenes requires -BuildScene and a Unity Player target.'
+}
+if ($ReleasePlayer -and (!$BuildScene -or $PlayerTarget -eq 'WeChatMiniGame')) {
+    throw '-ReleasePlayer requires -BuildScene and a Unity Player target.'
+}
+$buildScenes = @($BuildScene) + $AdditionalBuildScenes
+foreach ($scene in $buildScenes) {
+    if ($scene -and ($scene -notmatch '^Assets/[A-Za-z0-9 /_.-]+\.unity$' -or $scene -match '(^|/)\.\.(/|$)' -or
+        -not (Test-Path -LiteralPath (Join-Path $project $scene) -PathType Leaf))) { throw "Expected a scene under Assets: $scene" }
+}
 if ($WeChatSdkPath -and $PlayerTarget -ne 'WeChatMiniGame') { throw '-WeChatSdkPath applies to WeChatMiniGame.' }
 if ($PlayerTarget -eq 'WeChatMiniGame' -and !$BuildScene) { throw 'WeChatMiniGame requires -BuildScene.' }
 
@@ -138,8 +149,9 @@ internal static class AwithGameWorkspaceProbe
             PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.WebGL, ScriptingImplementation.IL2CPP);
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
-            scenes = new[] { Read("-awith-game-scene") }, locationPathName = Read("-awith-game-player"),
-            target = target, options = BuildOptions.Development
+            scenes = Read("-awith-game-scene").Split('|'), locationPathName = Read("-awith-game-player"),
+            target = target, options = Array.IndexOf(Environment.GetCommandLineArgs(), "-awith-game-release") >= 0
+                ? BuildOptions.None : BuildOptions.Development
         });
         if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
             throw new InvalidOperationException(target + " player build: " + report.summary.result);
@@ -258,9 +270,11 @@ try {
         }
         $buildLog = Join-Path $evidence 'Player-build.log'
         $buildMethod = if ($isWeChat) { 'AwithWeChatMiniGameBuild.Run' } else { 'AwithGameWorkspaceProbe.Build' }
-        Invoke-Unity 'Player-build' @('-quit', '-buildTarget', $editorTarget, '-executeMethod', $buildMethod,
+        $buildArguments = @('-quit', '-buildTarget', $editorTarget, '-executeMethod', $buildMethod,
             '-awith-game-build-target', $nativeTarget,
-            '-awith-game-scene', $BuildScene, '-awith-game-player', $buildOutput)
+            '-awith-game-scene', ($buildScenes -join '|'), '-awith-game-player', $buildOutput)
+        if ($ReleasePlayer) { $buildArguments += '-awith-game-release' }
+        Invoke-Unity 'Player-build' $buildArguments
         $player = if ($isWeChat) { Join-Path $buildOutput 'minigame' } else { $buildOutput }
         $entryPoint = if ($isWebGL) { Join-Path $player 'index.html' } else { $player }
         if ($isWeChat) { $entryPoint = Join-Path $player 'game.js' }
@@ -273,7 +287,8 @@ try {
         game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
         mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log')
         testsRun = [bool]$RunTests; tests = $testReports
-        buildScene = $BuildScene; playerTarget = $(if ($BuildScene) { $PlayerTarget }); buildVerified = [bool]$BuildScene
+        buildScene = $BuildScene; buildScenes = @($buildScenes | Where-Object { $_ }); playerTarget = $(if ($BuildScene) { $PlayerTarget })
+        buildVerified = [bool]$BuildScene; releasePlayer = [bool]$ReleasePlayer
         buildLog = $buildLog; player = $player
         verificationProject = $isolated; verificationProjectRetained = [bool]$KeepProject; verificationIdentity = $identityPath
         runtimeVerified = $false; manualReview = 'not-run'

@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Test.Application.Combat;
+using AwithGameFrame.Extensions.GameSave;
+using AwithGameFrame.Foundation.DataPersistence;
 
 namespace Test.Application.Tests
 {
@@ -58,5 +60,41 @@ namespace Test.Application.Tests
             Assert.That(reopened.Completed, Is.True);
             Assert.That(reopened.TryAccept(), Is.True);
         }
+
+        [Test]
+        public async Task PreservesLegacyCompletionAndKeepsIndependentBestTimes()
+        {
+            var legacy = new VersionedSaveService<LegacyCompletion>(root, new JsonSerializer(), 1);
+            await legacy.SaveAsync(1, new LegacyCompletion { Completed = true }, "Rain Pass contract");
+            var session = new ContractSession(root);
+            await session.OpenAsync();
+            Assert.That(session.WasMigrated && session.Completed, Is.True);
+            Assert.That(session.BestTicks(ContractSession.CedarId, "built-in"), Is.Null);
+
+            await Finish(session, "salt-causeway", "v1", 320);
+            await Finish(session, "salt-causeway", "v1", 400);
+            await Finish(session, "salt-causeway", "v1", 300);
+            await Finish(session, "salt-causeway", "v2", 412);
+            await Finish(session, "ember-foundry", "v1", 581);
+
+            var reopened = new ContractSession(root);
+            await reopened.OpenAsync();
+            Assert.That(reopened.WasMigrated, Is.False);
+            Assert.That(reopened.HasCompleted(ContractSession.CedarId), Is.True);
+            Assert.That(reopened.BestTicks("salt-causeway", "v1"), Is.EqualTo(300));
+            Assert.That(reopened.BestTicks("salt-causeway", "v2"), Is.EqualTo(412));
+            Assert.That(reopened.BestTicks("ember-foundry", "v1"), Is.EqualTo(581));
+        }
+
+        private static async Task Finish(ContractSession session, string id, string version, int ticks)
+        {
+            Assert.That(session.TryAccept(id, version) && session.TryBeginBattle() &&
+                session.TryRecordVictory(RunStatus.Victory, ticks), Is.True);
+            await session.SaveResultAsync();
+            Assert.That(session.TryReturn(), Is.True);
+            session.FinishReturn();
+        }
+
+        private sealed class LegacyCompletion { public bool Completed { get; set; } }
     }
 }

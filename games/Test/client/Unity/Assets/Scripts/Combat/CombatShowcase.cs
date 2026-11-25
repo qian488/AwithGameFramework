@@ -160,6 +160,29 @@ namespace Test.Client.Combat
             return true;
         }
 
+        internal int CommissionTicks { get; private set; }
+        internal string CommissionConfigHash { get; private set; }
+        internal Material CommissionMaterial { get; private set; }
+
+        internal bool StartCommission(InstalledContract contract, Material material)
+        {
+            if (!IsTrialSelection || trials?.IsSaving == true) return false;
+            if (!StartRoute(contract.Boss.Route)) return false;
+            commission = true;
+            CommissionConfigHash = contract.ConfigurationHash;
+            CommissionMaterial = material;
+            var marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            marker.name = "Contract route banner";
+            marker.transform.SetParent(world.Root.transform, false);
+            marker.transform.localPosition = new Vector3(2.8f, 2.1f, 3.2f);
+            marker.transform.localScale = new Vector3(1.35f, 2.1f, .12f);
+            Destroy(marker.GetComponent<Collider>());
+            marker.GetComponent<Renderer>().sharedMaterial = material;
+            return true;
+        }
+
+        internal void StepCommissionTimer() { if (commission) CommissionTicks++; }
+
         private bool StartRoute(CombatMap map)
         {
             Debug.Log($"Rain Pass stage=route-building map={map.Name} boss={map.Boss.Name} config={BossConfigurationHash}.", this);
@@ -399,7 +422,11 @@ namespace Test.Client.Combat
                     accumulator -= StepSeconds;
                     var movement = new Numerics.Vector3(direction.x, 0, direction.z);
                     var facing = new Numerics.Vector3(forward.x, 0, forward.z);
-                    if (run.TrialOpponent == null) run.Step(movement, facing, guard, arrowAim);
+                    if (run.TrialOpponent == null)
+                    {
+                        StepCommissionTimer();
+                        run.Step(movement, facing, guard, arrowAim);
+                    }
                     else
                     {
                         Task save = trials.Step(movement, facing, guard, arrowAim);
