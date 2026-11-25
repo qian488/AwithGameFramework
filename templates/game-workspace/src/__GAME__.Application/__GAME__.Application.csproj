@@ -10,9 +10,9 @@
   <ItemGroup>
     <Compile Include="Runtime/**/*.cs" />
     <ProjectReference Include="../__GAME__.Domain/__GAME__.Domain.csproj" />
-    <ProjectReference Include="__REPO__/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
-    <ProjectReference Include="__REPO__/src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
-    <ProjectReference Include="__REPO__/src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
-    <ProjectReference Include="__REPO__/src/AwithGameFrame.Networking/AwithGameFrame.Networking.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Networking/AwithGameFrame.Networking.csproj" />
   </ItemGroup>
 </Project>

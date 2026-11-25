@@ -54,12 +54,6 @@ function Invoke-DotNet([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "dotnet failed (exit $LASTEXITCODE): $($Arguments -join ' ')" }
 }
 
-function Get-RelativePath([string]$FromDirectory, [string]$ToPath) {
-    $from = New-Object Uri(([IO.Path]::GetFullPath($FromDirectory).TrimEnd([char[]]'\/')) + [IO.Path]::DirectorySeparatorChar)
-    $to = New-Object Uri([IO.Path]::GetFullPath($ToPath))
-    return [Uri]::UnescapeDataString($from.MakeRelativeUri($to).ToString())
-}
-
 function Show-Paths($Game) {
     $engineDirectory = if ($Game.engine -eq 'unity') { 'Unity' } else { 'Godot' }
     Write-Host "Game source: $gameRoot/src"
@@ -216,10 +210,7 @@ switch ($Command) {
             foreach ($source in @(Get-ChildItem -LiteralPath $templateRoot -Recurse -File -Force)) {
                 $relative = $source.FullName.Substring($templateRoot.Length + 1).Replace('__GAME__', $Name)
                 $destination = Join-Path $stage $relative
-                $finalDestination = Join-Path $gameRoot $relative
-                $repoReference = Get-RelativePath ([IO.Path]::GetDirectoryName($finalDestination)) $repositoryRoot
-                if ($source.Extension -eq '.csproj') { $repoReference = [Security.SecurityElement]::Escape($repoReference) }
-                $text = [IO.File]::ReadAllText($source.FullName).Replace('__GAME__', $Name).Replace('__REPO__', $repoReference)
+                $text = [IO.File]::ReadAllText($source.FullName).Replace('__GAME__', $Name)
                 Write-Utf8 $destination $text
             }
             $game = [ordered]@{ schemaVersion = 1; name = $Name; engine = $Engine

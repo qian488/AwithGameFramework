@@ -1,5 +1,10 @@
 # 最近验证
 
+## Windows 干净克隆构建（2026-11-24）
+
+- 基于 `4ec9173` 验证本轮工作区修复。在启用 `core.autocrlf=true` 的改名克隆中，Test 生成配置保留 LF，外部构建和客户端同步通过。构建清单记录 `sourceDirty=false`，同步后的 `Test.Application.dll` 与构建产物 SHA-256 一致。Test 领域测试 **15/15**、应用测试 **21/21**，同一克隆中从脚手架新建的工作区也完成构建。证据在 `artifacts/p0-verified/artifacts`。
+- 仓库标准验证通过，框架测试 **575/575**、模板测试 **13/13**、Headless 与 AgentKit 契约通过。Unity **2022.3.16f1** 通过 Test 隔离后台导入与客户端脚本编译。报告在 `artifacts/game-unity/Test/20261124-170559-9a623abf/summary.json`。Windows CI 流程已配置，结果待远端执行。
+
 ## 开发控制台与客户端同步（2026-11-24）
 
 - 在 `3cbb5a8` 上的开发控制台工作区，用无界面 Chromium **157.0.8103.79** 执行 Test 构建、配置生成与检查、两组 .NET 测试、共享协议检查和仓库验证。失败用例在页面显示错误与退出码。报告在 `artifacts/DevPanel/smoke.json`。

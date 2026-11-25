@@ -10,7 +10,7 @@
   <ItemGroup>
     <Compile Include="Runtime/**/*.cs" />
     <ProjectReference Include="../../src/__GAME__.Application/__GAME__.Application.csproj" />
-    <ProjectReference Include="__REPO__/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
     <None Update="server.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

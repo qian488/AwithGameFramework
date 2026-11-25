@@ -11,7 +11,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Compile Include="Runtime/**/*.cs" />
     <ProjectReference Include="../../src/Test.Application/Test.Application.csproj" />
-    <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
     <None Update="server.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

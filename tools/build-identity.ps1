@@ -1,7 +1,7 @@
 function Get-BuildIdentityGitValue([string]$RepositoryRoot, [string[]]$Arguments) {
     $value = & git -C $RepositoryRoot @Arguments 2>$null
     if ($LASTEXITCODE -ne 0) { return 'unknown' }
-    return ([string]$value).Trim()
+    return ($value -join "`n").Trim()
 }
 
 function Get-BuildIdentityFiles([string]$RepositoryRoot, [string]$GameRoot) {

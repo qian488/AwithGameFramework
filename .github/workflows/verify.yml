@@ -23,6 +23,44 @@ jobs:
           name: framework-validation
           path: artifacts/TestResults
 
+  test-workspace:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+        working-directory: framework-checkout
+    steps:
+      - name: Enable Windows checkout line ending conversion
+        working-directory: .
+        run: git config --global core.autocrlf true
+      - uses: actions/checkout@v4
+        with:
+          path: framework-checkout
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Build Test from a clean checkout
+        run: |
+          if (git status --porcelain) { throw 'Expected a clean checkout before building Test.' }
+          ./tools/game.ps1 build -Name Test
+          $build = Get-Content -LiteralPath artifacts/games/Test/Debug/portable/build.json -Raw | ConvertFrom-Json
+          if ($build.sourceDirty -ne $false) { throw 'Expected sourceDirty=false in the build manifest.' }
+      - name: Run Test domain tests
+        run: dotnet test games/Test/tests/Test.Domain.Tests/Test.Domain.Tests.csproj --logger "trx;LogFileName=domain.trx" --results-directory artifacts/TestResults/Test
+      - name: Run Test application tests
+        run: dotnet test games/Test/tests/Test.Application.Tests/Test.Application.Tests.csproj --logger "trx;LogFileName=application.trx" --results-directory artifacts/TestResults/Test
+      - name: Create and build a game from the workspace template
+        run: |
+          ./tools/game.ps1 new -Name WorkspaceProbe -Engine unity
+          ./tools/game.ps1 build -Name WorkspaceProbe
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-workspace-validation
+          path: framework-checkout/artifacts/TestResults/Test
+
   godot:
     runs-on: ubuntu-latest
     steps:

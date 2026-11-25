@@ -12,9 +12,9 @@
     <EmbeddedResource Include="../../configuration/rain-pass-opponents.json" LogicalName="Test.RainPass.Opponents.json" />
     <EmbeddedResource Include="Runtime/Generated/Configuration/*.json" LogicalName="Test.RainPass.%(Filename)%(Extension)" />
     <ProjectReference Include="../Test.Domain/Test.Domain.csproj" />
-    <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
-    <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
-    <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
-    <ProjectReference Include="../../../../../AwithGameFramework/src/AwithGameFrame.Networking/AwithGameFrame.Networking.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Core/AwithGameFrame.Core.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Data/AwithGameFrame.Data.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Gameplay/AwithGameFrame.Gameplay.csproj" />
+    <ProjectReference Include="../../../../src/AwithGameFrame.Networking/AwithGameFrame.Networking.csproj" />
   </ItemGroup>
 </Project>
