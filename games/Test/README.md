@@ -30,7 +30,16 @@ powershell -File tools/game.ps1 run-server -Name Test
 
 - `Assets/Scenes/EffectShowcase.unity` 用于比较九个预设。进入 Play Mode 后，在 Game 窗口左侧切换效果。天气、火焰和星光会持续发射，闪电与爆发结束后可点 `Replay` 重播。
 - `Assets/Scenes/SampleScene.unity` 用于验证 `GameHost`。场景中的星环实例关闭了 `Play On Enable`，由宿主控制首播和每 3 秒重播。
-- `Assets/Scenes/CombatShowcase.unity` 包含雨夜试炼和原版 Rain Pass。打开后点击 Play，或使用 `Tools > Test > Rain Pass > Open and Play`。三个场景都在 Build Settings 中。
+- `Assets/Scenes/CombatShowcase.unity` 包含雨夜试炼和原版 Rain Pass。打开后点击 Play，或使用 `Tools > Test > Rain Pass > Open and Play`。
+- `Assets/Scenes/RainPassCamp.unity` 是雨夜委托的独立入口。打开后点击 Play。
+
+## 雨夜委托
+
+在营地接取委托，进入杉林挑战 Cedar Sentinel。加载时可以取消。在战斗中按 `Esc` 暂停后可以撤退，战败后可以从当前检查点重试。胜利后结算保存完成记录，随后可以返回营地。重开后可以看到完成记录并再次挑战。存档位于 `Application.persistentDataPath/RainPassContract`。
+
+`ContractSession` 管理委托状态和版本化存档。营地通过场景服务加载已有战斗场景，回营时关闭战斗宿主并释放场景。营地界面经视图服务加载。战斗继续使用现有杉林配置、规则和检查点。
+
+修改外部程序集后运行 `tools/game.ps1 sync -Name Test`。后台验收用 `tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>' -RunTests`。实际试玩从营地场景进入，检查加载反馈、按 `Esc` 后的鼠标操作和回营后的按钮焦点。
 
 ## Rain Pass 近战演示
 

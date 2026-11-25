@@ -1,5 +1,10 @@
 # 最近验证
 
+## Test 雨夜委托与营地画面（2026-11-25）
+
+- Test 领域测试 **15/15**、应用测试 **23/23**，仓库标准验证通过。Unity **2022.3.16f1** 后台导入通过，EditMode **16/16**、PlayMode **10/10**。回归覆盖营地显示相机、加载取消、进战与回营的相机切换，以及胜利、存档失败重试和读回。
+- 在隔离工程的 PlayMode 中用 Direct3D 11 离屏采集 **1280×720** 营地画面，采集夹具临时将 Canvas 切换到相机空间。报告和 PNG 位于 `artifacts/game-unity/Test/20261125-091312-9cdf3b77`。转场观感和实体鼠标焦点的人工验收入口见 [雨夜委托](../../games/Test/README.md#雨夜委托)。
+
 ## Windows 干净克隆构建（2026-11-24）
 
 - 基于 `4ec9173` 验证本轮工作区修复。在启用 `core.autocrlf=true` 的改名克隆中，Test 生成配置保留 LF，外部构建和客户端同步通过。构建清单记录 `sourceDirty=false`，同步后的 `Test.Application.dll` 与构建产物 SHA-256 一致。Test 领域测试 **15/15**、应用测试 **21/21**，同一克隆中从脚手架新建的工作区也完成构建。证据在 `artifacts/p0-verified/artifacts`。

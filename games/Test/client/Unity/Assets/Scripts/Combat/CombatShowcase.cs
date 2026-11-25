@@ -44,6 +44,7 @@ namespace Test.Client.Combat
         private TrialSession trials;
         private string trialCatalogError;
         private bool expedition;
+        private bool commission;
         private Vector2 opponentScroll;
         private Camera lens;
         private InputService input;
@@ -94,6 +95,8 @@ namespace Test.Client.Combat
         public int SimulationTick => run?.Tick ?? 0;
         public bool IsTrialSelection => run != null && !expedition && run.TrialOpponent == null;
         public bool TrialsReady => opponents != null;
+        internal bool CommissionReady => mapBossOptions != null;
+        internal bool CommissionUnavailable => mapBossError != null || Failure != null;
         public int? ActiveTrialId => run?.TrialOpponent?.Id;
         public CombatMapId? ActiveMapId => run?.Map?.Id;
         public string BossConfigurationHash => mapBossCatalog?.ConfigurationHash;
@@ -148,6 +151,13 @@ namespace Test.Client.Combat
                 if (option.Id == id) return StartRoute(option.Route);
             Debug.LogWarning($"Rain Pass could not open BossChallenge ID {id}.", this);
             return false;
+        }
+
+        internal bool StartCommission()
+        {
+            if (!StartMapBoss(ContractSession.BossId)) return false;
+            commission = true;
+            return true;
         }
 
         private bool StartRoute(CombatMap map)
@@ -355,7 +365,7 @@ namespace Test.Client.Combat
         protected override void Update()
         {
             base.Update();
-            if (run == null || Failure != null) return;
+            if (run == null || Failure != null || !IsReady) return;
             bool automation = PassEvidence.Requested;
             bool focused = UnityEngine.Application.isFocused;
             if (!automation && !focused && previousFocus && Playing) run.TogglePause();
@@ -510,7 +520,7 @@ namespace Test.Client.Combat
                 case "pause": if (pressed) run.TogglePause(); break;
                 case "retry": if (pressed && !Playing && (run.TrialOpponent != null || run.Status != RunStatus.Victory)) RetryEncounter(); break;
                 case "restart":
-                    if (pressed && !Playing)
+                    if (pressed && !Playing && !commission)
                     {
                         if (run.TrialOpponent != null) ShowTrialSelection();
                         else RestartRun();
@@ -531,7 +541,7 @@ namespace Test.Client.Combat
             }
             hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest, Time.unscaledTime < noticeUntil ? notice : "", noticeColor);
             if (run.TrialOpponent != null && !Playing) hud.DrawTrialResult(this, trials);
-            else if (!PassEvidence.Requested && !Playing && GUI.Button(new Rect(Screen.width / 2f - 90f, Screen.height * .67f, 180f, 30f), "Route and trial selection"))
+            else if (!commission && !PassEvidence.Requested && !Playing && GUI.Button(new Rect(Screen.width / 2f - 90f, Screen.height * .67f, 180f, 30f), "Route and trial selection"))
                 ShowTrialSelection();
         }
 

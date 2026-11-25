@@ -246,9 +246,17 @@ namespace Test.Client.Combat
             return null;
         }
 
-        private void Drive(CombatRun run)
+        internal void DriveContract(CombatShowcase target, bool defend)
         {
-            var space = showcase.Space;
+            reset = defend;
+            target.Space.Gates(target.Run.Status == RunStatus.Proceed, 1);
+            Drive(target.Run, target.Space);
+        }
+
+        private void Drive(CombatRun run) => Drive(run, showcase.Space);
+
+        private void Drive(CombatRun run, PassSpace space)
+        {
             var position = space.Position(0);
             if (run.Status == RunStatus.Proceed)
             {

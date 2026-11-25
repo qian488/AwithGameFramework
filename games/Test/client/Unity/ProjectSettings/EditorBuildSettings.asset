@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/CombatShowcase.unity
     guid: af112bca760c0b0a56214af071ab024c
+  - enabled: 1
+    path: Assets/Scenes/RainPassCamp.unity
+    guid: d1d1f4e09ac64b46b74ed90dc2febc57
   m_configObjects: {}
