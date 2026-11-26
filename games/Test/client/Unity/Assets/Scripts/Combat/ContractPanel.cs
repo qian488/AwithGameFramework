@@ -22,6 +22,7 @@ namespace Test.Client.Combat
         [SerializeField] private Button retryRead;
         [SerializeField] private Button retryReturn;
         [SerializeField] private Button settings;
+        [SerializeField] private Button leaderboard;
         private Button[] buttons;
         private ContractAction primary;
         private ContractAction secondary;
@@ -34,7 +35,7 @@ namespace Test.Client.Combat
         private Font localizedFont;
 
         internal void Bind(Action onPrimary, Action onSecondary, Action onSettings = null,
-            Func<string, string> lookup = null, Font font = null)
+            Func<string, string> lookup = null, Font font = null, Action onLeaderboard = null)
         {
             translate = lookup ?? (value => value);
             localizedFont = font;
@@ -49,6 +50,11 @@ namespace Test.Client.Combat
             {
                 settings.gameObject.SetActive(false);
                 if (onSettings != null) settings.onClick.AddListener(() => onSettings());
+            }
+            if (leaderboard != null)
+            {
+                leaderboard.gameObject.SetActive(false);
+                if (onLeaderboard != null) leaderboard.onClick.AddListener(() => onLeaderboard());
             }
             if (localizedFont != null)
                 foreach (var label in GetComponentsInChildren<Text>(true)) label.font = localizedFont;
@@ -119,6 +125,13 @@ namespace Test.Client.Combat
             if (settings == null) return;
             settings.gameObject.SetActive(available);
             if (available) settings.GetComponentInChildren<Text>().text = translate("Settings");
+        }
+
+        internal void SetLeaderboardAvailable(bool available)
+        {
+            if (leaderboard == null) return;
+            leaderboard.gameObject.SetActive(available);
+            if (available) leaderboard.GetComponentInChildren<Text>().text = translate("Cloud scores");
         }
 
         private void Show(string title, string message, ContractAction primaryAction = ContractAction.None,

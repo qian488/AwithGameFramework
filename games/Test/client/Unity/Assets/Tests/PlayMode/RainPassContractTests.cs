@@ -50,7 +50,7 @@ namespace Test.Client.Tests
             yield return Await(() => HasButton("Accept contract"), "commission card");
             AssertCampReleased();
             Assert.That(camp.GetComponentInChildren<Canvas>().renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
-            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(9));
+            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(10));
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("Accept contract").gameObject));
             yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "01-camp", "Accept contract", "Settings");
         }

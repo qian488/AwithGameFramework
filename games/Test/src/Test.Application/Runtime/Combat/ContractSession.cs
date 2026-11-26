@@ -25,13 +25,37 @@ namespace Test.Application.Combat
         private int victoryTicks;
         private string resultSubmissionId;
 
-        public ContractSession(string saveDirectory)
+        public ContractSession(string saveDirectory, string playerId = "local-player")
         {
+            if (string.IsNullOrWhiteSpace(playerId)) throw new ArgumentException("A player ID is required.", nameof(playerId));
+            PlayerId = playerId;
             saves = new VersionedSaveService<Progress>(saveDirectory, Serializer, 3,
                 new[] { new SaveMigration(1, 2, MigrateCompletionAsync), new SaveMigration(2, 3, MigrateProgressAsync) });
         }
 
+        public static string LoadOrCreatePlayerId(string directory)
+        {
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "player-id.txt");
+            if (!File.Exists(path))
+            {
+                var id = Guid.NewGuid().ToString("N");
+                var pending = path + "." + id + ".tmp";
+                try
+                {
+                    File.WriteAllText(pending, id);
+                    try { File.Move(pending, path); }
+                    catch (IOException) when (File.Exists(path)) { }
+                }
+                finally { File.Delete(pending); }
+            }
+            var savedId = File.ReadAllText(path).Trim();
+            if (!Guid.TryParseExact(savedId, "N", out _)) throw new InvalidDataException("The saved anonymous player ID is invalid.");
+            return savedId;
+        }
+
         public ContractPhase Phase { get; private set; }
+        public string PlayerId { get; }
         public bool Completed => HasCompleted(contractId);
         public bool WasMigrated { get; private set; }
         public bool SavedResult { get; private set; }
@@ -117,7 +141,7 @@ namespace Test.Application.Combat
                         if (resultSubmissionId != null)
                             next.PendingScores.Add(new SubmitContractScoreRequest
                             {
-                                SubmissionId = resultSubmissionId, ContractId = contractId,
+                                SubmissionId = resultSubmissionId, PlayerId = PlayerId, ContractId = contractId,
                                 ContentVersion = contentVersion, ElapsedTicks = victoryTicks
                             });
                         await PersistAsync(next, token);
@@ -165,7 +189,7 @@ namespace Test.Application.Combat
         private static SubmitContractScoreRequest CopyScore(SubmitContractScoreRequest score) => new SubmitContractScoreRequest
         {
             SubmissionId = score.SubmissionId, ContractId = score.ContractId,
-            ContentVersion = score.ContentVersion, ElapsedTicks = score.ElapsedTicks
+            ContentVersion = score.ContentVersion, ElapsedTicks = score.ElapsedTicks, PlayerId = score.PlayerId
         };
 
         public bool TryReturn()

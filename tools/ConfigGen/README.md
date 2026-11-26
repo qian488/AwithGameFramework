@@ -9,6 +9,8 @@ dotnet run --project tools/ConfigGen -- schema.json Data Generated --check
 
 每张表在平面数据目录存一个同名 JSON、CSV 或 XLSX 文件。`--check` 检查预期产物和过期文件。HTTP 协议生成使用 `--protocol`。
 
+HTTP 协议 schema 可以在 `types` 中声明具名记录。记录字段支持标量及其一维数组，请求和响应字段也可以使用记录及其一维数组。兼容性检查按基线校验已有记录、端点与字段。想查看排行榜端点如何返回记录数组，可以打开 [Test 协议源](../../games/Test/protocol/schema.json)。
+
 ## Schema
 
 ```json

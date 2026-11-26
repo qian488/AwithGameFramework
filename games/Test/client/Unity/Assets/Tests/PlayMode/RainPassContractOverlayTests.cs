@@ -1,10 +1,12 @@
 #if UNITY_WEBGL && !UNITY_EDITOR
 using System.Collections;
+using System.Linq;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Extensions.Localization;
 using AwithGameFrame.Gameplay.Settings;
 using NUnit.Framework;
 using Test.Application.Combat;
+using Test.Application.Protocol;
 using Test.Client.Combat;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -90,6 +92,46 @@ namespace Test.Client.Tests
                 scores.Render(ContractPhase.Result, true, false, RunStatus.Victory, true, null,
                     contractTitle: "Ember Foundry", scoreStatus: "Score synced.");
                 yield return RainPassContractFrames.Check(canvas, "16-score-synced", "返回营地");
+
+                scores.gameObject.SetActive(false);
+                var leaderboardPrefab = Resources.Load<GameObject>(LeaderboardPanel.Key);
+                var leaderboard = Object.Instantiate(leaderboardPrefab, root.transform, false).GetComponent<LeaderboardPanel>();
+                leaderboard.Bind(key => localization.GetText(key), font, () => { }, () => { });
+                var rows = leaderboard.GetComponentsInChildren<Text>().Where(text => text.name.StartsWith("Row ")).ToArray();
+                Assert.That(rows, Has.Length.EqualTo(10));
+                leaderboard.ShowLoading("Salt Causeway", "v2");
+                yield return RainPassContractFrames.CheckWithDisabledButton(canvas, "17-leaderboard-loading", "刷新", "刷新", "关闭");
+                leaderboard.Show("Salt Causeway", "v2",
+                    new ContractLeaderboardService.LeaderboardView(new GetContractLeaderboardResponse
+                    {
+                        Entries = Enumerable.Range(1, 10).Select(rank => new LeaderboardEntry
+                        {
+                            PlayerId = "b8a3ee2d6e414c768ad1d7454cbd21" + rank.ToString("D2"),
+                            ElapsedTicks = 240 + rank * 60,
+                            Rank = rank,
+                            IsMine = rank == 1
+                        }).ToArray(),
+                        OwnBestTicks = 300, OwnRank = 1
+                    }, false, new System.DateTime(2026, 11, 26, 1, 2, 3, System.DateTimeKind.Utc)));
+                yield return RainPassContractFrames.CheckLeaderboardRows(canvas, "18-leaderboard-loaded", rows, 10, "刷新", "关闭");
+                leaderboard.ShowLoading("Salt Causeway", "v2");
+                leaderboard.ShowError();
+                yield return RainPassContractFrames.CheckLeaderboardRows(canvas, "19-leaderboard-error", rows, 0, "刷新", "关闭");
+                var cached = new GetContractLeaderboardResponse
+                {
+                    Entries = new[] { new LeaderboardEntry { PlayerId = "local-player", ElapsedTicks = 300, Rank = 1, IsMine = true } },
+                    OwnBestTicks = 300, OwnRank = 1
+                };
+                leaderboard.Show("Salt Causeway", "v2", new ContractLeaderboardService.LeaderboardView(cached, true,
+                    new System.DateTime(2026, 11, 26, 1, 2, 3, System.DateTimeKind.Utc)));
+                foreach (var label in leaderboard.GetComponentsInChildren<Text>())
+                    foreach (char character in label.text)
+                        Assert.That(font.HasCharacter(character), Is.True, label.text);
+                yield return RainPassContractFrames.CheckLeaderboardRows(canvas, "20-leaderboard-cached", rows, 1, "刷新", "关闭");
+                leaderboard.Show("Salt Causeway", "v2", new ContractLeaderboardService.LeaderboardView(
+                    new GetContractLeaderboardResponse { Entries = new LeaderboardEntry[0] }, false,
+                    new System.DateTime(2026, 11, 26, 1, 2, 3, System.DateTimeKind.Utc)));
+                yield return RainPassContractFrames.CheckLeaderboardRows(canvas, "21-leaderboard-empty", rows, 0, "刷新", "关闭");
             }
             finally
             {

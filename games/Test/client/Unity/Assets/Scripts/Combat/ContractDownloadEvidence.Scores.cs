@@ -14,6 +14,24 @@ namespace Test.Client.Combat
         {
             string stage = RainPassCamp.Argument("-scores-stage");
             yield return Until(() => Has("Next contract"), "published score-test offers");
+            if (stage == "leaderboard")
+            {
+                string contract = RainPassCamp.Argument("-leaderboard-contract");
+                Click("Next contract");
+                yield return null;
+                Require(camp.SelectedOffer?.Id == contract, "published leaderboard contract");
+                string version = camp.SelectedOffer.Version;
+                if (Has("Download"))
+                {
+                    Click("Download");
+                    yield return Wait(camp.ContentOperation);
+                }
+                else if (camp.InstalledVersion(contract) != version)
+                    yield return Wait(camp.InstallSelected());
+                yield return PlayScore(version, Until(() => Shows("Score synced."), "leaderboard score confirmation"));
+                Mark("leaderboard-score-confirmed");
+                yield break;
+            }
             if (stage == "reopen")
             {
                 Require(camp.ScoreCursor == 2 && camp.PendingScoreCount == 1, "offline submission reopens on the last durable cursor");

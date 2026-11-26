@@ -48,7 +48,8 @@ if ($LASTEXITCODE -ne 0) { throw "WebGL Overlay test failed. Inspect $reportPath
 $report = [IO.File]::ReadAllText($reportPath) | ConvertFrom-Json
 $expected = @('01-camp', '02-loading', '03-cancelling', '04-paused', '05-defeated', '06-save-failed', '07-victory',
     '08-reopened', '09-download-offer', '10-downloading', '11-update-failure',
-    '12-settings-en', '13-settings-zh', '14-settings-save-failure', '15-score-pending', '16-score-synced')
+    '12-settings-en', '13-settings-zh', '14-settings-save-failure', '15-score-pending', '16-score-synced',
+    '17-leaderboard-loading', '18-leaderboard-loaded', '19-leaderboard-error', '20-leaderboard-cached', '21-leaderboard-empty')
 $frames = @{}
 $completed = @()
 foreach ($message in $report.messages) {

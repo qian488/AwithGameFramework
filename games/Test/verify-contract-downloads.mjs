@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { copyFile, mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -10,13 +11,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 const [playerPath, publicationPath, legacySave, evidencePath, mode, scoreServerPath] = process.argv.slice(2);
 const settings = mode === '--settings';
 const scores = mode === '--scores';
+const leaderboard = mode === '--leaderboard';
 if (!evidencePath || !legacySave || !publicationPath || !playerPath)
     throw new Error('Pass the Windows Player, publication directory, legacy slot-1.save and a new evidence directory.');
 const player = await realpath(playerPath);
 const boot = await readFile(join(dirname(player), 'Test_Data', 'boot.config'), 'utf8');
 if (/^player-connection-mode=/m.test(boot)) throw new Error('Build the verification Player with -ReleasePlayer.');
 const publication = await realpath(publicationPath);
-const scoreServer = scores ? await realpath(scoreServerPath) : null;
+const scoreServer = scores || leaderboard ? await realpath(scoreServerPath) : null;
 const evidence = resolve(evidencePath);
 await mkdir(evidence);
 const data = await mkdtemp(fileURLToPath(new URL('../../artifacts/ContractData-', import.meta.url)));
@@ -29,6 +31,7 @@ const salt = offers.find(offer => offer.id === 'salt-causeway');
 const saltV2 = 'salt-causeway/v2/salt-causeway-v2-scene';
 const requests = [];
 let phase = settings ? 'healthy' : 'initial';
+let leaderboardOffers;
 let attempts = 0;
 const server = createServer(async (request, response) => {
     try {
@@ -37,7 +40,7 @@ const server = createServer(async (request, response) => {
         requests.push(entry);
         if (pathname === 'index.json') {
             response.setHeader('Content-Type', 'application/json');
-            response.end(JSON.stringify(phase === 'initial' ? [{ ...salt, version: 'v1' }] : offers));
+            response.end(JSON.stringify(leaderboardOffers ?? (phase === 'initial' ? [{ ...salt, version: 'v1' }] : offers)));
             return;
         }
         const file = await realpath(resolve(publication, pathname));
@@ -156,13 +159,19 @@ async function exists(path) {
     });
 }
 
-async function run(name, offline = false, scoreStage = null) {
+async function run(name, offline = false, scoreStage = null, profile = data, contract = null) {
     const output = join(evidence, name);
     await mkdir(output);
-    const args = ['-batchmode', '-nographics', '-contract-feed', feed, '-contract-data', data,
-        scores ? '-scores-evidence' : settings ? '-settings-evidence' : '-contract-evidence', output, '-logFile', join(output, 'Player.log')];
+    const evidenceFlag = leaderboard && scoreStage !== 'leaderboard' ? '-leaderboard-evidence' :
+        scores || leaderboard ? '-scores-evidence' : settings ? '-settings-evidence' : '-contract-evidence';
+    const args = ['-batchmode', '-nographics', '-contract-feed', feed, '-contract-data', profile,
+        evidenceFlag, output, '-logFile', join(output, 'Player.log')];
     if (offline) args.push(settings ? '-settings-reopen' : '-contract-offline', 'true');
     if (scores) args.push('-contract-scores', scoreAddress, '-scores-stage', scoreStage);
+    if (leaderboard && scoreStage === 'leaderboard')
+        args.push('-contract-scores', scoreAddress, '-scores-stage', scoreStage, '-leaderboard-contract', contract);
+    if (leaderboard && scoreStage !== 'leaderboard') args.push('-contract-leaderboard', scoreAddress);
+    if (leaderboard && scoreStage === 'cached') args.push('-leaderboard-reopen', 'true');
     const child = spawn(player, args, { cwd: dirname(player), windowsHide: true, stdio: 'ignore' });
     const outcome = once(child, 'exit').then(([code]) => code);
     let exited = false;
@@ -191,6 +200,16 @@ async function run(name, offline = false, scoreStage = null) {
                     processedScoreMarker = true;
                 }
             }
+            if (leaderboard && !processedScoreMarker && scoreStage === 'query' && await exists(join(output, 'query-loaded'))) {
+                await stopScoreServer();
+                await writeFile(join(output, 'server-stopped'), '');
+                processedScoreMarker = true;
+            }
+            if (leaderboard && !processedScoreMarker && scoreStage === 'cached' && await exists(join(output, 'cache-visible'))) {
+                await startScoreServer('LeaderboardServer-Reopened');
+                await writeFile(join(output, 'server-restored'), '');
+                processedScoreMarker = true;
+            }
             await delay(100);
         }
         if (!exited) throw new Error(`Player timed out. See ${output}.`);
@@ -213,9 +232,76 @@ function closeFeed() {
     server.closeAllConnections();
 }
 
-const report = { passed: false, feed, player, data, requests, scenario: scores ? 'contract-scores' : settings ? 'player-settings' : 'contract-downloads' };
+const report = { passed: false, feed, player, data, requests,
+    scenario: leaderboard ? 'leaderboard' : scores ? 'contract-scores' : settings ? 'player-settings' : 'contract-downloads' };
 try {
-    if (scores) {
+    if (leaderboard) {
+        phase = 'healthy';
+        await startScoreServer('LeaderboardServer');
+        const profiles = await Promise.all(Array.from({ length: 3 }, () =>
+            mkdtemp(fileURLToPath(new URL('../../artifacts/Lb-', import.meta.url)))));
+        const play = (name, index, offer) => {
+            leaderboardOffers = [offer];
+            return run(name, false, 'leaderboard', profiles[index], offer.id);
+        };
+        const saltV1 = { ...salt, version: 'v1' };
+        const ember = offers.find(offer => offer.id === 'ember-foundry');
+        report.plays = [
+            await play('FirstPlayer', 0, saltV1),
+            await play('SecondPlayerSameBoard', 1, saltV1),
+            await play('SecondPlayerNewVersion', 1, salt),
+            await play('ThirdPlayer', 2, ember)
+        ];
+        const playerId = await readFile(join(profiles[0], 'RainPassProfile', 'player-id.txt'), 'utf8');
+        const post = async (path, payload) => {
+            const response = await fetch(scoreAddress + path, {
+                method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(5000)
+            });
+            if (!response.ok) throw new Error(path + ' returned ' + response.status);
+            return response.json();
+        };
+        const query = async (contractId, contentVersion) => (await post('contract-scores/leaderboard',
+            { playerId, contractId, contentVersion, limit: 10 })).data;
+        const original = await query(salt.id, 'v1');
+        const sorted = original.entries[0]?.elapsedTicks <= original.entries[1]?.elapsedTicks;
+        if (original.entries.length !== 2 || !original.ownRank || !sorted ||
+            (await query(salt.id, 'v2')).entries.length !== 1 || (await query(ember.id, 'v1')).entries.length !== 1 ||
+            (await query(ember.id, 'v2')).entries.length !== 0)
+            throw new Error('Expected two v1 players, one v2 player, one Ember player and an empty unreleased version.');
+        const submit = elapsedTicks => post('contract-scores/submissions', {
+            submissionId: randomUUID().replaceAll('-', ''), playerId, contractId: salt.id, contentVersion: 'v1', elapsedTicks
+        });
+        await submit(original.ownBestTicks + 120);
+        const worse = await query(salt.id, 'v1');
+        if (JSON.stringify(worse) !== JSON.stringify(original)) throw new Error('A slower run changed the board.');
+        const fasterTicks = original.entries[0].elapsedTicks - 1;
+        await submit(fasterTicks);
+        const improved = await query(salt.id, 'v1');
+        if (improved.ownRank !== 1 || improved.ownBestTicks !== fasterTicks || improved.entries.length !== 2)
+            throw new Error('A faster run did not update the existing rank.');
+        report.boards = { original, worse, improved };
+        leaderboardOffers = [saltV1];
+        report.cache = await run('LeaderboardCache', false, 'query', profiles[0]);
+        report.reopened = await run('LeaderboardReopened', false, 'cached', profiles[0]);
+        if (JSON.stringify(await query(salt.id, 'v1')) !== JSON.stringify(improved))
+            throw new Error('The board changed after server restart.');
+        for (let index = 11; index > 0; index--)
+            await post('contract-scores/submissions', {
+                submissionId: randomUUID().replaceAll('-', ''), playerId: 'fixture-' + String(index).padStart(2, '0'),
+                contractId: ember.id, contentVersion: 'v2', elapsedTicks: 100
+            });
+        await post('contract-scores/submissions', {
+            submissionId: randomUUID().replaceAll('-', ''), playerId, contractId: ember.id, contentVersion: 'v2', elapsedTicks: 200
+        });
+        const fullBoard = await query(ember.id, 'v2');
+        if (fullBoard.entries.length !== 10 || fullBoard.ownRank !== 12 || fullBoard.ownBestTicks !== 200)
+            throw new Error('Expected a top ten and a separate rank for the local player outside the top ten.');
+        if (fullBoard.entries.some((entry, index) => entry.isMine || entry.rank !== index + 1 ||
+            entry.playerId !== 'fixture-' + String(index + 1).padStart(2, '0')))
+            throw new Error('Tied scores must sort by player ID, independent of submission order.');
+        report.topTen = fullBoard;
+    } else if (scores) {
         report.scores = scoreEvidence;
         await startScoreServer('ScoreServer-Initial');
         report.online = await run('Online', false, 'online');

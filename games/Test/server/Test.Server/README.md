@@ -30,3 +30,5 @@ node games/Test/verify-online.mjs artifacts/bin/Test.Server/Debug/net8.0/Test.Se
 客户端经 `/contract-scores/session` 提交成绩，在 `/contract-scores/recovery?after=<序号>` 补查确认。HTTP POST `/contract-scores/submissions` 接受同一协议。每次写盘提交成绩及其确认序号。同一个提交 ID 和相同内容返回原确认，改用该 ID 提交不同成绩时返回冲突。重启后从原存档目录恢复账本。
 
 `DropFirstScoreConfirmation` 是后台验收专用的故障注入开关。它在首次 WebSocket 提交写盘后断开连接，并在该进程退出前暂停补查。正常运行时保持默认值 false。
+
+`POST /contract-scores/leaderboard` 从成绩账本按委托和内容版本计算榜单。每个匿名玩家显示最快一次，平分时按玩家 ID 排序。响应还返回查询者的最佳成绩和全榜排名，包括榜外玩家。服务重启后从原账本重算。

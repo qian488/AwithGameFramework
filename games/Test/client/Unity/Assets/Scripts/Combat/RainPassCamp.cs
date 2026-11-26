@@ -43,6 +43,11 @@ namespace Test.Client.Combat
         private string error;
         private DownloadableContracts downloads;
         private ContractScoreSync scores;
+        private ContractLeaderboardService leaderboard;
+        private LeaderboardPanel leaderboardPanel;
+        private ViewHandle leaderboardView;
+        private Task leaderboardOperation = Task.CompletedTask;
+        private CancellationTokenSource leaderboardQuery;
         private Task scoreExchange = Task.CompletedTask;
         private float nextScoreExchange;
         private IReadOnlyList<DownloadableContractOffer> offers = Array.Empty<DownloadableContractOffer>();
@@ -56,6 +61,7 @@ namespace Test.Client.Combat
         private ResourceStore battleStore;
         [SerializeField] private string contractFeedUrl;
         [SerializeField] private string contractScoreUrl;
+        [SerializeField] private string contractLeaderboardUrl;
         [SerializeField] private Camera campCamera;
         [SerializeField] private Canvas contractCanvas;
 
@@ -92,18 +98,26 @@ namespace Test.Client.Combat
             campCamera.enabled = true;
             var dataRoot = Argument("-contract-data");
             var userRoot = dataRoot ?? UnityEngine.Application.persistentDataPath;
-            session = new ContractSession(SaveDirectory ?? Path.Combine(userRoot, "RainPassContract"));
             var scoreUrl = Argument("-contract-scores") ?? contractScoreUrl;
+            var leaderboardUrl = Argument("-contract-leaderboard") ?? contractLeaderboardUrl;
+            if (string.IsNullOrWhiteSpace(leaderboardUrl)) leaderboardUrl = scoreUrl;
+            var profileRoot = SaveDirectory == null ? userRoot : Path.GetDirectoryName(Path.GetFullPath(SaveDirectory));
+            string playerId = ContractSession.LoadOrCreatePlayerId(Path.Combine(profileRoot, "RainPassProfile"));
+            session = new ContractSession(SaveDirectory ?? Path.Combine(userRoot, "RainPassContract"), playerId);
             if (!string.IsNullOrWhiteSpace(scoreUrl))
                 scores = new ContractScoreSync(new Uri(scoreUrl), session, host.Dispatcher);
+            if (!string.IsNullOrWhiteSpace(leaderboardUrl))
+            {
+                leaderboard = new ContractLeaderboardService(new Uri(leaderboardUrl),
+                    session.PlayerId, Path.Combine(profileRoot, "RainPassLeaderboard"));
+            }
             var feed = Argument("-contract-feed") ?? contractFeedUrl;
             if (!string.IsNullOrWhiteSpace(feed))
                 downloads = new DownloadableContracts(new Uri(feed), Path.Combine(userRoot, "ContractDownloads"));
             var resources = new ResourceStore(new UnityResourceLoader(), host.Dispatcher);
             language = new LocalizationService(host.Context, "en");
             RainPassPreferences.LoadLanguages(language);
-            var settingsRoot = SaveDirectory == null ? userRoot : Path.GetDirectoryName(Path.GetFullPath(SaveDirectory));
-            var saves = new VersionedSaveService<UserSettingsData>(Path.Combine(settingsRoot, "RainPassSettings"), new JsonSerializer(), 1);
+            var saves = new VersionedSaveService<UserSettingsData>(Path.Combine(profileRoot, "RainPassSettings"), new JsonSerializer(), 1);
             settings = new UserSettingsService(host.Context, new VersionedUserSettingsStore(saves), RainPassPreferences.Defaults(), language);
             settingsFont = Resources.Load<Font>("RainPassContract/RainPassUI");
             if (settingsFont == null) throw new InvalidOperationException("Missing Rain Pass UI font.");
@@ -118,9 +132,15 @@ namespace Test.Client.Combat
                         settingsPanel.Bind(settings.Snapshot, Translate, settingsFont, SaveSettings, CloseSettings);
                         return;
                     }
+                    if (request.Key == LeaderboardPanel.Key)
+                    {
+                        leaderboardPanel = content.GetComponent<LeaderboardPanel>();
+                        if (leaderboardPanel == null) throw new InvalidOperationException("The leaderboard prefab needs a LeaderboardPanel component.");
+                        return;
+                    }
                     panel = content.GetComponent<ContractPanel>();
                     if (panel == null) throw new InvalidOperationException("The contract panel prefab needs a ContractPanel component.");
-                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont);
+                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont, OpenLeaderboard);
                 }), resources);
             host.AddModule(new ResourceModule(resources));
             host.AddModule(new SceneModule(scenes));
@@ -135,16 +155,92 @@ namespace Test.Client.Combat
             await views.OpenAsync(new ViewRequest("RainPassContract/Panel"));
             operation = OpenAsync();
             await operation;
+            if (leaderboard != null)
+            {
+                try { await leaderboard.InitializeAsync(CancellationToken.None); }
+                catch (Exception exception) { Debug.LogWarning($"Rain Pass leaderboard cache: {exception.Message}", this); }
+            }
             if (downloads != null) await BeginContent(RefreshOffersAsync);
             if (Argument("-contract-evidence") != null || Argument("-scores-evidence") != null)
                 gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
             if (Argument("-settings-evidence") != null) gameObject.AddComponent<PlayerSettingsEvidence>().Run(this);
+            if (Argument("-leaderboard-evidence") != null) gameObject.AddComponent<LeaderboardEvidence>().Run(this);
         }
 
         private void OpenSettings()
         {
             if (settingsView != null || !settingsOperation.IsCompleted) return;
             settingsOperation = ChangeSettingsViewAsync(open: true);
+        }
+
+        private void OpenLeaderboard()
+        {
+            if (leaderboard == null || leaderboardView != null || !leaderboardOperation.IsCompleted ||
+                settingsView != null || !settingsOperation.IsCompleted) return;
+            var offer = SelectedOffer;
+            var version = offer == null ? null : InstalledVersion(offer.Id);
+            if (offer == null || version == null) return;
+            leaderboardOperation = OpenLeaderboardAsync(offer, version);
+        }
+
+        private async Task OpenLeaderboardAsync(DownloadableContractOffer offer, string version)
+        {
+            try
+            {
+                leaderboardView = await views.OpenAsync(new ViewRequest(LeaderboardPanel.Key, layer: 11, modal: true));
+                leaderboardPanel.Bind(Translate, settingsFont, CloseLeaderboard, RefreshLeaderboard);
+                await RefreshLeaderboardAsync(offer.Title, offer.Id, version);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Rain Pass leaderboard window failed: {exception}", this);
+                if (leaderboardPanel != null) leaderboardPanel.ShowError();
+            }
+        }
+
+        private void CloseLeaderboard()
+        {
+            if (leaderboardView == null) return;
+            if (leaderboardQuery != null) leaderboardQuery.Cancel();
+            leaderboardOperation = CloseLeaderboardAsync(leaderboardOperation);
+        }
+
+        private async Task CloseLeaderboardAsync(Task pending)
+        {
+            var view = leaderboardView;
+            leaderboardView = null;
+            await pending;
+            try { await views.CloseAsync(view); }
+            catch (Exception exception) { Debug.LogWarning($"Rain Pass leaderboard close failed: {exception.Message}", this); }
+            finally { leaderboardPanel = null; }
+        }
+
+        private void RefreshLeaderboard()
+        {
+            if (leaderboardPanel == null || !leaderboardOperation.IsCompleted) return;
+            var offer = SelectedOffer;
+            var version = offer == null ? null : InstalledVersion(offer.Id);
+            if (offer != null && version != null) leaderboardOperation = RefreshLeaderboardAsync(offer.Title, offer.Id, version);
+        }
+
+        private async Task RefreshLeaderboardAsync(string title, string contractId, string version)
+        {
+            using var query = new CancellationTokenSource();
+            leaderboardQuery = query;
+            leaderboardPanel.ShowLoading(title, version);
+            try
+            {
+                var result = await leaderboard.QueryAsync(contractId, version, query.Token);
+                if (result.CacheError != null) Debug.LogWarning($"Rain Pass leaderboard cache: {result.CacheError}", this);
+                leaderboardPanel.Show(title, version, result);
+            }
+            catch (OperationCanceledException) when (query.IsCancellationRequested) { }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Rain Pass leaderboard query failed: {exception.Message}", this);
+                leaderboardPanel.ShowError();
+            }
+            finally { leaderboardQuery = null; }
         }
 
         private void CloseSettings()
@@ -230,7 +326,8 @@ namespace Test.Client.Combat
             if (showcase != null && showcase.Run != null && operation.IsCompleted &&
                 session.TryRecordVictory(showcase.Run.Status, showcase.CommissionTicks))
                 operation = SaveAsync();
-            if (downloads != null && !SettingsOpen && settingsOperation.IsCompleted && (Phase == ContractPhase.Camp ||
+            if (downloads != null && !SettingsOpen && settingsOperation.IsCompleted &&
+                leaderboardView == null && leaderboardOperation.IsCompleted && (Phase == ContractPhase.Camp ||
                 Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused))
             {
                 if (Input.GetKeyDown(KeyCode.F5)) _ = BeginContent(RefreshOffersAsync);
@@ -381,6 +478,7 @@ namespace Test.Client.Combat
         {
             var offer = SelectedOffer;
             panel.SetSettingsAvailable(Phase == ContractPhase.Camp || Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused);
+            panel.SetLeaderboardAvailable(Phase == ContractPhase.Camp && leaderboard != null && offer != null && InstalledVersion(offer.Id) != null);
             if (Phase == ContractPhase.Camp && downloads != null)
             {
                 var version = offer == null ? null : InstalledVersion(offer.Id);
@@ -492,6 +590,13 @@ namespace Test.Client.Combat
                     try { await camp.scores.DisposeAsync(); }
                     catch (Exception exception) { Debug.LogWarning($"Rain Pass score shutdown: {exception.Message}", camp); }
                     await camp.scoreExchange;
+                }
+                if (camp.leaderboard != null)
+                {
+                    camp.leaderboardQuery?.Cancel();
+                    await camp.leaderboardOperation;
+                    try { await camp.leaderboard.DisposeAsync(); }
+                    catch (Exception exception) { Debug.LogWarning($"Rain Pass leaderboard shutdown: {exception.Message}", camp); }
                 }
             }
         }

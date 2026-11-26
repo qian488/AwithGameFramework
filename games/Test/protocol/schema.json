@@ -1,6 +1,17 @@
 {
   "namespace": "Test.Application.Protocol",
   "version": 1,
+  "types": [
+    {
+      "name": "LeaderboardEntry",
+      "fields": [
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "ElapsedTicks", "wireName": "elapsedTicks", "type": "int" },
+        { "name": "Rank", "wireName": "rank", "type": "int" },
+        { "name": "IsMine", "wireName": "isMine", "type": "bool" }
+      ]
+    }
+  ],
   "endpoints": [
     {
       "name": "SubmitContractScore",
@@ -8,16 +19,34 @@
       "path": "contract-scores/submissions",
       "request": [
         { "name": "SubmissionId", "wireName": "submissionId", "type": "string" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string", "required": false },
         { "name": "ContractId", "wireName": "contractId", "type": "string" },
         { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
         { "name": "ElapsedTicks", "wireName": "elapsedTicks", "type": "int" }
       ],
       "response": [
         { "name": "SubmissionId", "wireName": "submissionId", "type": "string" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string", "required": false },
         { "name": "Sequence", "wireName": "sequence", "type": "long" },
         { "name": "ContractId", "wireName": "contractId", "type": "string" },
         { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
         { "name": "ElapsedTicks", "wireName": "elapsedTicks", "type": "int" }
+      ]
+    },
+    {
+      "name": "GetContractLeaderboard",
+      "method": "POST",
+      "path": "contract-scores/leaderboard",
+      "request": [
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "ContractId", "wireName": "contractId", "type": "string" },
+        { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
+        { "name": "Limit", "wireName": "limit", "type": "int" }
+      ],
+      "response": [
+        { "name": "Entries", "wireName": "entries", "type": "LeaderboardEntry[]" },
+        { "name": "OwnBestTicks", "wireName": "ownBestTicks", "type": "int", "required": false },
+        { "name": "OwnRank", "wireName": "ownRank", "type": "int", "required": false }
       ]
     }
   ]

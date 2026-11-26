@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using AwithGameFrame.Extensions.GameSave;
 using AwithGameFrame.Foundation.DataPersistence;
+using AwithGameFrame.Networking;
 using AwithGameFrame.Networking.Realtime;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -50,6 +51,7 @@ namespace Test.Server
             web.MapGet("/contract-scores/recovery", RecoverAsync);
             web.MapGet("/contract-scores/session", RunSessionAsync);
             web.MapPost("/" + GameProtocol.SubmitContractScore.RelativePath, SubmitHttpAsync);
+            web.MapPost("/" + GameProtocol.GetContractLeaderboard.RelativePath, LeaderboardAsync);
             try { await web.StartAsync(token); }
             catch { await web.DisposeAsync(); web = null; throw; }
         }
@@ -119,26 +121,52 @@ namespace Test.Server
         {
             try
             {
-                using var body = new MemoryStream();
-                var buffer = new byte[1024];
-                int read;
-                while ((read = await context.Request.Body.ReadAsync(buffer.AsMemory(), context.RequestAborted)) != 0)
-                {
-                    if (body.Length + read > 4096) { context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge; return; }
-                    body.Write(buffer, 0, read);
-                }
-                var result = await SubmitAsync(await Serializer.DeserializeAsync<SubmitContractScoreRequest>(body.ToArray()), context.RequestAborted);
+                var result = await SubmitAsync(await ReadRequestAsync<SubmitContractScoreRequest>(context), context.RequestAborted);
                 await WriteAsync(context, result.Receipt);
             }
             catch (InvalidDataException) { context.Response.StatusCode = StatusCodes.Status409Conflict; }
             catch (Exception exception) when (exception is ArgumentException || exception is Newtonsoft.Json.JsonException)
             { context.Response.StatusCode = StatusCodes.Status400BadRequest; }
+            catch (BadHttpRequestException error) { context.Response.StatusCode = error.StatusCode; }
+        }
+
+        private async Task LeaderboardAsync(HttpContext context)
+        {
+            try
+            {
+                var request = await ReadRequestAsync<GetContractLeaderboardRequest>(context);
+                if (request == null || !ValidSlug(request.PlayerId) || !ValidSlug(request.ContractId) ||
+                    !ValidSlug(request.ContentVersion) || request.Limit < 1 || request.Limit > 50)
+                    throw new ArgumentException("Invalid leaderboard request.");
+                var matching = Volatile.Read(ref ledger).Scores.Where(score => score.ContractId == request.ContractId &&
+                    score.ContentVersion == request.ContentVersion)
+                    .GroupBy(score => score.PlayerId ?? "local-player", StringComparer.Ordinal)
+                    .Select(group => new { PlayerId = group.Key, ElapsedTicks = group.Min(score => score.ElapsedTicks) })
+                    .OrderBy(score => score.ElapsedTicks).ThenBy(score => score.PlayerId, StringComparer.Ordinal)
+                    .ToArray();
+                var entries = matching.Take(request.Limit).Select((score, index) => new LeaderboardEntry
+                {
+                    PlayerId = score.PlayerId, ElapsedTicks = score.ElapsedTicks, Rank = index + 1,
+                    IsMine = score.PlayerId == request.PlayerId
+                }).ToArray();
+                int ownIndex = Array.FindIndex(matching, score => score.PlayerId == request.PlayerId);
+                await WriteProtocolAsync(context, new GetContractLeaderboardResponse
+                {
+                    Entries = entries,
+                    OwnBestTicks = ownIndex < 0 ? 0 : matching[ownIndex].ElapsedTicks,
+                    OwnRank = ownIndex < 0 ? 0 : ownIndex + 1
+                });
+            }
+            catch (ArgumentException) { context.Response.StatusCode = StatusCodes.Status400BadRequest; }
+            catch (Newtonsoft.Json.JsonException) { context.Response.StatusCode = StatusCodes.Status400BadRequest; }
+            catch (BadHttpRequestException error) { context.Response.StatusCode = error.StatusCode; }
         }
 
         private async Task<(SubmitContractScoreResponse Receipt, bool Created)> SubmitAsync(SubmitContractScoreRequest submission, CancellationToken token)
         {
             if (submission == null || !Guid.TryParseExact(submission.SubmissionId, "N", out _) ||
-                !ValidSlug(submission.ContractId) || !ValidSlug(submission.ContentVersion) || submission.ElapsedTicks <= 0)
+                (submission.PlayerId != null && !ValidSlug(submission.PlayerId)) || !ValidSlug(submission.ContractId) ||
+                !ValidSlug(submission.ContentVersion) || submission.ElapsedTicks <= 0)
                 throw new ArgumentException("Invalid contract score submission.");
             await writeGate.WaitAsync(token);
             try
@@ -147,7 +175,8 @@ namespace Test.Server
                 var previous = current.Scores.Find(score => score.SubmissionId == submission.SubmissionId);
                 if (previous != null)
                 {
-                    if (previous.ContractId != submission.ContractId || previous.ContentVersion != submission.ContentVersion ||
+                    if ((previous.PlayerId ?? "local-player") != (submission.PlayerId ?? "local-player") ||
+                        previous.ContractId != submission.ContractId || previous.ContentVersion != submission.ContentVersion ||
                         previous.ElapsedTicks != submission.ElapsedTicks)
                         throw new InvalidDataException("The submission ID already identifies a different score.");
                     return (previous, false);
@@ -155,7 +184,8 @@ namespace Test.Server
                 var receipt = new SubmitContractScoreResponse
                 {
                     SubmissionId = submission.SubmissionId, Sequence = current.Scores.Count + 1L,
-                    ContractId = submission.ContractId, ContentVersion = submission.ContentVersion, ElapsedTicks = submission.ElapsedTicks
+                    PlayerId = submission.PlayerId ?? "local-player", ContractId = submission.ContractId,
+                    ContentVersion = submission.ContentVersion, ElapsedTicks = submission.ElapsedTicks
                 };
                 var next = new ScoreLedger { Scores = new List<SubmitContractScoreResponse>(current.Scores) { receipt } };
                 await saves.SaveAsync(Slot, next, "Contract score ledger", token);
@@ -167,10 +197,28 @@ namespace Test.Server
 
         private static bool ValidSlug(string value) => value != null && Slug.IsMatch(value);
 
+        private static async Task<T> ReadRequestAsync<T>(HttpContext context)
+        {
+            using var body = new MemoryStream();
+            var buffer = new byte[1024];
+            int read;
+            while ((read = await context.Request.Body.ReadAsync(buffer.AsMemory(), context.RequestAborted)) != 0)
+            {
+                if (body.Length + read > 4096) throw new BadHttpRequestException("Request too large.", StatusCodes.Status413PayloadTooLarge);
+                body.Write(buffer, 0, read);
+            }
+            return await Serializer.DeserializeAsync<T>(body.ToArray());
+        }
+
         private static async Task WriteAsync<T>(HttpContext context, T value)
         {
             context.Response.ContentType = "application/json";
             await context.Response.Body.WriteAsync(await Serializer.SerializeAsync(value), context.RequestAborted);
+        }
+
+        private static async Task WriteProtocolAsync<T>(HttpContext context, T value)
+        {
+            await WriteAsync(context, new ProtocolEnvelope<T> { Status = 0, Data = value });
         }
 
         private sealed class ScoreLedger

@@ -12,7 +12,20 @@ namespace Test.Client.Tests
 {
     internal static class RainPassContractFrames
     {
-        internal static IEnumerator Check(Canvas canvas, string state, params string[] expectedButtons)
+        internal static IEnumerator Check(Canvas canvas, string state, params string[] expectedButtons) =>
+            CheckWithDisabledButton(canvas, state, null, expectedButtons);
+
+        internal static IEnumerator CheckWithDisabledButton(Canvas canvas, string state, string disabledButton, params string[] expectedButtons)
+            => CheckFrame(canvas, state, disabledButton, expectedButtons, null);
+
+        internal static IEnumerator CheckLeaderboardRows(Canvas canvas, string state, Text[] rows, int visibleCount,
+            params string[] expectedButtons)
+        {
+            Assert.That(rows.Count(row => !string.IsNullOrEmpty(row.text)), Is.EqualTo(visibleCount));
+            return CheckFrame(canvas, state, null, expectedButtons, rows);
+        }
+
+        private static IEnumerator CheckFrame(Canvas canvas, string state, string disabledButton, string[] expectedButtons, Text[] rows)
         {
             Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
             Assert.That(Camera.allCameras.Any(camera => camera.targetDisplay == 0 && camera.targetTexture == null), Is.True);
@@ -23,7 +36,7 @@ namespace Test.Client.Tests
             var areas = new List<Rect>(buttons.Length);
             foreach (var button in buttons)
             {
-                Assert.That(button.IsInteractable(), Is.True);
+                Assert.That(button.IsInteractable(), Is.EqualTo(button.GetComponentInChildren<Text>().text != disabledButton));
                 Rect area = ScreenBounds((RectTransform)button.transform);
                 Assert.That(areas.Any(previous => previous.Overlaps(area)), Is.False, "Buttons overlap.");
                 areas.Add(area);
@@ -45,6 +58,18 @@ namespace Test.Client.Tests
                 Assert.That(frame, Is.Not.Null, state);
                 Assert.That(frame.GetPixels32().Count(pixel => pixel.r > 145 && pixel.g > 155 && pixel.b > 145),
                     Is.GreaterThan(100), "The frame should contain rendered text or highlights.");
+                if (rows != null)
+                {
+                    foreach (var row in rows)
+                    {
+                        var bounds = ScreenBounds(row.rectTransform);
+                        Assert.That(areas.Any(area => area.Overlaps(bounds)), Is.False, row.name + " overlaps a button.");
+                        var pixels = frame.GetPixels(Mathf.CeilToInt(bounds.xMin), Mathf.CeilToInt(bounds.yMin) + 2,
+                            Mathf.FloorToInt(bounds.width) - 1, Mathf.FloorToInt(bounds.height) - 4);
+                        bool rendered = pixels.Count(pixel => pixel.r > 0.57f && pixel.g > 0.61f && pixel.b > 0.57f) > 12;
+                        Assert.That(rendered, Is.EqualTo(!string.IsNullOrEmpty(row.text)), state + " · " + row.name + " · " + row.text);
+                    }
+                }
                 var png = frame.EncodeToPNG();
                 string encoded = Convert.ToBase64String(png);
                 for (int offset = 0; offset < encoded.Length; offset += 4096)

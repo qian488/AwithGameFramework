@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 云端委托成绩（2026-11-26）
+
+- Unity **2022.3.16f1** 的隔离导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建证据位于 `artifacts/game-unity/Test/20261126-102927-91d911f2/summary.json`。Test Application 测试 **25/25**。协议生成检查验证了加入可选玩家标识和新端点后的兼容性，再将榜单端点和记录加入基线。
+- 榜单的后台联调使用三个独立档案完成四次委托，覆盖跨玩家排名、按委托版本分榜、更新最佳成绩、同分排序、前十与榜外个人成绩、服务端重启，以及缓存跨进程重开后在线刷新。证据位于同一目录的 `LeaderboardSmoke/report.json`，下载、玩家设置、成绩同步回归分别保存到 `ContractRegression`、`SettingsRegression`、`ScoreRegression`。
+- 无头 Chromium 采集 **21 张** 960×600 Overlay 截图。榜单夹具对满榜、查询失败、离线缓存和空榜逐行检查渲染像素及按钮重叠，捕获文本存在但画面缺行的回归。证据位于 `artifacts/game-unity/Test/20261126-101736-6e20c439/Overlay-2b6d6449/Browser`。实际鼠标焦点和其他窗口尺寸的人工检查入口见 [云端委托成绩](../../games/Test/README.md#云端委托成绩)。
+
 ## Test 委托成绩同步（2026-11-25）
 
 - Unity **2022.3.16f1** 后台导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建通过。Test Application 测试 **25/25**，包含旧档迁移与待提交记录随通关保存。

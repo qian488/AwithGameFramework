@@ -32,6 +32,17 @@ namespace AwithGameFrame.Tests
         }
 
         [Test]
+        public void EmitsRecordArraysAndChecksRecordFieldCompatibility()
+        {
+            const string fields = "{\"name\":\"Value\",\"wireName\":\"value\",\"type\":\"int\"}";
+            var structured = Schema.Replace("\"endpoints\"", "\"types\":[{\"name\":\"Row\",\"fields\":[" + fields + "]}],\"endpoints\"")
+                .Replace("\"response\":[" + fields, "\"response\":[{\"name\":\"Rows\",\"wireName\":\"rows\",\"type\":\"Row[]\"}");
+            Assert.That(ProtocolCompiler.Compile(structured, structured), Does.Contain("public Row[] Rows"));
+            Assert.Throws<InvalidDataException>(() => ProtocolCompiler.Compile(structured.Replace("\"int\"", "\"long\""), structured));
+            Assert.Throws<InvalidDataException>(() => ProtocolCompiler.Compile(structured.Replace("Row[]", "Missing[]")));
+        }
+
+        [Test]
         public void GeneratedDtosUseActualCodecWireNames()
         {
             var codec = new DataContractJsonProtocolCodec();

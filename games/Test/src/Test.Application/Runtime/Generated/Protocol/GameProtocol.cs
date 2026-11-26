@@ -6,10 +6,49 @@ using AwithGameFrame.Networking;
 namespace Test.Application.Protocol
 {
     [DataContract]
+    public sealed class LeaderboardEntry
+    {
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "elapsedTicks", IsRequired = true)]
+        public int ElapsedTicks { get; set; }
+        [DataMember(Name = "rank", IsRequired = true)]
+        public int Rank { get; set; }
+        [DataMember(Name = "isMine", IsRequired = true)]
+        public bool IsMine { get; set; }
+    }
+
+    [DataContract]
+    public sealed class GetContractLeaderboardRequest
+    {
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "contractId", IsRequired = true)]
+        public string ContractId { get; set; }
+        [DataMember(Name = "contentVersion", IsRequired = true)]
+        public string ContentVersion { get; set; }
+        [DataMember(Name = "limit", IsRequired = true)]
+        public int Limit { get; set; }
+    }
+
+    [DataContract]
+    public sealed class GetContractLeaderboardResponse
+    {
+        [DataMember(Name = "entries", IsRequired = true)]
+        public LeaderboardEntry[] Entries { get; set; }
+        [DataMember(Name = "ownBestTicks", IsRequired = false)]
+        public int OwnBestTicks { get; set; }
+        [DataMember(Name = "ownRank", IsRequired = false)]
+        public int OwnRank { get; set; }
+    }
+
+    [DataContract]
     public sealed class SubmitContractScoreRequest
     {
         [DataMember(Name = "submissionId", IsRequired = true)]
         public string SubmissionId { get; set; }
+        [DataMember(Name = "playerId", IsRequired = false)]
+        public string PlayerId { get; set; }
         [DataMember(Name = "contractId", IsRequired = true)]
         public string ContractId { get; set; }
         [DataMember(Name = "contentVersion", IsRequired = true)]
@@ -23,6 +62,8 @@ namespace Test.Application.Protocol
     {
         [DataMember(Name = "submissionId", IsRequired = true)]
         public string SubmissionId { get; set; }
+        [DataMember(Name = "playerId", IsRequired = false)]
+        public string PlayerId { get; set; }
         [DataMember(Name = "sequence", IsRequired = true)]
         public long Sequence { get; set; }
         [DataMember(Name = "contractId", IsRequired = true)]
@@ -36,6 +77,7 @@ namespace Test.Application.Protocol
     public static class GameProtocol
     {
         public const int Version = 1;
+        public static readonly ProtocolEndpoint<GetContractLeaderboardRequest, GetContractLeaderboardResponse> GetContractLeaderboard = new ProtocolEndpoint<GetContractLeaderboardRequest, GetContractLeaderboardResponse>(new HttpMethod("POST"), "contract-scores/leaderboard", true);
         public static readonly ProtocolEndpoint<SubmitContractScoreRequest, SubmitContractScoreResponse> SubmitContractScore = new ProtocolEndpoint<SubmitContractScoreRequest, SubmitContractScoreResponse>(new HttpMethod("POST"), "contract-scores/submissions", true);
     }
 }
