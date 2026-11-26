@@ -49,22 +49,32 @@ namespace Test.Client.Combat
         private IEnumerator Verify()
         {
             var stage = RainPassCamp.Argument("-expedition-stage");
+            var routeId = RainPassCamp.Argument("-expedition-route") ?? "salt-causeway";
+            bool upgrade = routeId == "salt-causeway";
+            string title = upgrade ? "Salt Causeway" : "Ember Foundry";
+            string installedVersion = upgrade ? "v2" : "v1";
             yield return Until(() => Find("Expedition") != null, "camp expedition entrance");
             if (stage == "play")
             {
                 Click("Expedition");
-                yield return Until(() => Find("Install Salt Causeway") != null, "published v1 route");
-                Click("Install Salt Causeway");
-                yield return Until(() => Find("Start Salt Causeway") != null, "finish installing route");
-                Click("Start Salt Causeway");
-                yield return Until(() => camp.Phase == ContractPhase.Battle && camp.ExpeditionLeg == 1, "expedition first leg");
+                yield return Until(() => Find("Install " + title) != null, "published v1 route");
+                Click("Install " + title);
+                yield return Until(() => Find("Start " + title) != null, "finish installing route");
+                Click("Start " + title);
+                yield return Until(() => camp.Phase == ContractPhase.Battle && camp.Expedition.ActiveBattle?.IsFinalLeg == false, "expedition first leg");
                 Require(camp.ActiveContractVersion == "v1", "first leg uses v1");
                 Require(camp.ActiveShowcase.Run.ArrowsRemaining == 6, "standard kit took effect");
                 yield return WinBattle();
                 yield return Until(() => camp.Expedition.Checkpoint != null && Find("Recover posture") != null, "save rest checkpoint");
-                Require(camp.Expedition.Checkpoint.Version == "v1" && camp.Expedition.Marks == 0, "v1 checkpoint and no award before final");
+                Require(camp.Expedition.Checkpoint.Route == routeId && camp.Expedition.Checkpoint.Version == "v1" &&
+                    camp.Expedition.Marks == 0, "v1 checkpoint and no award before final");
                 Click("Recover posture");
                 yield return Until(() => camp.Expedition.Checkpoint.Supply == "posture", "persist supply choice");
+                if (!upgrade)
+                {
+                    Mark("v1-first-leg-checkpoint");
+                    yield break;
+                }
                 Click("Close expedition");
                 yield return Until(() => Find("Next contract") != null, "return to camp before update");
                 Click("Next contract");
@@ -72,10 +82,10 @@ namespace Test.Client.Combat
                 yield return Until(() => File.Exists(Path.Combine(output, "v2-available")), "v2 available");
                 var refresh = camp.RefreshOffers();
                 yield return Until(() => refresh.IsCompleted, "refresh v2");
-                yield return Until(() => camp.SelectedOffer?.Id == "salt-causeway", "salt causeway remains selected");
+                yield return Until(() => camp.SelectedOffer?.Id == routeId, "route remains selected");
                 var install = camp.InstallSelected();
                 yield return Until(() => install.IsCompleted, "install v2");
-                Require(camp.InstalledVersion("salt-causeway") == "v2", "activate v2 before offline restart");
+                Require(camp.InstalledVersion(routeId) == installedVersion, "activate v2 before offline restart");
                 Mark("v1-first-leg-checkpoint-v2-installed");
                 yield break;
             }
@@ -83,10 +93,11 @@ namespace Test.Client.Combat
             if (stage == "resume")
             {
                 yield return Until(() => Find("Continue to Cedar Grove") != null, "restore saved checkpoint");
-                Require(camp.Expedition.Checkpoint.Version == "v1" && camp.InstalledVersion("salt-causeway") == "v2" &&
-                    camp.Expedition.Checkpoint.Supply == "posture", "restore route version and selected supplies");
+                Require(camp.Expedition.Checkpoint.Route == routeId && camp.Expedition.Checkpoint.Version == "v1" &&
+                    camp.InstalledVersion(routeId) == installedVersion && camp.Expedition.Checkpoint.Supply == "posture",
+                    "restore route version and selected supplies");
                 Click("Continue to Cedar Grove");
-                yield return Until(() => camp.Phase == ContractPhase.Battle && camp.ExpeditionLeg == 2, "enter Cedar Grove offline");
+                yield return Until(() => camp.Phase == ContractPhase.Battle && camp.Expedition.ActiveBattle?.IsFinalLeg == true, "enter Cedar Grove offline");
                 Require(camp.ActiveShowcase.Run.View(0).Vitality.Posture == 0, "selected posture supply took effect");
                 yield return WinBattle();
                 yield return Until(() => camp.Expedition.Latest != null && Find("Unlock guard") != null, "victory and award saved");
@@ -96,8 +107,9 @@ namespace Test.Client.Combat
                 yield return Until(() => camp.Expedition.Gear == "guard" && camp.Expedition.Marks == 0, "unlock kit and spend only once");
                 yield return Until(() => Find("Replay route v1") != null, "saved first leg recording");
                 Click("Replay route v1");
-                yield return Until(() => camp.ActiveReplay?.ContentVersion == "v1", "load v1 recording while v2 is active");
-                Require(camp.InstalledVersion("salt-causeway") == "v2", "replay preserves active pointer");
+                yield return Until(() => camp.ActiveReplay?.ContractId == routeId && camp.ActiveReplay.ContentVersion == "v1",
+                    "load the original first leg recording");
+                Require(camp.InstalledVersion(routeId) == installedVersion, "replay preserves active pointer");
                 Click("Close replay");
                 yield return Until(() => Find("Expedition") != null && camp.ActiveReplay == null, "leave first replay");
                 Click("Expedition");

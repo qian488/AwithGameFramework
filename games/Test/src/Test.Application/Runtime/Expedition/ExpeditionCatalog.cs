@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AwithGameFrame.Data.Configuration;
 using AwithGameFrame.Foundation.DataPersistence;
 using Test.Application.Combat;
+using Test.Domain.Expedition;
 using JsonException = Newtonsoft.Json.JsonException;
 
 namespace Test.Application.Expedition
@@ -64,6 +65,9 @@ namespace Test.Application.Expedition
                 string path = $"routes[{index}]";
                 var route = ReadRoute(document.Routes[index], path);
                 if (!routeIds.Add(route.Id)) throw Invalid(path + ".id", $"duplicate route ID '{route.Id}'");
+                if (!ExpeditionRules.IsRoute(route.Id)) throw Invalid(path + ".id", $"unsupported starting route '{route.Id}'");
+                var expectedMap = route.Id == ExpeditionRules.SaltCausewayId ? CombatMapId.SaltCauseway : CombatMapId.EmberFoundry;
+                if (route.Map != expectedMap) throw Invalid(path + ".map", $"expected '{expectedMap}' for '{route.Id}'");
                 routes.Add(route);
             }
 
@@ -76,7 +80,9 @@ namespace Test.Application.Expedition
                 if (loadout == null) throw Invalid(path, "expected an equipment object");
                 RequireKey(loadout.Id, path + ".id");
                 if (!equipmentIds.Add(loadout.Id)) throw Invalid(path + ".id", $"duplicate equipment ID '{loadout.Id}'");
-                if (loadout.Arrows == null || loadout.Arrows < 0) throw Invalid(path + ".arrows", "expected a nonnegative integer");
+                if (!ExpeditionRules.IsGear(loadout.Id)) throw Invalid(path + ".id", $"unsupported equipment '{loadout.Id}'");
+                if (!ExpeditionRules.IsArrowCapacity(loadout.Arrows.GetValueOrDefault()))
+                    throw Invalid(path + ".arrows", "expected a positive arrow capacity");
                 if (loadout.Posture <= 0) throw Invalid(path + ".posture", "expected a positive integer");
                 equipment.Add(new ExpeditionEquipment(loadout.Id, loadout.Arrows.Value, loadout.Posture));
             }

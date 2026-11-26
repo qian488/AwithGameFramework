@@ -122,6 +122,8 @@ node games/Test/verify-expedition.mjs '<Windows Release Player>' '<合同发布�
 
 脚本在后台使用同一档案跨三次启动验证休整、原版本续玩和联网结算。人工体验入口为 `RainPassCamp.unity` 或其 Windows Player，检查实体手柄、休整音效和两条路线的战斗节奏。 [远征需求和并行工单](design/expedition/brief.md)
 
+默认验证盐风堤 v1 到 v2 的版本切换。追加 `--route ember-foundry` 可验证余烬铸造厂 v1 的两段远征、离线续玩和回放。使用新的证据目录。
+
 用 `verify-game-unity.ps1` 以 `RainPassCamp.unity` 为首场景、`CombatShowcase.unity` 为附加场景构建 WebGL。浏览器脚本使用本机 Playwright，以无头 Chromium 验证营地、远征菜单、杉林训练、暂停和撤退，并保存截图。
 
 ```powershell

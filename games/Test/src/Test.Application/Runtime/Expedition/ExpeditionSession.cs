@@ -34,14 +34,16 @@ namespace Test.Application.Expedition
         public bool Pending { get; set; }
     }
 
-    public sealed class ExpeditionSession
+    public sealed partial class ExpeditionSession
     {
         private readonly VersionedSaveService<Profile> saves;
+        private readonly string replayRoot;
         private Profile profile = new Profile();
 
-        public ExpeditionSession(string directory)
+        public ExpeditionSession(string directory, string replayRoot)
         {
             saves = new VersionedSaveService<Profile>(directory, new JsonSerializer(), 1);
+            this.replayRoot = replayRoot ?? throw new ArgumentNullException(nameof(replayRoot));
         }
 
         public int Marks => profile.Marks;
@@ -80,7 +82,7 @@ namespace Test.Application.Expedition
             await SaveAsync(next);
         }
 
-        public async Task SaveCheckpointAsync(ExpeditionCheckpoint checkpoint)
+        private async Task SaveCheckpointAsync(ExpeditionCheckpoint checkpoint)
         {
             if (!Valid(checkpoint)) throw new ArgumentException("Invalid expedition checkpoint.", nameof(checkpoint));
             var next = Next();
@@ -107,15 +109,15 @@ namespace Test.Application.Expedition
             });
         }
 
-        public async Task CompleteAsync(int secondTicks, int rewardAmount)
+        private async Task CompleteAsync(int secondTicks)
         {
             var checkpoint = profile.Checkpoint ?? throw new InvalidOperationException("An expedition checkpoint is required.");
-            if (secondTicks <= 0 || rewardAmount < 0) throw new ArgumentOutOfRangeException(nameof(secondTicks));
+            if (secondTicks <= 0) throw new ArgumentOutOfRangeException(nameof(secondTicks));
             if (profile.Results.Any(item => item.Checkpoint.Id == checkpoint.Id))
                 throw new InvalidOperationException("The expedition result was already recorded.");
             var next = Next();
             int reward = ExpeditionRules.AwardFirstClear(next.Results.Any(item =>
-                item.Checkpoint.Route == checkpoint.Route)) * rewardAmount;
+                item.Checkpoint.Route == checkpoint.Route)) * checkpoint.RewardAmount;
             next.Marks = checked(next.Marks + reward);
             next.Results.Add(new ExpeditionResult
             {
@@ -154,7 +156,7 @@ namespace Test.Application.Expedition
             Guid.TryParseExact(checkpoint.Id, "N", out _) && !string.IsNullOrWhiteSpace(checkpoint.Version) &&
             ExpeditionRules.IsRoute(checkpoint.Route) && ExpeditionRules.IsGear(checkpoint.Gear) &&
             ExpeditionRules.IsSupply(checkpoint.Supply) && checkpoint.FirstTicks > 0 && checkpoint.Arrows >= 0 &&
-            checkpoint.Capacity > 0 && checkpoint.Arrows <= checkpoint.Capacity &&
+            ExpeditionRules.IsArrowCapacity(checkpoint.Capacity) && checkpoint.Arrows <= checkpoint.Capacity &&
             checkpoint.PostureLimit > 0 && checkpoint.Posture >= 0 && checkpoint.Posture < checkpoint.PostureLimit &&
             checkpoint.RecoveryBonus >= 0 && checkpoint.RecoveryBonus < 12 && checkpoint.RewardAmount > 0 &&
             !string.IsNullOrWhiteSpace(checkpoint.Fingerprint);

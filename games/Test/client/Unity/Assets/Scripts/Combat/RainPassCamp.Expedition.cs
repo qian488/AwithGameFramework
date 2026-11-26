@@ -17,25 +17,20 @@ namespace Test.Client.Combat
         private ExpeditionSession expedition;
         private ExpeditionCatalog expeditionCatalog;
         private ExpeditionOnline expeditionOnline;
-        private string expeditionReplayRoot;
-        private ContractReplay expeditionRecording;
         private ExpeditionPanel expeditionPanel;
         private ExpeditionFeedback expeditionFeedback;
         private ViewHandle expeditionView;
         private Task expeditionViewOperation = Task.CompletedTask;
-        private ExpeditionCheckpoint expeditionRun;
-        private int expeditionLeg;
         private string expeditionIssue;
         private string expeditionBoard;
         private float expeditionNextSync;
 
         internal ExpeditionSession Expedition => expedition;
-        internal int ExpeditionLeg => expeditionLeg;
 
         private void ConfigureExpedition(string root, string scoreUrl)
         {
-            expedition = new ExpeditionSession(Path.Combine(root, "RainPassExpedition"));
-            expeditionReplayRoot = Path.Combine(root, "RainPassExpeditionReplays");
+            expedition = new ExpeditionSession(Path.Combine(root, "RainPassExpedition"),
+                Path.Combine(root, "RainPassExpeditionReplays"));
             if (!string.IsNullOrWhiteSpace(scoreUrl)) expeditionOnline = new ExpeditionOnline(new Uri(scoreUrl));
         }
 
@@ -49,9 +44,10 @@ namespace Test.Client.Combat
             }
             try
             {
+                var configuration = await ExpeditionCatalog.LoadAsync(catalog.bytes);
                 await expedition.OpenAsync();
-                expeditionCatalog = await ExpeditionCatalog.LoadAsync(catalog.bytes);
                 expeditionFeedback = ExpeditionFeedback.Create(contractCanvas, ExpeditionSfx(settings.Snapshot));
+                expeditionCatalog = configuration;
             }
             catch (Exception exception) { Debug.LogWarning($"Rain Pass expedition initialization: {exception}", this); }
             finally { Resources.UnloadAsset(catalog); }
@@ -169,16 +165,8 @@ namespace Test.Client.Combat
                 installed[offer.Id] = (await downloads.InstallAsync(offer, default)).Snapshot;
                 return;
             }
-            var gear = expeditionCatalog.Equipment.Single(item => item.Id == expedition.Gear);
-            expeditionRun = new ExpeditionCheckpoint
-            {
-                Id = Guid.NewGuid().ToString("N"), Gear = gear.Id, Route = offer.Id,
-                Version = snapshot.Manifest.Version, Fingerprint = snapshot.Fingerprint,
-                Supply = ExpeditionRules.ArrowsSupply, Capacity = gear.Arrows, Arrows = gear.Arrows,
-                PostureLimit = gear.Posture, RecoveryBonus = ExpeditionRules.PostureRecoveryBonus(gear.Id),
-                RewardAmount = expeditionCatalog.FirstClearMarks
-            };
-            await EnterExpeditionLegAsync(1, offer);
+            var battle = expedition.StartRoute(expeditionCatalog, offer.Id, snapshot.Manifest.Version, snapshot.Fingerprint);
+            await EnterExpeditionBattleAsync(battle, offer);
         }
 
         private async Task StartExpeditionTrainingAsync()
@@ -189,35 +177,27 @@ namespace Test.Client.Combat
 
         private async Task ContinueExpeditionAsync(ExpeditionCheckpoint checkpoint)
         {
-            if (downloads == null || await downloads.OpenInstalledAsync(checkpoint.Route, checkpoint.Fingerprint) == null)
-                throw new IOException("Expedition requires the installed route " + checkpoint.Version + ".");
-            expeditionRun = checkpoint;
-            await EnterExpeditionLegAsync(2, null);
+            var retained = downloads == null ? null : await downloads.OpenInstalledAsync(checkpoint.Route, checkpoint.Fingerprint);
+            var battle = expedition.Resume(expeditionCatalog, retained?.Snapshot.Fingerprint);
+            await EnterExpeditionBattleAsync(battle, null);
         }
 
-        private async Task EnterExpeditionLegAsync(int leg, DownloadableContractOffer offer)
+        private async Task EnterExpeditionBattleAsync(ExpeditionBattle battle, DownloadableContractOffer offer)
         {
-            expeditionFeedback?.Stop();
-            await CloseExpeditionAsync();
-            if (!session.TryAccept(offer?.Id ?? ContractSession.CedarId, offer == null ? "built-in" : expeditionRun.Version))
-                throw new InvalidOperationException("Return to camp before entering an expedition.");
-            expeditionLeg = leg;
-            expeditionRecording = null;
-            await LoadAsync(offer);
-            if (Phase != ContractPhase.Battle)
+            try
             {
-                expeditionLeg = 0;
-                return;
+                expeditionFeedback?.Stop();
+                await CloseExpeditionAsync();
+                if (!session.TryAccept(battle.ContractId, battle.ContractVersion))
+                    throw new InvalidOperationException("Return to camp before entering an expedition.");
+                // The camp owns cancellation and cleanup while Unity is loading.
+                operation = LoadAsync(offer);
+                await operation;
             }
-        }
-
-        private void ApplyExpeditionKit()
-        {
-            if (expeditionLeg == 0) return;
-            var run = expeditionRun;
-            int arrows = expeditionLeg == 1 ? run.Capacity : ExpeditionRules.RestockArrows(run.Arrows, run.Capacity, run.Supply);
-            int posture = expeditionLeg == 1 || run.Supply == ExpeditionRules.PostureSupply ? 0 : run.Posture;
-            showcase.Run.ConfigureExpeditionKit(arrows, run.Capacity, posture, run.PostureLimit, run.RecoveryBonus);
+            finally
+            {
+                if (Phase != ContractPhase.Battle) expedition.CancelBattle();
+            }
         }
 
         private void ChangeSupply(string supply) => RunExpeditionAction(async () =>
@@ -232,23 +212,12 @@ namespace Test.Client.Combat
         private async Task FinishExpeditionLegAsync()
         {
             expeditionIssue = null;
+            ExpeditionBattleOutcome outcome;
             try
             {
-                expeditionRecording ??= showcase.FinishReplay();
-                if (expeditionRecording != null)
-                {
-                    var store = new ContractReplayStore(Path.Combine(expeditionReplayRoot, expeditionRun.Id));
-                    await store.SaveAsync(expeditionRecording);
-                }
-                if (expeditionLeg == 1)
-                {
-                    var run = expeditionRun;
-                    run.FirstTicks = showcase.CommissionTicks;
-                    run.Arrows = showcase.Run.ArrowsRemaining;
-                    run.Posture = Math.Min(run.PostureLimit - 1, showcase.Run.View(0).Vitality.Posture);
-                    await expedition.SaveCheckpointAsync(run);
-                }
-                else await expedition.CompleteAsync(showcase.CommissionTicks, expeditionRun.RewardAmount);
+                var run = showcase.Run;
+                outcome = await expedition.FinishBattleAsync(showcase.CommissionTicks, run.ArrowsRemaining,
+                    run.View(0).Vitality.Posture, showcase.FinishReplay);
             }
             catch (Exception exception)
             {
@@ -256,9 +225,8 @@ namespace Test.Client.Combat
                 Debug.LogWarning($"Rain Pass expedition result: {exception}", this);
                 return;
             }
-            expeditionLeg = 0;
             if (session.TryReturn()) await ReturnAsync(null);
-            expeditionFeedback?.Play(expedition.Checkpoint == null ? ExpeditionFeedbackCue.Reward : ExpeditionFeedbackCue.CheckpointSaved);
+            expeditionFeedback?.Play(outcome == ExpeditionBattleOutcome.Completed ? ExpeditionFeedbackCue.Reward : ExpeditionFeedbackCue.CheckpointSaved);
             if (Phase == ContractPhase.Camp) await OpenExpeditionAsync();
         }
 
@@ -290,7 +258,7 @@ namespace Test.Client.Combat
                 ? new DownloadableContractOffer { Id = ContractSession.CedarId, Title = "Cedar Grove" }
                 : offers.FirstOrDefault(item => item.Id == checkpoint.Route);
             if (offer == null) throw new IOException("The expedition route catalog is unavailable.");
-            var store = new ContractReplayStore(Path.Combine(expeditionReplayRoot, checkpoint.Id));
+            var store = expedition.ReplaysFor(result);
             await CloseExpeditionAsync();
             await OpenReplayAsync(offer, store);
             if (replayView == null) return;

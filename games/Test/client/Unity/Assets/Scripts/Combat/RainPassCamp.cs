@@ -342,9 +342,10 @@ namespace Test.Client.Combat
             }
             if (expeditionView != null && expeditionPanel != null)
                 RainPassGamepad.Navigate(expeditionPanel, CloseExpedition);
-            if (expeditionLeg > 0 && showcase != null && showcase.Run.Status == RunStatus.Victory && operation.IsCompleted && expeditionIssue == null)
+            bool expeditionBattleActive = expedition.ActiveBattle != null;
+            if (expeditionBattleActive && showcase?.Run?.Status == RunStatus.Victory && operation.IsCompleted && expeditionIssue == null)
                 operation = FinishExpeditionLegAsync();
-            if (expeditionLeg == 0 && showcase != null && showcase.Run != null && operation.IsCompleted &&
+            if (!expeditionBattleActive && showcase != null && showcase.Run != null && operation.IsCompleted &&
                 session.TryRecordVictory(showcase.Run.Status, showcase.CommissionTicks))
                 operation = SaveAsync();
             if (expeditionOnline != null && Phase == ContractPhase.Camp && operation.IsCompleted &&
@@ -391,7 +392,7 @@ namespace Test.Client.Combat
         private void Primary()
         {
             if (!operation.IsCompleted) return;
-            if (expeditionLeg > 0 && expeditionIssue != null && showcase?.Run.Status == RunStatus.Victory)
+            if (expedition.ActiveBattle != null && expeditionIssue != null && showcase?.Run?.Status == RunStatus.Victory)
             {
                 operation = FinishExpeditionLegAsync();
                 return;
@@ -451,9 +452,10 @@ namespace Test.Client.Combat
                 {
                     bool started = offer == null ? showcase.StartCommission() : showcase.StartCommission(activeContract, banner);
                     if (!started) throw new InvalidOperationException("The contract battle could not start.");
-                    ApplyExpeditionKit();
+                    var expeditionBattle = expedition.ActiveBattle;
+                    expeditionBattle?.ApplyTo(showcase.Run);
                     if (activeContract != null) showcase.RecordReplay(activeContract, offer.Id);
-                    else if (expeditionLeg == 2) showcase.RecordBuiltInReplay(ContractSession.CedarId, expeditionRun.Version);
+                    else if (expeditionBattle != null) showcase.RecordBuiltInReplay(expeditionBattle.ContractId, expeditionBattle.ContentVersion);
                     showcase.SetViewInput(new ViewInputRouter(views));
                     showcase.ApplyPlayerSettings(settings.Snapshot);
                     session.TryBeginBattle();
@@ -494,8 +496,9 @@ namespace Test.Client.Combat
 
         private void StartReturn()
         {
-            expeditionLeg = 0;
-            if (session.TryReturn()) operation = ReturnAsync(null);
+            if (!session.TryReturn()) return;
+            expedition.CancelBattle();
+            operation = ReturnAsync(null);
         }
 
         private async Task ReturnAsync(string message)
@@ -537,7 +540,7 @@ namespace Test.Client.Combat
         {
             var offer = SelectedOffer;
             panel.SetExpeditionAvailable(expeditionCatalog != null && operation.IsCompleted && contentOperation.IsCompleted && Phase == ContractPhase.Camp);
-            if (expeditionLeg > 0 && expeditionIssue != null && showcase?.Run.Status == RunStatus.Victory)
+            if (expedition.ActiveBattle != null && expeditionIssue != null && showcase?.Run?.Status == RunStatus.Victory)
             {
                 panel.Render(ContractPhase.Result, false, false, RunStatus.Victory, false, expeditionIssue, "Expedition");
                 return;

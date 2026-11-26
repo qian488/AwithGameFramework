@@ -48,7 +48,7 @@ namespace Test.Application.Tests
             source["version"] = "v2";
             source["firstClearMarks"] = 2;
             source["unlockCost"] = 3;
-            source["equipment"][0]["arrows"] = 0;
+            source["equipment"][0]["arrows"] = 8;
 
             var catalog = await ExpeditionCatalog.LoadAsync(Encoding.UTF8.GetBytes(source.ToJsonString()));
 
@@ -57,7 +57,7 @@ namespace Test.Application.Tests
                 Assert.That(catalog.Version, Is.EqualTo("v2"));
                 Assert.That(catalog.FirstClearMarks, Is.EqualTo(2));
                 Assert.That(catalog.UnlockCost, Is.EqualTo(3));
-                Assert.That(catalog.Equipment[0].Arrows, Is.Zero);
+                Assert.That(catalog.Equipment[0].Arrows, Is.EqualTo(8));
             });
         }
 
@@ -67,7 +67,11 @@ namespace Test.Application.Tests
         [TestCase("finalRoute.map", "\"EmberFoundry\"", "finalRoute")]
         [TestCase("routes.0.map", "\"1\"", "routes[0].map")]
         [TestCase("routes.1.id", "\"salt-causeway\"", "routes[1].id")]
+        [TestCase("routes.1.id", "\"unknown-route\"", "routes[1].id")]
+        [TestCase("routes.1.map", "\"SaltCauseway\"", "routes[1].map")]
         [TestCase("equipment.1.id", "\"standard\"", "equipment[1].id")]
+        [TestCase("equipment.2.id", "\"scout\"", "equipment[2].id")]
+        [TestCase("equipment.0.arrows", "0", "equipment[0].arrows")]
         [TestCase("equipment.1.arrows", "null", "equipment[1].arrows")]
         [TestCase("equipment.2.posture", "-1", "equipment[2].posture")]
         public void RejectsInvalidSourceWithFieldDiagnostic(string field, string replacement, string diagnostic)

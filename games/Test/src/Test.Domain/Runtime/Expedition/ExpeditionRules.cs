@@ -23,6 +23,8 @@ namespace Test.Domain.Expedition
 
         public static bool IsGear(string gear) => gear is StandardGear or GuardGear or ArcherGear;
 
+        public static bool IsArrowCapacity(int capacity) => capacity > 0;
+
         public static bool IsSupply(string supply) => supply is ArrowsSupply or PostureSupply;
 
         /// <summary>Returns the contract at a zero-based leg index, or null for an invalid route or leg.</summary>

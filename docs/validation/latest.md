@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 远征配置校验与阶段编排（2026-11-26）
+
+- Test Application **46/46**、Domain **48/48**。回归覆盖零箭袋容量、未知装备或路线、地图不匹配时的字段诊断，以及按原内容指纹续玩、两种补给、撤退后保留休整点和存档失败重试。标准验证通过框架 **577/577**、模板 **13/13**、AgentKit 契约和 Headless 示例。
+- Unity **2022.3.16f1** 的 EditMode **16/16**、PlayMode **11/11** 及 Windows Release 构建通过。盐风堤与余烬铸造厂分别用独立档案后台跑完首段、离线重开、杉林结算、两段回放和联机上榜。盐风堤同时验证安装 v2 后仍按 v1 续玩。远征与普通委托回放回归报告位于 `artifacts/game-unity/Test/20261126-151856-bca0e5d5`。
+- WebGL Release 在无头 Chromium 验证打开远征、进入杉林训练、暂停、撤退与再次进场。报告与 7 张截图位于 `artifacts/game-unity/Test/20261126-151404-71efd7d5/ExpeditionBrowser`。
+
 ## Test 雨夜远征与并行交付（2026-11-26）
 
 - 从 `e5d9c35` 的关联 worktree 并行交付领域规则、配置、Unity 面板、服务端和后台脚本。五张实际工单的交接位于 `artifacts/agent/boards/test-rain-pass-expedition/deliveries`，状态为 `ready-for-review`。后台脚本首轮触发 Windows 路径长度问题，改派后使用更短的隔离档案路径复跑。新版规格修复了初版导入时损坏的中文验收文字，初版看板保留执行记录。 [需求](../../games/Test/design/expedition/brief.md) · [工单规格](../../games/Test/design/expedition/board.json)

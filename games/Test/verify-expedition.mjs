@@ -8,22 +8,27 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
+import { parseArgs } from 'node:util';
 
-const [playerPath, publicationPath, evidencePath, option, scorePath, ...extra] = process.argv.slice(2);
-if (!playerPath || !publicationPath || !evidencePath || extra.length ||
-    (option !== undefined && (option !== '--scores' || !scorePath))) {
-    throw new Error('Usage: node games/Test/verify-expedition.mjs <Player.exe> <publicationDir> <newEvidenceDir> [--scores <Test.Server.dll>]');
+const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    options: { scores: { type: 'string' }, route: { type: 'string', default: 'salt-causeway' } }
+});
+const [playerPath, publicationPath, evidencePath] = positionals;
+const contractId = values.route;
+if (positionals.length !== 3 || !['salt-causeway', 'ember-foundry'].includes(contractId)) {
+    throw new Error('Usage: node games/Test/verify-expedition.mjs <Player.exe> <publicationDir> <newEvidenceDir> [--scores <Test.Server.dll>] [--route <salt-causeway|ember-foundry>]');
 }
+const upgrade = contractId === 'salt-causeway';
 const player = await realpath(playerPath);
 const publication = await realpath(publicationPath);
-const scoreAssembly = scorePath ? await realpath(scorePath) : null;
+const scoreAssembly = values.scores ? await realpath(values.scores) : null;
 const evidence = resolve(evidencePath);
 await mkdir(evidence);
 const profile = await mkdtemp(fileURLToPath(new URL('../../artifacts/ExpeditionProfile-', import.meta.url)));
 
-const contractId = 'salt-causeway';
 const report = {
-    scenario: 'rain-pass-expedition', passed: false, player, publication, profile, contractId,
+    scenario: 'rain-pass-expedition', passed: false, player, publication, profile, contractId, upgrade,
     stages: {}, requests: []
 };
 let contentServer;
@@ -55,9 +60,9 @@ function stopContent() {
 
 async function startContent() {
     const offers = JSON.parse(await readFile(join(publication, 'index.json'), 'utf8'));
-    const salt = offers.find(offer => offer.id === contractId);
-    if (!salt?.title) throw new Error('Publication index must include a Salt Causeway offer.');
-    for (const version of ['v1', 'v2']) {
+    const offer = offers.find(candidate => candidate.id === contractId);
+    if (!offer?.title) throw new Error('Publication index must include ' + contractId + '.');
+    for (const version of upgrade ? ['v1', 'v2'] : ['v1']) {
         const path = join(publication, contractId, version, 'content-manifest.json');
         const manifest = JSON.parse(await readFile(path, 'utf8'));
         if (manifest.version !== version) throw new Error('Unexpected version in ' + path);
@@ -74,7 +79,7 @@ async function startContent() {
                 return;
             }
             if (pathname === 'index.json') {
-                const bytes = Buffer.from(JSON.stringify([{ ...salt, version: activeVersion }]));
+                const bytes = Buffer.from(JSON.stringify([{ ...offer, version: activeVersion }]));
                 response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': bytes.length });
                 response.end(bytes);
                 return;
@@ -181,6 +186,7 @@ async function runStage(stage) {
     const args = [
         '-batchmode', '-nographics', '-logFile', log,
         '-expedition-evidence', output, '-expedition-stage', stage,
+        '-expedition-route', contractId,
         '-contract-data', profile, '-contract-feed', report.feed
     ];
     if (stage === 'sync') args.push('-contract-leaderboard', report.scoreUrl, '-contract-scores', report.scoreUrl);
@@ -191,7 +197,7 @@ async function runStage(stage) {
         while (!process.outcome() && Date.now() < deadline) {
             const message = await readText(failure);
             if (message !== null) throw new Error(message.trim() || 'Player wrote failure.txt.');
-            if (stage === 'play' && activeVersion === 'v1' && await readText(join(output, 'publish-v2')) !== null) {
+            if (upgrade && stage === 'play' && activeVersion === 'v1' && await readText(join(output, 'publish-v2')) !== null) {
                 activeVersion = 'v2';
                 await writeFile(join(output, 'v2-available'), '');
             }
