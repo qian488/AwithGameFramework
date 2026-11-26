@@ -51,8 +51,9 @@ namespace Test.Client.Combat
         private UnityInputBackend backend;
         private SettingsEvidenceInput evidenceInput;
         private IDisposable inputEvents;
-        private bool forwardHeld, backHeld, leftHeld, rightHeld;
+        private float forwardHeld, backHeld, leftHeld, rightHeld;
         private bool guard, paused, debug, fixedCamera, previousFocus;
+        private RainPassGamepad gamepad;
         private float yaw, pitch = 17, noticeUntil, shake;
         private string notice = "";
         private Color noticeColor;
@@ -233,7 +234,7 @@ namespace Test.Client.Combat
 
         protected override void ConfigureHost(GameHost host)
         {
-            input = new InputService(host.Events);
+            input = new InputService(host.Events, new BattleInputRouter(this, null));
             backend = new UnityInputBackend();
             backend.MapMouse("mouse/middle", 2);
             backend.MapKey("keyboard/r", KeyCode.R);
@@ -246,15 +247,19 @@ namespace Test.Client.Combat
             RainPassPreferences.BindBattle(input);
             inputEvents = host.Events.Subscribe<InputActionEvent>(Receive);
             if (RainPassCamp.Argument("-settings-evidence") != null) evidenceInput = new SettingsEvidenceInput();
-            host.AddModule(new InputModule(input, evidenceInput ?? (IInputBackend)backend));
+            gamepad = new RainPassGamepad(backend);
+            host.AddModule(new InputModule(input, evidenceInput ?? (IInputBackend)gamepad));
         }
 
         internal InputService BattleInput => input;
-        internal bool ForwardHeld => forwardHeld;
+        internal bool ForwardHeld => forwardHeld != 0;
+        internal float CameraYaw => yaw;
+        internal void SetViewInput(IInputRouter views) => input.SetRouter(new BattleInputRouter(this, views));
         internal (float Music, float Effects) Mix => audio.Mix;
-        internal void FeedEvidenceInput(string control)
+        internal void FeedEvidenceInput(string control, string secondControl = null)
         {
             evidenceInput.Control = control;
+            evidenceInput.SecondControl = secondControl;
             input.Poll(evidenceInput).ThrowIfFailed();
         }
 
@@ -262,6 +267,8 @@ namespace Test.Client.Combat
         {
             var current = input.CaptureBindings();
             var next = AwithGameFrame.Gameplay.Settings.UserSettingsRules.BuildInputBindings(settings, current);
+            foreach (var binding in next)
+                if (binding.Action == "pause") gamepad.PauseControl = binding.Control;
             for (int index = 0; index < current.Count; index++)
             {
                 if (current[index].Control == next[index].Control) continue;
@@ -276,8 +283,27 @@ namespace Test.Client.Combat
         private sealed class SettingsEvidenceInput : IInputBackend
         {
             public bool IsFocused => true;
-            internal string Control;
-            public float ReadControl(string control) => control == Control ? 1 : 0;
+            internal string Control, SecondControl;
+            public float ReadControl(string control) => control == Control || control == SecondControl ? 1 : 0;
+        }
+
+        private sealed class BattleInputRouter : IInputRouter
+        {
+            private readonly CombatShowcase battle;
+            private readonly IInputRouter views;
+
+            internal BattleInputRouter(CombatShowcase battle, IInputRouter views)
+            {
+                this.battle = battle;
+                this.views = views;
+            }
+
+            public bool Route(InputActionEvent action)
+            {
+                if (views?.Route(action) == true) return true;
+                if (battle.run?.Status != RunStatus.Paused) return false;
+                return action.Action != "pause" && action.Action != "retry" && action.Action != "restart";
+            }
         }
 
         protected override async Task OnStartedAsync()
@@ -410,8 +436,8 @@ namespace Test.Client.Combat
             base.Update();
             if (run == null || Failure != null || !IsReady) return;
             bool automation = PassEvidence.Requested || evidenceInput != null;
-            bool focused = UnityEngine.Application.isFocused;
-            if (!automation && !focused && previousFocus && Playing) run.TogglePause();
+            bool focused = RainPassGamepad.HasFocus;
+            if (!automation && !UnityEngine.Application.isBatchMode && !focused && previousFocus && Playing) run.TogglePause();
             previousFocus = focused;
             if (paused != (run.Status == RunStatus.Paused))
             {
@@ -429,11 +455,16 @@ namespace Test.Client.Combat
                     yaw += Input.GetAxisRaw("Mouse X") * 2.1f;
                     pitch = Mathf.Clamp(pitch - Input.GetAxisRaw("Mouse Y") * 1.55f, 6, 43);
                 }
+                if (run.Locked == 0)
+                {
+                    var look = RainPassGamepad.Look;
+                    yaw += look.x * 155 * delta;
+                    pitch = Mathf.Clamp(pitch - look.y * 95 * delta, 6, 43);
+                }
                 accumulator += delta;
                 var forward = Quaternion.Euler(0, yaw, 0) * Vector3.forward;
                 var right = Quaternion.Euler(0, yaw, 0) * Vector3.right;
-                var desired = Vector2.ClampMagnitude(new Vector2((rightHeld ? 1 : 0) - (leftHeld ? 1 : 0),
-                    (forwardHeld ? 1 : 0) - (backHeld ? 1 : 0)), 1);
+                var desired = Vector2.ClampMagnitude(new Vector2(rightHeld - leftHeld, forwardHeld - backHeld), 1);
                 var direction = forward * desired.y + right * desired.x;
                 Numerics.Vector3? arrowAim = run.Weapon == PlayerWeapon.Bow && run.Locked == 0
                     ? space.AimPoint(lens.ViewportPointToRay(new Vector3(.5f, .5f))) : (Numerics.Vector3?)null;
@@ -513,7 +544,7 @@ namespace Test.Client.Combat
             yaw = 0;
             pitch = 17;
             guard = false;
-            forwardHeld = backHeld = leftHeld = rightHeld = false;
+            forwardHeld = backHeld = leftHeld = rightHeld = 0;
             accumulator = 0;
             shake = 0;
             noticeUntil = 0;
@@ -551,10 +582,10 @@ namespace Test.Client.Combat
             bool held = message.Phase != InputActionPhase.Released;
             switch (message.Action)
             {
-                case "forward": forwardHeld = held; break;
-                case "back": backHeld = held; break;
-                case "right": rightHeld = held; break;
-                case "left": leftHeld = held; break;
+                case "forward": forwardHeld = message.Value; break;
+                case "back": backHeld = message.Value; break;
+                case "right": rightHeld = message.Value; break;
+                case "left": leftHeld = message.Value; break;
                 case "guard": guard = held; if (pressed) run.Queue(CombatButtons.Guard); break;
                 case "attack":
                     if (pressed) run.Queue(CombatButtons.AttackPressed);

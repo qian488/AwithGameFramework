@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 手柄委托（2026-11-26）
+
+- Unity **2022.3.16f1** 隔离导入、EditMode **16/16**、PlayMode **11/11** 和 Windows Release Player 构建通过。PlayMode 注入虚拟 Xbox 布局手柄，从营地接取杉林委托，验证摇杆移动、转视角、锁定、弹反、处决、存档和回营。证据位于 `artifacts/game-unity/Test/20261126-111036-3909bae7/summary.json` 与同目录的 `PlayMode.xml`。后台 Player 的设置、下载、成绩同步及榜单回归报告位于同目录下的 `*Regression/report.json`。
+- 自动化检查开始暂停时释放攻击、方向键移动焦点、B 继续、恢复后抬起再按才恢复攻击，以及移除设备时释放移动。键鼠接管使用后端的模拟键盘输入值核对。实体手柄的摇杆响应、热插拔和实体键鼠切换待体验，入口见 [手柄委托](../../games/Test/README.md#手柄委托)。
+- 无头 Chromium 采集 **22 张** Overlay 截图，复看了手柄继续提示和选中的撤回按钮。截图及报告位于 `artifacts/game-unity/Test/20261126-110652-90e293ec/Overlay-a7045f18/Browser`。
+
 ## Test 云端委托成绩（2026-11-26）
 
 - Unity **2022.3.16f1** 的隔离导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建证据位于 `artifacts/game-unity/Test/20261126-102927-91d911f2/summary.json`。Test Application 测试 **25/25**。协议生成检查验证了加入可选玩家标识和新端点后的兼容性，再将榜单端点和记录加入基线。

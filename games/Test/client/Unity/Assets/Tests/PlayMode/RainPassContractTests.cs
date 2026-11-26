@@ -15,7 +15,7 @@ using Object = UnityEngine.Object;
 
 namespace Test.Client.Tests
 {
-    public sealed class RainPassContractTests
+    public sealed partial class RainPassContractTests
     {
         private string saveRoot;
         private RainPassCamp camp;

@@ -94,12 +94,13 @@ namespace Test.Client.Combat
             yield return Enter("salt-causeway");
             var first = camp.ActiveShowcase;
             AssertPauseBinding(first);
-            Frame(first, "keyboard/p");
-            Require(first.Run.Status == RunStatus.Paused, "P pauses the downloaded route");
-            Frame(first);
-            yield return Until(() => Find("设置") != null, "pause settings button");
             Frame(first, "keyboard/w");
-            Require(first.ForwardHeld, "press reaches gameplay before opening settings");
+            Require(first.ForwardHeld, "press reaches gameplay before pausing");
+            first.FeedEvidenceInput("keyboard/w", "keyboard/p");
+            Require(first.Run.Status == RunStatus.Paused, "P pauses the downloaded route");
+            Frame(first, "keyboard/w");
+            Require(!first.ForwardHeld, "pausing releases movement even while the key remains held");
+            yield return Until(() => Find("设置") != null, "pause settings button");
             Click("设置");
             yield return Until(() => camp.SettingsOpen, "paused settings");
             Frame(first, "keyboard/w");
@@ -118,12 +119,15 @@ namespace Test.Client.Combat
             }
             Click("关闭");
             yield return Until(() => !camp.SettingsOpen, "dismiss modal");
+            first.FeedEvidenceInput("keyboard/w", "keyboard/p");
+            Require(first.Run.Status == RunStatus.Fighting, "P resumes the downloaded route");
             Frame(first, "keyboard/w");
-            Require(!first.ForwardHeld, "same held key stays suppressed after dismissal");
+            Require(!first.ForwardHeld, "same held key stays suppressed after dismissal and resume");
             Frame(first);
             Frame(first, "keyboard/w");
             Require(first.ForwardHeld, "press after physical release reaches gameplay");
             float savedEffects = first.Mix.Effects;
+            Frame(first, "keyboard/p");
             Frame(first);
             Mark("modal-input-and-live-audio");
             yield return Retreat();

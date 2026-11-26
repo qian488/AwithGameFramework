@@ -1,6 +1,6 @@
 {
   "name": "Test.Client",
-  "references": ["AwithGameFrame.Unity", "AwithGameFrame.Extensions", "UnityEngine.UI"],
+  "references": ["AwithGameFrame.Unity", "AwithGameFrame.Extensions", "UnityEngine.UI", "Unity.InputSystem"],
   "overrideReferences": true,
   "precompiledReferences": ["AwithGameFrame.Core.dll", "AwithGameFrame.Data.dll", "AwithGameFrame.Gameplay.dll", "AwithGameFrame.Networking.dll", "Test.Application.dll", "Test.Domain.dll"]
 }

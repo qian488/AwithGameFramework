@@ -9,6 +9,7 @@ using Test.Application.Combat;
 using Test.Application.Protocol;
 using Test.Client.Combat;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -23,6 +24,7 @@ namespace Test.Client.Tests
             camera.GetComponent<Camera>().clearFlags = CameraClearFlags.SolidColor;
             camera.GetComponent<Camera>().backgroundColor = new Color(0.07f, 0.10f, 0.13f);
             var root = new GameObject("Capture Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+            var eventSystemObject = new GameObject("Capture Event System", typeof(EventSystem));
             try
             {
                 var canvas = root.GetComponent<Canvas>();
@@ -132,11 +134,20 @@ namespace Test.Client.Tests
                     new GetContractLeaderboardResponse { Entries = new LeaderboardEntry[0] }, false,
                     new System.DateTime(2026, 11, 26, 1, 2, 3, System.DateTimeKind.Utc)));
                 yield return RainPassContractFrames.CheckLeaderboardRows(canvas, "21-leaderboard-empty", rows, 0, "刷新", "关闭");
+
+                leaderboard.gameObject.SetActive(false);
+                panel.Render(ContractPhase.Battle, false, false, RunStatus.Paused, false, null,
+                    pauseKey: "Esc / Menu / B");
+                var retreat = panel.GetComponentsInChildren<Button>().Single();
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(retreat.gameObject));
+                Assert.That(panel.GetComponentsInChildren<Text>().Any(label => label.text == "Press Esc / Menu / B to resume."), Is.True);
+                yield return RainPassContractFrames.Check(canvas, "22-gamepad-paused", "Retreat to camp");
             }
             finally
             {
                 Object.Destroy(root);
                 Object.Destroy(camera);
+                Object.Destroy(eventSystemObject);
             }
         }
     }

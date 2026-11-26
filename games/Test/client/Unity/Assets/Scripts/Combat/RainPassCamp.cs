@@ -335,6 +335,17 @@ namespace Test.Client.Combat
                 if (Input.GetKeyDown(KeyCode.Backspace) && Phase == ContractPhase.Camp && SelectedOffer != null) _ = RollbackSelected();
             }
             UpdatePanel();
+            if (leaderboardView != null && leaderboardPanel != null) RainPassGamepad.Navigate(leaderboardPanel, CloseLeaderboard);
+            else if (settingsView != null && settingsPanel != null) RainPassGamepad.Navigate(settingsPanel, CloseSettings);
+            else if (panel.isActiveAndEnabled && leaderboardOperation.IsCompleted && settingsOperation.IsCompleted)
+                RainPassGamepad.Navigate(panel, BackFromContractPanel);
+        }
+
+        private void BackFromContractPanel()
+        {
+            if (Phase == ContractPhase.Battle && showcase.Run.Status == RunStatus.Paused) showcase.Run.TogglePause();
+            else if (Phase == ContractPhase.Loading || Phase == ContractPhase.Battle && showcase.Run.Status == RunStatus.Defeated)
+                Secondary();
         }
 
         private async Task ExchangeScoresAsync()
@@ -415,7 +426,7 @@ namespace Test.Client.Combat
                 {
                     bool started = offer == null ? showcase.StartCommission() : showcase.StartCommission(activeContract, banner);
                     if (!started) throw new InvalidOperationException("The contract battle could not start.");
-                    showcase.BattleInput.SetRouter(new ViewInputRouter(views));
+                    showcase.SetViewInput(new ViewInputRouter(views));
                     showcase.ApplyPlayerSettings(settings.Snapshot);
                     session.TryBeginBattle();
                     return;
@@ -494,11 +505,12 @@ namespace Test.Client.Combat
                     !contentOperation.IsCompleted, offers.Count != 0, error ?? contentIssue);
                 return;
             }
+            string resume = RainPassGamepad.HasPad ? pauseKey + " / Menu / B" : pauseKey;
             panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult,
                 error ?? (Phase == ContractPhase.Battle ? contentIssue : null), offer?.Title,
                 offer != null && showcase?.Run?.Status == RunStatus.Paused ?
                     (contentOperation.IsCompleted ? "F5 refreshes offers. U downloads the latest release." : "Downloading the latest release…") : null,
-                pauseKey, session.SavedResult && session.HasResultSubmission ?
+                resume, session.SavedResult && session.HasResultSubmission ?
                     (session.IsResultPending ? "Saved locally. Score pending." : "Score synced.") : null);
         }
 
