@@ -27,6 +27,7 @@ public static class Program
                 "board-import --spec <repo path> | board-show --board <id>\n" +
                 "board-tracker --board <id> --snapshot <repo-relative GitHub issue export>\n" +
                 "ticket-start|ticket-handoff --board <id> --ticket <id>\n" +
+                "ticket-prepare|ticket-collect --board <id> --ticket <id> --worktree <linked worktree>\n" +
                 "ticket-triage --board <id> --ticket <id> --owner <owner> --priority <0-3> --note <text>\n" +
                 "capabilities [--kind <kind>] [--mode <mode>] [--query <text>] (list executable capability entries)\n" +
                 "modules [--id <module id>] (list maintained package entry points)\n" +
@@ -43,7 +44,7 @@ public static class Program
         string Get(string name) => options.TryGetValue(name, out string? value) ? value : throw new ArgumentException("Missing --" + name);
         var workspace = new Workspace(Workspace.FindRoot());
         if (command == "board-import") { Print(TicketBoard.Import(workspace, Get("spec")).Spec.Id); return 0; }
-        if (command is "board-show" or "board-tracker" or "ticket-start" or "ticket-handoff" or "ticket-triage")
+        if (command is "board-show" or "board-tracker" or "ticket-start" or "ticket-prepare" or "ticket-handoff" or "ticket-collect" or "ticket-triage")
         {
             var result = TicketBoard.Execute(workspace, command, Get("board"), Get);
             Print(result.View);

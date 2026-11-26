@@ -73,6 +73,8 @@ powershell -File tools/agent.ps1 context --task $task
 
 工作看板保存在 `artifacts/agent/boards`。`ticket-start` 返回可在新进程接手的任务路径，重复调用返回同一任务。规格文件变更后，把修订的规格切片导入新的看板。按常规流程生成计划并执行必需检查，再运行 `ticket-handoff --board editor-adoption --ticket command-reference`。交接重新检查当前证据，输出状态、摘要和报告路径。机器检查通过的工单进入 `ready-for-review`。实际评审通过后重新交接，`accepted` 状态解锁依赖工单。
 
+并行执行时，先把规格放进基线提交，再从该提交建立关联 worktree。主工作区用 `ticket-start` 建立任务，随后用 `ticket-prepare --board <id> --ticket <id> --worktree <目录>` 校验并复制任务清单和基线。将返回的任务路径交给执行者，在对应 worktree 收集上下文和运行检查。主工作区用 `ticket-collect --board <id> --ticket <id> --worktree <目录>` 重新核对清单、基线与执行证据。若另一张已交付工单修改了同一路径，报告会标出工单和文件。主工作区保存交接摘要，主 Agent 负责源码集成和集成回归。
+
 跟踪器对照接受 GitHub CLI `gh issue list --state all --json url,title,state` 输出的本地快照。`board-tracker --board editor-adoption --snapshot '<仓库相对快照路径>'` 按 `externalRef` 对照工单，输出未关联、缺失、状态一致或需复核。以实际评审决定是否更新远端议题。命令只读取快照。
 
 ## 清单与上下文

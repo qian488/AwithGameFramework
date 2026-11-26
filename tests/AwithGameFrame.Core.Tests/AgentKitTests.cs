@@ -118,6 +118,112 @@ namespace AwithGameFrame.Core.Tests
         }
 
         [Test]
+        public async Task TicketCollectRejectsBaselineMismatchAndOverlappingVerifiedWorktrees()
+        {
+            const string specPath = "artifacts/ticket-spec.json";
+            const string sourcePath = "work/source.md";
+            var spec = new BoardSpec
+            {
+                Id = "collection",
+                Version = 1,
+                Brief = "README.md",
+                DecisionSource = "Synthetic test specification",
+                Tickets = new[]
+                {
+                    new TicketSpec { Id = "first", Owner = "Fixture owner", Scope = task },
+                    new TicketSpec { Id = "second", Owner = "Fixture owner", Scope = TaskFiles.Load<TaskSpec>(workspace.Resolve("template.json")) }
+                }
+            };
+            TaskFiles.Save(workspace.Resolve(specPath), spec);
+            var board = TicketBoard.Import(workspace, specPath);
+            var workerRoots = new List<string>();
+            string originalWorktrees = Git("worktree", "list", "--porcelain");
+
+            string TicketFile(string id, string name) => $"artifacts/agent/tasks/{board.State[id].TaskId}/{name}";
+            TicketResult Run(string command, string id, string workerRoot = null) =>
+                TicketBoard.Execute(workspace, command, spec.Id, option => option switch
+                {
+                    "ticket" => id,
+                    "worktree" => workerRoot,
+                    _ => throw new ArgumentException(option)
+                });
+
+            async Task<Workspace> PrepareWorker(string id, string contents)
+            {
+                Run("ticket-start", id);
+                string workerRoot = workspace.Resolve("artifacts/worktrees/" + id);
+                Git("worktree", "add", "--detach", workerRoot, "HEAD");
+                workerRoots.Add(workerRoot);
+                var worker = new Workspace(workerRoot);
+                // The original baseline includes the fixture's untracked template.
+                File.Copy(workspace.Resolve("template.json", true), worker.Resolve("template.json"));
+                string taskPath = TicketFile(id, "task.json");
+                string workerDirectory = Path.GetDirectoryName(worker.Resolve(taskPath))!;
+                Run("ticket-prepare", id, workerRoot);
+                Run("ticket-prepare", id, workerRoot);
+
+                File.WriteAllText(worker.Resolve(sourcePath), contents);
+                var workerTask = TaskFiles.ReadTask(worker, taskPath);
+                ContextBundle.Build(worker, workerTask, workerDirectory);
+                var plan = ToolRunner.Plan(worker, workerTask, workerDirectory, "probe");
+                var run = await ToolRunner.RunAsync(worker, workerTask, workerDirectory, plan, CancellationToken.None);
+                Assert.That(run.Status, Is.EqualTo("passed"), id);
+                var verified = Evaluation.Evaluate(worker, workerTask, workerDirectory);
+                Assert.That(verified.Status, Is.EqualTo("ready-for-review"), id);
+                Assert.That(verified.Changes.Select(change => change.Path), Is.EqualTo(new[] { sourcePath }), id);
+                return worker;
+            }
+
+            try
+            {
+                var first = await PrepareWorker("first", "first worker edit");
+                var second = await PrepareWorker("second", "second worker edit");
+                string mainSource = workspace.Resolve(sourcePath, true);
+                File.WriteAllText(mainSource, "staged main edit");
+                Git("add", "--", sourcePath);
+                File.WriteAllText(mainSource, "unstaged main edit");
+                string untracked = workspace.Resolve("template.json", true);
+                string untrackedHash = Workspace.HashFile(untracked);
+                string originalHead = workspace.Head();
+                string originalStatus = Git("status", "--porcelain=v1", "--untracked-files=all");
+                string originalIndex = Git("show", ":" + sourcePath);
+
+                string baselinePath = first.Resolve(TicketFile("first", "baseline.json"), true);
+                byte[] originalBaseline = File.ReadAllBytes(baselinePath);
+                TaskFiles.Save(baselinePath, first.CaptureBaseline());
+                Assert.That(() => Run("ticket-prepare", "first", first.Root),
+                    Throws.TypeOf<InvalidOperationException>().With.Message.Contains("different task package"));
+                Assert.That(() => Run("ticket-collect", "first", first.Root),
+                    Throws.TypeOf<InvalidOperationException>().With.Message.Contains("baseline differs"));
+                File.WriteAllBytes(baselinePath, originalBaseline);
+
+                var collected = Run("ticket-collect", "first", first.Root).Handoff!;
+                Assert.That(collected.Status, Is.EqualTo("ready-for-review"));
+                var overlap = Run("ticket-collect", "second", second.Root).Handoff!;
+                Assert.That(overlap.Status, Is.EqualTo("failed"));
+                const string diagnosis = "Overlapping worktree delivery with first: " + sourcePath;
+                string report = workspace.Resolve(overlap.Report, true);
+                Assert.That(File.ReadAllText(report), Does.Contain(diagnosis));
+                var evaluation = TaskFiles.Load<EvaluationResult>(Path.Combine(Path.GetDirectoryName(report)!, "evaluation.json"));
+                Assert.That(evaluation.ChecksPassed, Is.False);
+                Assert.That(evaluation.Failures, Is.EqualTo(new[] { diagnosis }));
+
+                Assert.That(File.ReadAllText(mainSource), Is.EqualTo("unstaged main edit"));
+                Assert.That(Workspace.HashFile(untracked), Is.EqualTo(untrackedHash));
+                Assert.That(Git("show", ":" + sourcePath), Is.EqualTo(originalIndex));
+                Assert.That(workspace.Head(), Is.EqualTo(originalHead));
+                Assert.That(Git("status", "--porcelain=v1", "--untracked-files=all"), Is.EqualTo(originalStatus));
+            }
+            finally
+            {
+                foreach (string workerRoot in workerRoots)
+                    Git("worktree", "remove", "--force", workerRoot);
+                Assert.That(workerRoots.Any(Directory.Exists), Is.False);
+                Assert.That(Git("worktree", "list", "--porcelain"), Is.EqualTo(originalWorktrees));
+            }
+        }
+
+        [Test]
         public void TicketBoardRejectsCyclesAndPreventsPickupAfterTheBriefChanges()
         {
             var ticket = new TicketSpec { Id = "first", Owner = "Fixture owner", Scope = task, DependsOn = new[] { "first" } };
@@ -399,7 +505,7 @@ namespace AwithGameFrame.Core.Tests
             });
         }
 
-        private void Git(params string[] arguments)
+        private string Git(params string[] arguments)
         {
             var start = new ProcessStartInfo("git") { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
             foreach (string argument in arguments) start.ArgumentList.Add(argument);
@@ -407,7 +513,7 @@ namespace AwithGameFrame.Core.Tests
             var output = process.StandardOutput.ReadToEndAsync(); var errors = process.StandardError.ReadToEndAsync();
             process.WaitForExit();
             if (process.ExitCode != 0) throw new InvalidOperationException(errors.GetAwaiter().GetResult());
-            output.GetAwaiter().GetResult();
+            return output.GetAwaiter().GetResult();
         }
     }
 }

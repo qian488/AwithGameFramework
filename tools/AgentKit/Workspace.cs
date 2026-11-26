@@ -43,6 +43,9 @@ public sealed class Workspace
 
     public string Head() => RunGit(Root, "rev-parse", "--verify", "HEAD").TrimEnd('\r', '\n');
 
+    internal string GitCommonDirectory() => Path.TrimEndingDirectorySeparator(
+        Path.GetFullPath(RunGit(Root, "rev-parse", "--path-format=absolute", "--git-common-dir").TrimEnd('\r', '\n')));
+
     public Baseline CaptureBaseline()
     {
         var baseline = new Baseline { Head = Head() };
