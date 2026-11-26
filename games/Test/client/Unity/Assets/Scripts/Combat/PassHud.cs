@@ -16,7 +16,7 @@ namespace Test.Client.Combat
         private GUIStyle title, small, wrappedSmall, middle, centered, headline;
         private float smoothed;
 
-        public void Draw(CombatRun run, PassSpace space, Camera lens, bool diagnostics, int seed, string digest, string cue, Color cueColor)
+        public void Draw(CombatRun run, PassSpace space, Camera lens, bool diagnostics, int seed, string digest, string cue, Color cueColor, bool drawStatusOverlay)
         {
             PrepareStyles();
             var matrix = GUI.matrix;
@@ -47,7 +47,7 @@ namespace Test.Client.Combat
             {
                 bool bow = run.Weapon == PlayerWeapon.Bow;
                 Fill(new Rect(29, bottom - 36, 278, 30), Panel);
-                string weapon = bow ? $"BOW   {run.ArrowsRemaining}/{BowRules.QuiverCapacity} arrows" : "SWORD";
+                string weapon = bow ? $"BOW   {run.ArrowsRemaining}/{run.QuiverCapacity} arrows" : "SWORD";
                 if (bow && run.ArrowsRemaining == 0 && player.Phase == AttackPhase.Ready) weapon = "QUIVER EMPTY   1  Equip sword";
                 Label(new Rect(44, bottom - 34, 242, 26), weapon, small, bow && run.ArrowsRemaining == 0 ? Amber : Ivory);
                 if (bow && run.Locked == 0)
@@ -85,7 +85,7 @@ namespace Test.Client.Combat
                     Label(new Rect(left + 14, bottom + 48, 286, 18), "1   Sword       2   Bow", small, Slate);
                 }
             }
-            else if (run.TrialOpponent == null)
+            else if (drawStatusOverlay && run.TrialOpponent == null)
             {
                 Fill(new Rect(0, 0, width, height), new Color(.012f, .029f, .038f, .68f));
                 float left = width / 2 - 248;

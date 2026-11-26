@@ -27,6 +27,7 @@ namespace Test.Server
         private readonly SemaphoreSlim writeGate = new SemaphoreSlim(1, 1);
         private readonly ServerOptions options;
         private readonly VersionedSaveService<ScoreLedger> saves;
+        private readonly ExpeditionScores expeditionScores;
         private ScoreLedger ledger;
         private WebApplication web;
         private int confirmationDropped;
@@ -35,6 +36,7 @@ namespace Test.Server
         {
             this.options = options;
             saves = new VersionedSaveService<ScoreLedger>(options.ScoreDirectory, Serializer, 1);
+            expeditionScores = new ExpeditionScores(options.ScoreDirectory);
         }
 
         public override string Id => "Test.contract-scores";
@@ -44,6 +46,7 @@ namespace Test.Server
             var saved = await saves.LoadAsync(Slot, token);
             ledger = saved.Status == SaveLoadStatus.NotFound ? new ScoreLedger() :
                 saved.Data ?? throw new InvalidDataException("Missing score ledger.");
+            await expeditionScores.LoadAsync(token);
             var builder = WebApplication.CreateBuilder();
             builder.WebHost.UseUrls($"http://127.0.0.1:{options.ScorePort}");
             web = builder.Build();
@@ -52,6 +55,7 @@ namespace Test.Server
             web.MapGet("/contract-scores/session", RunSessionAsync);
             web.MapPost("/" + GameProtocol.SubmitContractScore.RelativePath, SubmitHttpAsync);
             web.MapPost("/" + GameProtocol.GetContractLeaderboard.RelativePath, LeaderboardAsync);
+            expeditionScores.MapRoutes(web);
             try { await web.StartAsync(token); }
             catch { await web.DisposeAsync(); web = null; throw; }
         }
@@ -197,7 +201,7 @@ namespace Test.Server
 
         private static bool ValidSlug(string value) => value != null && Slug.IsMatch(value);
 
-        private static async Task<T> ReadRequestAsync<T>(HttpContext context)
+        internal static async Task<T> ReadRequestAsync<T>(HttpContext context)
         {
             using var body = new MemoryStream();
             var buffer = new byte[1024];
@@ -216,7 +220,7 @@ namespace Test.Server
             await context.Response.Body.WriteAsync(await Serializer.SerializeAsync(value), context.RequestAborted);
         }
 
-        private static async Task WriteProtocolAsync<T>(HttpContext context, T value)
+        internal static async Task WriteProtocolAsync<T>(HttpContext context, T value)
         {
             await WriteAsync(context, new ProtocolEnvelope<T> { Status = 0, Data = value });
         }

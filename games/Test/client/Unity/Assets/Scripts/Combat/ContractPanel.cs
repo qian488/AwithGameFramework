@@ -24,6 +24,7 @@ namespace Test.Client.Combat
         [SerializeField] private Button settings;
         [SerializeField] private Button leaderboard;
         [SerializeField] private Button replay;
+        [SerializeField] private Button expedition;
         private Button[] buttons;
         private ContractAction primary;
         private ContractAction secondary;
@@ -36,7 +37,7 @@ namespace Test.Client.Combat
         private Font localizedFont;
 
         internal void Bind(Action onPrimary, Action onSecondary, Action onSettings = null,
-            Func<string, string> lookup = null, Font font = null, Action onLeaderboard = null, Action onReplay = null)
+            Func<string, string> lookup = null, Font font = null, Action onLeaderboard = null, Action onReplay = null, Action onExpedition = null)
         {
             translate = lookup ?? (value => value);
             localizedFont = font;
@@ -61,6 +62,11 @@ namespace Test.Client.Combat
             {
                 replay.gameObject.SetActive(false);
                 if (onReplay != null) replay.onClick.AddListener(() => onReplay());
+            }
+            if (expedition != null)
+            {
+                expedition.gameObject.SetActive(false);
+                if (onExpedition != null) expedition.onClick.AddListener(() => onExpedition());
             }
             if (localizedFont != null)
                 foreach (var label in GetComponentsInChildren<Text>(true)) label.font = localizedFont;
@@ -144,6 +150,11 @@ namespace Test.Client.Combat
         {
             if (replay == null) return;
             replay.gameObject.SetActive(available);
+        }
+
+        internal void SetExpeditionAvailable(bool available)
+        {
+            if (expedition != null) expedition.gameObject.SetActive(available);
         }
 
         private void Show(string title, string message, ContractAction primaryAction = ContractAction.None,

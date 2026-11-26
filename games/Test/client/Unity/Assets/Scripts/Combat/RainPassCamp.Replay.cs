@@ -42,16 +42,16 @@ namespace Test.Client.Combat
             replayOperation = OpenReplayAsync(offer);
         }
 
-        private async Task OpenReplayAsync(DownloadableContractOffer offer)
+        private async Task OpenReplayAsync(DownloadableContractOffer offer, ContractReplayStore store = null)
         {
             try
             {
                 replayOffer = offer;
-                replayVersions = replays.Versions(offer.Id);
+                replayVersions = (store ?? replays).Versions(offer.Id);
                 int selected = replayVersions.ToList().IndexOf(activeContract?.Snapshot.Manifest.Version ?? InstalledVersion(offer.Id));
                 replaySelection = Math.Max(selected, 0);
                 replayView = await views.OpenAsync(new ViewRequest(ContractReplayPanel.Key, layer: 12, modal: true));
-                replayPanel.Bind(() => SelectReplay(-1), () => SelectReplay(1), WatchReplay, CloseReplay,
+                replayPanel.Bind(() => SelectReplay(-1), () => SelectReplay(1), () => WatchReplay(store), CloseReplay,
                     ToggleReplayPause, () => replaySlow = !replaySlow,
                     () => JumpReplay(ContactResult.Deflect), () => JumpReplay(ContactResult.Finish));
                 ShowReplayList();
@@ -79,27 +79,28 @@ namespace Test.Client.Combat
                 !busy && replayVersions.Count > 1);
         }
 
-        private void WatchReplay()
+        private void WatchReplay(ContractReplayStore store)
         {
             if (replayView == null || activeReplay != null || !replayOperation.IsCompleted || replayVersions.Count == 0) return;
-            replayOperation = WatchReplayAsync(replayOffer.Id, replayVersions[replaySelection]);
+            replayOperation = WatchReplayAsync(replayOffer.Id, replayVersions[replaySelection], store);
         }
 
-        private async Task WatchReplayAsync(string id, string version)
+        private async Task WatchReplayAsync(string id, string version, ContractReplayStore store = null)
         {
             bool loadingScene = false;
             ShowReplayList("Loading replay " + version + "…", busy: true);
             try
             {
-                var replay = await replays.LoadAsync(id, version);
+                var replay = await (store ?? replays).LoadAsync(id, version);
                 if (replay == null)
                 {
                     ShowReplayList("Replay " + version + " is unavailable.", unavailable: true);
                     return;
                 }
-                var installed = await downloads.OpenInstalledAsync(id, replay.Fingerprint);
-                if (installed == null || installed.Snapshot.Manifest.Version != version ||
-                    installed.ConfigurationHash != replay.ConfigurationHash)
+                bool builtIn = id == ContractSession.CedarId && replay.Fingerprint == null && store != null;
+                var installed = builtIn ? null : await downloads.OpenInstalledAsync(id, replay.Fingerprint);
+                if (!builtIn && (installed == null || installed.Snapshot.Manifest.Version != version ||
+                    installed.ConfigurationHash != replay.ConfigurationHash))
                 {
                     ShowReplayList("Replay needs installed content " + version + ".", unavailable: true);
                     return;
@@ -110,11 +111,16 @@ namespace Test.Client.Combat
                     await ReleaseBattleAsync();
                 }
                 loadingScene = true;
-                var banner = await LoadContractSceneAsync(installed);
+                Material banner = null;
+                if (builtIn) battle = await scenes.LoadAsync(BattleScenePath, AwithGameFrame.Extensions.Scenes.SceneLoadMode.Additive);
+                else banner = await LoadContractSceneAsync(installed);
                 AttachBattleShowcase();
                 while (!cancelRequested && !showcase.CommissionReady && !showcase.CommissionUnavailable) await Task.Yield();
                 if (cancelRequested) throw new OperationCanceledException("Replay host is closing.");
-                if (!showcase.StartCommission(installed, banner)) throw new InvalidOperationException("Could not prepare recorded route.");
+                bool started = builtIn
+                    ? showcase.BossConfigurationHash == replay.ConfigurationHash && showcase.StartCommission()
+                    : showcase.StartCommission(installed, banner);
+                if (!started) throw new InvalidOperationException("Could not prepare recorded route.");
                 showcase.ApplyPlayerSettings(settings.Snapshot);
                 showcase.BeginReplay(replay);
                 activeReplay = replay;

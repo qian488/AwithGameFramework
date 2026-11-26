@@ -10,6 +10,17 @@
         { "name": "Rank", "wireName": "rank", "type": "int" },
         { "name": "IsMine", "wireName": "isMine", "type": "bool" }
       ]
+    },
+    {
+      "name": "ExpeditionLeaderboardEntry",
+      "fields": [
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "FirstTicks", "wireName": "firstTicks", "type": "int" },
+        { "name": "SecondTicks", "wireName": "secondTicks", "type": "int" },
+        { "name": "TotalTicks", "wireName": "totalTicks", "type": "long" },
+        { "name": "Rank", "wireName": "rank", "type": "int" },
+        { "name": "IsMine", "wireName": "isMine", "type": "bool" }
+      ]
     }
   ],
   "endpoints": [
@@ -47,6 +58,41 @@
         { "name": "Entries", "wireName": "entries", "type": "LeaderboardEntry[]" },
         { "name": "OwnBestTicks", "wireName": "ownBestTicks", "type": "int", "required": false },
         { "name": "OwnRank", "wireName": "ownRank", "type": "int", "required": false }
+      ]
+    },
+    {
+      "name": "SubmitExpeditionScore",
+      "method": "POST",
+      "path": "expedition-scores",
+      "request": [
+        { "name": "SubmissionId", "wireName": "submissionId", "type": "string" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
+        { "name": "RouteId", "wireName": "routeId", "type": "string" },
+        { "name": "GearId", "wireName": "gearId", "type": "string" },
+        { "name": "FirstTicks", "wireName": "firstTicks", "type": "int" },
+        { "name": "SecondTicks", "wireName": "secondTicks", "type": "int" }
+      ],
+      "response": [
+        { "name": "SubmissionId", "wireName": "submissionId", "type": "string" },
+        { "name": "Accepted", "wireName": "accepted", "type": "bool" }
+      ]
+    },
+    {
+      "name": "GetExpeditionLeaderboard",
+      "method": "POST",
+      "path": "expedition-scores/leaderboard",
+      "request": [
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
+        { "name": "RouteId", "wireName": "routeId", "type": "string" },
+        { "name": "GearId", "wireName": "gearId", "type": "string" },
+        { "name": "Limit", "wireName": "limit", "type": "int" }
+      ],
+      "response": [
+        { "name": "Entries", "wireName": "entries", "type": "ExpeditionLeaderboardEntry[]" },
+        { "name": "OwnBestTicks", "wireName": "ownBestTicks", "type": "long" },
+        { "name": "OwnRank", "wireName": "ownRank", "type": "int" }
       ]
     }
   ]

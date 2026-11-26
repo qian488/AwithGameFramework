@@ -76,13 +76,20 @@ namespace Test.Application.Combat
         private readonly ContractReplay replay;
 
         public ContractReplayRecorder(CombatRun run, ICombatSpace space, InstalledContract installed, string contractId)
+            : this(run, space, contractId, installed.Snapshot.Manifest.Version,
+                installed.Snapshot.Fingerprint, installed.ConfigurationHash)
+        {
+        }
+
+        public ContractReplayRecorder(CombatRun run, ICombatSpace space, string contractId, string version,
+            string fingerprint, string configurationHash)
         {
             this.run = run;
             this.space = space;
             replay = new ContractReplay
             {
-                ContractId = contractId, ContentVersion = installed.Snapshot.Manifest.Version,
-                Fingerprint = installed.Snapshot.Fingerprint, ConfigurationHash = installed.ConfigurationHash
+                ContractId = contractId, ContentVersion = version,
+                Fingerprint = fingerprint, ConfigurationHash = configurationHash
             };
             Capture();
             run.Cue += Mark;

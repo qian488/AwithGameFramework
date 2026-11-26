@@ -110,6 +110,24 @@ node games/Test/verify-contract-downloads.mjs '<Player>/Test.exe' '<发布目录
 
 在下载委托的后台验证命令末尾追加 `--replay`，使用新的证据目录。该流程完成盐风堤 v1，安装 v2 后离线重开，然后在隔离档案中移走 v1，核对三种状态下的结果。体验入口为营地场景或该场景构建的 Windows Player。
 
+### 雨夜远征
+
+在营地打开 `Expedition`。可下载盐风堤或余烬铸造厂，把它作为首段。第一段胜利后自动保存休整点，在菜单选择补箭或清除架势压力。可当场继续，也可以关闭游戏，重开后从同一休整点进入杉林决战。续玩依据原局安装包的指纹校验版本。
+
+首次完成一条分支奖励一枚印记，装备解锁花费一枚。可选标准、守势与远射装备。箭量、架势和解锁价格见[远征配置](configuration/expedition.md)。结算可分别回看两段战斗。若配置了本机成绩服务，游戏会补交待同步成绩，并按内容版本、分支和装备档查榜。
+
+```powershell
+node games/Test/verify-expedition.mjs '<Windows Release Player>' '<合同发布目录>' '<新证据目录>' --scores '<Test.Server.dll>'
+```
+
+脚本在后台使用同一档案跨三次启动验证休整、原版本续玩和联网结算。人工体验入口为 `RainPassCamp.unity` 或其 Windows Player，检查实体手柄、休整音效和两条路线的战斗节奏。 [远征需求和并行工单](design/expedition/brief.md)
+
+用 `verify-game-unity.ps1` 以 `RainPassCamp.unity` 为首场景、`CombatShowcase.unity` 为附加场景构建 WebGL。浏览器脚本使用本机 Playwright，以无头 Chromium 验证营地、远征菜单、杉林训练、暂停和撤退，并保存截图。
+
+```powershell
+node games/Test/verify-expedition-webgl.mjs --player '<WebGL 输出目录>' --browser '<Chromium 可执行文件>' --output '<新证据目录>'
+```
+
 ## Rain Pass 近战演示
 
 ### 雨夜试炼

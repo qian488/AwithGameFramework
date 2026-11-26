@@ -50,9 +50,9 @@ namespace Test.Client.Tests
             yield return Await(() => HasButton("Accept contract"), "commission card");
             AssertCampReleased();
             Assert.That(camp.GetComponentInChildren<Canvas>().renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
-            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(11));
+            Assert.That(camp.GetComponentsInChildren<Button>(true), Has.Length.EqualTo(12));
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("Accept contract").gameObject));
-            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "01-camp", "Accept contract", "Settings");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "01-camp", "Accept contract", "Settings", "Expedition");
         }
 
         [UnityTest]
@@ -138,7 +138,7 @@ namespace Test.Client.Tests
             yield return null;
             yield return OpenCamp();
             Assert.That(camp.Completed, Is.True);
-            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "08-reopened", "Accept contract", "Settings");
+            yield return RainPassContractFrames.Check(camp.GetComponentInChildren<Canvas>(), "08-reopened", "Accept contract", "Settings", "Expedition");
         }
 
         private IEnumerator OpenCamp(string battleScenePath = CombatShowcase.ScenePath)

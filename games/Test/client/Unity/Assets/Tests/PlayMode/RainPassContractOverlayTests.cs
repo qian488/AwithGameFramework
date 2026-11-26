@@ -8,6 +8,7 @@ using NUnit.Framework;
 using Test.Application.Combat;
 using Test.Application.Protocol;
 using Test.Client.Combat;
+using Test.Client.Expedition;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
@@ -152,6 +153,24 @@ namespace Test.Client.Tests
                 yield return RainPassContractFrames.Check(canvas, "24-replay-playing", "Play", "0.5x", "Last deflect", "Last execution", "Close replay");
                 replay.List("Salt Causeway", "Replay needs installed content v1.", false, false);
                 yield return RainPassContractFrames.CheckWithDisabledButton(canvas, "25-replay-missing", "Watch replay", "Watch replay", "Close replay");
+
+                replay.gameObject.SetActive(false);
+                scores.Render(ContractPhase.Camp, false, false, null, false, null);
+                scores.SetSettingsAvailable(true);
+                scores.SetExpeditionAvailable(true);
+                var campLabels = scores.GetComponentsInChildren<Text>();
+                Assert.That(campLabels.Select(label => label.text), Does.Contain("雨夜委托"));
+                Assert.That(campLabels.Select(label => label.text),
+                    Does.Contain("在杉林击败守卫。战斗中按 Esc 暂停或撤退。"));
+                AssertGlyphs(campLabels);
+                yield return RainPassContractFrames.Check(canvas, "26-expedition-camp-zh", "接取委托", "设置", "Expedition");
+                scores.gameObject.SetActive(false);
+
+                var expeditionPrefab = Resources.Load<GameObject>(ExpeditionPanel.Key);
+                Assert.That(expeditionPrefab, Is.Not.Null, ExpeditionPanel.Key);
+                var expedition = Object.Instantiate(expeditionPrefab, root.transform, false).GetComponent<ExpeditionPanel>();
+                Assert.That(expedition, Is.Not.Null);
+                yield return CheckExpedition(canvas, expedition);
             }
             finally
             {
@@ -160,6 +179,98 @@ namespace Test.Client.Tests
                 Object.Destroy(eventSystemObject);
             }
         }
+
+        private static IEnumerator CheckExpedition(Canvas canvas, ExpeditionPanel panel)
+        {
+            System.Action available = () => { };
+            const string standard = "Forging marks 0 · Equipment standard";
+            var training = RenderExpedition(panel, standard, ("Locked guard", null), ("Locked archer", null),
+                ("Train in Cedar Grove", available), ("Close expedition", available));
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(training[2].gameObject), "Fresh training selection");
+            RenderExpedition(panel, standard, ("Equip guard", available), ("Locked archer", null),
+                ("Train in Cedar Grove", available), ("Close expedition", available));
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(training[2].gameObject), "Retained training selection");
+            yield return RainPassContractFrames.CheckWithDisabledButton(canvas, "27-expedition-training", "Locked archer",
+                "Equip guard", "Locked archer", "Train in Cedar Grove", "Close expedition");
+
+            RenderExpedition(panel, standard, ("Install Salt Causeway", available), ("Start Ember Foundry", available),
+                ("Equip guard", available), ("Locked archer", null), ("Close expedition", available));
+            yield return RainPassContractFrames.CheckWithDisabledButton(canvas, "28-expedition-routes", "Locked archer",
+                "Install Salt Causeway", "Start Ember Foundry", "Equip guard", "Locked archer", "Close expedition");
+
+            RenderExpedition(panel, standard + "\nCheckpoint salt-causeway v1 · Supply arrows",
+                ("Restock arrows", available), ("Recover posture", available), ("Continue to Cedar Grove", available),
+                ("Abandon expedition", available), ("Close expedition", available));
+            yield return RainPassContractFrames.Check(canvas, "29-expedition-checkpoint",
+                "Restock arrows", "Recover posture", "Continue to Cedar Grove", "Abandon expedition", "Close expedition");
+
+            int closeCount = 0;
+            var pending = RenderExpedition(panel,
+                "Forging marks 1 · Equipment standard\nLast clear v1 · 8.0s + 12.0s · Reward 1\nScore pending",
+                ("Unlock guard", available), ("Unlock archer", available), ("Replay route v1", available), ("Replay Cedar Grove", available),
+                ("Close expedition", () => closeCount++));
+            var scroll = panel.GetComponentInChildren<ScrollRect>();
+            Assert.That(BoundsIn(scroll.viewport, pending.Last().transform).min.y, Is.GreaterThanOrEqualTo(scroll.viewport.rect.yMin - 1));
+            yield return RainPassContractFrames.Check(canvas, "30-expedition-pending",
+                "Unlock guard", "Unlock archer", "Replay route v1", "Replay Cedar Grove", "Close expedition");
+
+            var buttons = RenderExpedition(panel,
+                "Forging marks 0 · Equipment guard\nLast clear v1 · 8.0s + 12.0s · Reward 1\nYour rank 1 · 20.0s\n#1 20.0s",
+                ("Start Salt Causeway", available), ("Install Ember Foundry", available), ("Equip standard", available),
+                ("Locked archer", null), ("Expedition leaderboard", available), ("Replay route v1", available), ("Replay Cedar Grove", available),
+                ("Close expedition", () => closeCount++));
+            var close = buttons.Last();
+            Assert.That(BoundsIn(scroll.viewport, close.transform).min.y, Is.LessThan(scroll.viewport.rect.yMin));
+            EventSystem.current.SetSelectedGameObject(close.gameObject);
+            yield return new WaitForEndOfFrame();
+            var revealed = BoundsIn(scroll.viewport, close.transform);
+            Assert.That(revealed.min.y, Is.GreaterThanOrEqualTo(scroll.viewport.rect.yMin - 1));
+            Assert.That(revealed.max.y, Is.LessThanOrEqualTo(scroll.viewport.rect.yMax + 1));
+            ExecuteEvents.Execute(close.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            Assert.That(closeCount, Is.EqualTo(1));
+        }
+
+        private static Button[] RenderExpedition(ExpeditionPanel panel, string status,
+            params (string Label, System.Action Execute)[] actions)
+        {
+            const string title = "Rain Pass Expedition";
+            panel.Render(title, status, actions);
+            Canvas.ForceUpdateCanvases();
+            var scroll = panel.GetComponentInChildren<ScrollRect>();
+            var labels = scroll.content.GetComponentsInChildren<Text>();
+            Assert.That(labels[0].text, Is.EqualTo(title));
+            Assert.That(labels[1].text, Is.EqualTo(status));
+            AssertGlyphs(labels);
+
+            var buttons = scroll.content.GetComponentsInChildren<Button>();
+            Assert.That(buttons.Select(button => button.GetComponentInChildren<Text>().text), Is.EqualTo(actions.Select(action => action.Label)));
+            Assert.That(buttons.Select(button => button.IsInteractable()), Is.EqualTo(actions.Select(action => action.Execute != null)));
+            var previous = BoundsIn(scroll.content, labels[1].transform);
+            Assert.That(BoundsIn(scroll.content, labels[0].transform).min.y, Is.GreaterThanOrEqualTo(previous.max.y - 1));
+            foreach (var button in buttons)
+            {
+                var bounds = BoundsIn(scroll.content, button.transform);
+                Assert.That(bounds.max.y, Is.LessThanOrEqualTo(previous.min.y + 1), button.GetComponentInChildren<Text>().text);
+                previous = bounds;
+            }
+            var selectable = buttons.Where(button => button.IsInteractable()).ToArray();
+            for (int index = 0; index < selectable.Length - 1; index++)
+            {
+                Assert.That(selectable[index].navigation.selectOnDown, Is.EqualTo(selectable[index + 1]));
+                Assert.That(selectable[index + 1].navigation.selectOnUp, Is.EqualTo(selectable[index]));
+            }
+            return buttons;
+        }
+
+        private static void AssertGlyphs(Text[] labels)
+        {
+            foreach (var label in labels)
+                foreach (char character in label.text.Where(character => character != '\n'))
+                    Assert.That(label.font.HasCharacter(character), Is.True, label.text);
+        }
+
+        private static Bounds BoundsIn(RectTransform relativeTo, Transform target) =>
+            RectTransformUtility.CalculateRelativeRectTransformBounds(relativeTo, target);
     }
 }
 #endif

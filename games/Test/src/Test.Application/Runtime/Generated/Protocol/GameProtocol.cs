@@ -6,6 +6,23 @@ using AwithGameFrame.Networking;
 namespace Test.Application.Protocol
 {
     [DataContract]
+    public sealed class ExpeditionLeaderboardEntry
+    {
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "firstTicks", IsRequired = true)]
+        public int FirstTicks { get; set; }
+        [DataMember(Name = "secondTicks", IsRequired = true)]
+        public int SecondTicks { get; set; }
+        [DataMember(Name = "totalTicks", IsRequired = true)]
+        public long TotalTicks { get; set; }
+        [DataMember(Name = "rank", IsRequired = true)]
+        public int Rank { get; set; }
+        [DataMember(Name = "isMine", IsRequired = true)]
+        public bool IsMine { get; set; }
+    }
+
+    [DataContract]
     public sealed class LeaderboardEntry
     {
         [DataMember(Name = "playerId", IsRequired = true)]
@@ -43,6 +60,32 @@ namespace Test.Application.Protocol
     }
 
     [DataContract]
+    public sealed class GetExpeditionLeaderboardRequest
+    {
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "contentVersion", IsRequired = true)]
+        public string ContentVersion { get; set; }
+        [DataMember(Name = "routeId", IsRequired = true)]
+        public string RouteId { get; set; }
+        [DataMember(Name = "gearId", IsRequired = true)]
+        public string GearId { get; set; }
+        [DataMember(Name = "limit", IsRequired = true)]
+        public int Limit { get; set; }
+    }
+
+    [DataContract]
+    public sealed class GetExpeditionLeaderboardResponse
+    {
+        [DataMember(Name = "entries", IsRequired = true)]
+        public ExpeditionLeaderboardEntry[] Entries { get; set; }
+        [DataMember(Name = "ownBestTicks", IsRequired = true)]
+        public long OwnBestTicks { get; set; }
+        [DataMember(Name = "ownRank", IsRequired = true)]
+        public int OwnRank { get; set; }
+    }
+
+    [DataContract]
     public sealed class SubmitContractScoreRequest
     {
         [DataMember(Name = "submissionId", IsRequired = true)]
@@ -74,10 +117,40 @@ namespace Test.Application.Protocol
         public int ElapsedTicks { get; set; }
     }
 
+    [DataContract]
+    public sealed class SubmitExpeditionScoreRequest
+    {
+        [DataMember(Name = "submissionId", IsRequired = true)]
+        public string SubmissionId { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "contentVersion", IsRequired = true)]
+        public string ContentVersion { get; set; }
+        [DataMember(Name = "routeId", IsRequired = true)]
+        public string RouteId { get; set; }
+        [DataMember(Name = "gearId", IsRequired = true)]
+        public string GearId { get; set; }
+        [DataMember(Name = "firstTicks", IsRequired = true)]
+        public int FirstTicks { get; set; }
+        [DataMember(Name = "secondTicks", IsRequired = true)]
+        public int SecondTicks { get; set; }
+    }
+
+    [DataContract]
+    public sealed class SubmitExpeditionScoreResponse
+    {
+        [DataMember(Name = "submissionId", IsRequired = true)]
+        public string SubmissionId { get; set; }
+        [DataMember(Name = "accepted", IsRequired = true)]
+        public bool Accepted { get; set; }
+    }
+
     public static class GameProtocol
     {
         public const int Version = 1;
         public static readonly ProtocolEndpoint<GetContractLeaderboardRequest, GetContractLeaderboardResponse> GetContractLeaderboard = new ProtocolEndpoint<GetContractLeaderboardRequest, GetContractLeaderboardResponse>(new HttpMethod("POST"), "contract-scores/leaderboard", true);
+        public static readonly ProtocolEndpoint<GetExpeditionLeaderboardRequest, GetExpeditionLeaderboardResponse> GetExpeditionLeaderboard = new ProtocolEndpoint<GetExpeditionLeaderboardRequest, GetExpeditionLeaderboardResponse>(new HttpMethod("POST"), "expedition-scores/leaderboard", true);
         public static readonly ProtocolEndpoint<SubmitContractScoreRequest, SubmitContractScoreResponse> SubmitContractScore = new ProtocolEndpoint<SubmitContractScoreRequest, SubmitContractScoreResponse>(new HttpMethod("POST"), "contract-scores/submissions", true);
+        public static readonly ProtocolEndpoint<SubmitExpeditionScoreRequest, SubmitExpeditionScoreResponse> SubmitExpeditionScore = new ProtocolEndpoint<SubmitExpeditionScoreRequest, SubmitExpeditionScoreResponse>(new HttpMethod("POST"), "expedition-scores", true);
     }
 }

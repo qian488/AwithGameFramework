@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "version": "v1",
+  "firstClearMarks": 1,
+  "unlockCost": 1,
+  "routes": [
+    { "id": "salt-causeway", "map": "SaltCauseway" },
+    { "id": "ember-foundry", "map": "EmberFoundry" }
+  ],
+  "finalRoute": { "id": "cedar-grove", "map": "CedarGrove" },
+  "equipment": [
+    { "id": "standard", "arrows": 6, "posture": 100 },
+    { "id": "guard", "arrows": 4, "posture": 125 },
+    { "id": "archer", "arrows": 10, "posture": 80 }
+  ]
+}

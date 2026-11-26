@@ -126,6 +126,24 @@ namespace Test.Application.Combat
         public int AttackOwner { get; private set; }
         public PlayerWeapon Weapon { get; private set; }
         public int ArrowsRemaining { get; private set; }
+        public int QuiverCapacity { get; private set; } = BowRules.QuiverCapacity;
+        private int? expeditionArrows;
+        private int expeditionPosture;
+        private int expeditionPostureLimit = 100;
+        private int expeditionRecoveryBonus;
+
+        public void ConfigureExpeditionKit(int arrows, int capacity, int posture, int postureLimit, int recoveryBonus)
+        {
+            if (arrows < 0 || arrows > capacity || posture < 0 || posture >= postureLimit || recoveryBonus < 0 || recoveryBonus >= 12)
+                throw new ArgumentOutOfRangeException(nameof(arrows), "Invalid expedition supplies.");
+            expeditionArrows = arrows;
+            QuiverCapacity = capacity;
+            expeditionPosture = posture;
+            expeditionPostureLimit = postureLimit;
+            expeditionRecoveryBonus = recoveryBonus;
+            ArrowsRemaining = arrows;
+            fighters[0] = new Fighter(100, postureLimit, Vector3.UnitZ) { Life = new Vitality(100, posture) };
+        }
         public IReadOnlyList<ArrowFlight> AirborneArrows { get; }
         public bool CanFinish => CanStartFinish(fighters[0]) && FindFinish() > 0;
         public bool IsHoldingFinish => finishHoldTarget != 0;
@@ -173,6 +191,8 @@ namespace Test.Application.Combat
         public void Retry() => Reset(Encounter == Encounter.Cleared ? Encounter.Gate : Encounter);
         public void Restart()
         {
+            expeditionArrows = null;
+            expeditionPosture = expeditionRecoveryBonus = 0;
             TrialOpponent = null;
             trialMoves = null;
             Reset(Map == null ? Encounter.Practice : Encounter.Courtyard);
@@ -248,10 +268,10 @@ namespace Test.Application.Combat
             }
             float advanceDepth = Map != null ? Map.GateDepth + 1.5f : Encounter == Encounter.Practice ? 13.5f : 35.5f;
             if (Status == RunStatus.Proceed && space.Position(0).Z >= advanceDepth)
-                Reset(Encounter + 1);
+                Reset(Encounter + 1, carryExpeditionKit: true);
         }
 
-        private void Reset(Encounter encounter)
+        private void Reset(Encounter encounter, bool carryExpeditionKit = false)
         {
             Encounter = encounter;
             Status = RunStatus.Fighting;
@@ -260,10 +280,17 @@ namespace Test.Application.Combat
             pending = requested = CombatButtons.None;
             finishHoldTarget = 0;
             Weapon = PlayerWeapon.Sword;
-            ArrowsRemaining = BowRules.QuiverCapacity;
+            if (expeditionArrows.HasValue && !carryExpeditionKit)
+                ArrowsRemaining = expeditionArrows.Value;
+            else if (!expeditionArrows.HasValue)
+                ArrowsRemaining = BowRules.QuiverCapacity;
             arrows.Clear();
             Count = encounter == Encounter.Courtyard ? (Map?.Guards ?? 3) + 1 : 2;
-            fighters[0] = new Fighter(100, 100, Vector3.UnitZ);
+            int startPosture = expeditionArrows.HasValue
+                ? carryExpeditionKit ? Math.Min(fighters[0].Life.Posture, expeditionPostureLimit - 1) : expeditionPosture
+                : 0;
+            fighters[0] = new Fighter(100, expeditionArrows.HasValue ? expeditionPostureLimit : 100, Vector3.UnitZ);
+            fighters[0].Life = new Vitality(100, startPosture);
             for (int actor = 1; actor < Count; actor++)
             {
                 var enemy = Map == null ? null : encounter == Encounter.Gate ? Map.Boss : Map.Patrol;
@@ -428,7 +455,9 @@ namespace Test.Application.Combat
         private void Advance(int actor)
         {
             var fighter = fighters[actor];
-            fighter.Life = CombatRules.Recover(fighter.Life, Tick, Tick - fighter.LastContact > 120, fighter.MaxPosture);
+            bool resting = Tick - fighter.LastContact > 120;
+            int interval = actor == 0 ? 12 - expeditionRecoveryBonus : 12;
+            fighter.Life = CombatRules.Recover(fighter.Life, Tick, resting, fighter.MaxPosture, interval);
             if (fighter.Moves == null || Phase(fighter) != AttackPhase.Ready) return;
             if (fighter.Segment + 1 == fighter.Moves.Length) Cancel(actor);
             else

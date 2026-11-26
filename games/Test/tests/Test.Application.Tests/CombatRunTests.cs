@@ -262,6 +262,22 @@ namespace Test.Application.Tests
         }
 
         [Test]
+        public void ExpeditionRetryRestoresSuppliesWithoutChangingQuiverCapacity()
+        {
+            var run = new CombatRun(new Space { EnemiesCanHit = false });
+            run.ConfigureExpeditionKit(4, 10, 12, 80, 0);
+            run.Queue(CombatButtons.EquipBow | CombatButtons.AttackPressed);
+            for (int tick = 0; tick <= BowRules.Shot.Duration; tick++) Step(run);
+            Assert.That(run.ArrowsRemaining, Is.EqualTo(3));
+            Assert.That(run.QuiverCapacity, Is.EqualTo(10));
+
+            run.Retry();
+            Assert.That(run.ArrowsRemaining, Is.EqualTo(4));
+            Assert.That(run.QuiverCapacity, Is.EqualTo(10));
+            Assert.That(run.View(0).Vitality.Posture, Is.EqualTo(12));
+        }
+
+        [Test]
         public async Task TrialCatalogAcceptsAnotherOpponentFromConfigurationAndNamesInvalidFields()
         {
             var shipped = await TrialCatalog.LoadAsync();

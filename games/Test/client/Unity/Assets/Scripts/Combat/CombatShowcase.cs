@@ -618,7 +618,8 @@ namespace Test.Client.Combat
                 hud.DrawTrialSelection(this, opponents, trials, mapBossOptions, trialCatalogError, mapBossError, ref opponentScroll);
                 return;
             }
-            hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest, Time.unscaledTime < noticeUntil ? notice : "", noticeColor);
+            hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest,
+                Time.unscaledTime < noticeUntil ? notice : "", noticeColor, drawStatusOverlay: !commission);
             if (run.TrialOpponent != null && !Playing) hud.DrawTrialResult(this, trials);
             else if (!commission && !PassEvidence.Requested && !Playing && GUI.Button(new Rect(Screen.width / 2f - 90f, Screen.height * .67f, 180f, 30f), "Route and trial selection"))
                 ShowTrialSelection();

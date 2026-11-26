@@ -1,0 +1,382 @@
+{
+  "version": 1,
+  "id": "test-rain-pass-expedition-v2",
+  "brief": "games/Test/design/expedition/brief.md",
+  "decisionSource": "用户确认扩大试点范围并要求创建任务与检验",
+  "tickets": [
+    {
+      "id": "rules",
+      "owner": "领域规则",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证路线、武备、补给和一次性奖励。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/src/Test.Domain/Runtime/Expedition",
+          "games/Test/tests/Test.Domain.Tests/ExpeditionRulesTests.cs"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证路线、武备、补给和一次性奖励。"
+        ]
+      }
+    },
+    {
+      "id": "configuration",
+      "owner": "配置",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证可编辑的远征配置和非法字段诊断。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/configuration",
+          "games/Test/src/Test.Application/Runtime/Expedition/ExpeditionCatalog.cs",
+          "games/Test/tests/Test.Application.Tests/ExpeditionCatalogTests.cs"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证可编辑的远征配置和非法字段诊断。"
+        ]
+      }
+    },
+    {
+      "id": "interface",
+      "owner": "Unity 界面",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证远征面板布局、焦点和输入。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/Scripts/Expedition",
+          "games/Test/client/Unity/Assets/Scripts/Expedition.meta",
+          "games/Test/client/Unity/Assets/Resources/Expedition",
+          "games/Test/client/Unity/Assets/Resources/Expedition.meta"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证远征面板布局、焦点和输入。"
+        ]
+      }
+    },
+    {
+      "id": "online",
+      "owner": "服务端",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证提交、重复确认、分组和进程重启。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/server",
+          "games/Test/protocol",
+          "games/Test/src/Test.Application/Runtime/Generated/Protocol/GameProtocol.cs"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证提交、重复确认、分组和进程重启。"
+        ]
+      }
+    },
+    {
+      "id": "verification",
+      "owner": "验收工具",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "后台验证两段远征、离线重开和联网批处理。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/verify-expedition.mjs"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "后台验证两段远征、离线重开和联网批处理。"
+        ]
+      }
+    },
+    {
+      "id": "feedback",
+      "owner": "Unity 表现",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证休整、补给和领奖的程序化音画反馈。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/Scripts/Combat/ExpeditionFeedback.cs",
+          "games/Test/client/Unity/Assets/Scripts/Combat/ExpeditionFeedback.cs.meta"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证休整、补给和领奖的程序化音画反馈。"
+        ]
+      }
+    },
+    {
+      "id": "browser",
+      "owner": "浏览器验证",
+      "priority": 1,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证浏览器中的远征布局与训练入口。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/Tests/PlayMode/RainPassContractOverlayTests.cs",
+          "games/Test/verify-rain-pass-ui.ps1"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证浏览器中的远征布局与训练入口。"
+        ]
+      }
+    },
+    {
+      "id": "flow",
+      "owner": "流程接入",
+      "priority": 2,
+      "dependsOn": [
+        "rules",
+        "configuration",
+        "interface"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "从正式营地入口连接两段战斗和休整。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/src/Test.Application/Runtime/Expedition",
+          "games/Test/client/Unity/Assets/Scripts/Combat",
+          "games/Test/game.json"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "从正式营地入口连接两段战斗和休整。"
+        ]
+      }
+    },
+    {
+      "id": "persistence",
+      "owner": "持久化",
+      "priority": 2,
+      "dependsOn": [
+        "rules"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证续玩、写盘重试和印记去重。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/src/Test.Application/Runtime/Expedition",
+          "games/Test/tests/Test.Application.Tests/ExpeditionSessionTests.cs"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证续玩、写盘重试和印记去重。"
+        ]
+      }
+    },
+    {
+      "id": "content",
+      "owner": "内容生产",
+      "priority": 2,
+      "dependsOn": [
+        "configuration"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证可编辑的远征内容、发布版本及历史包。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/configuration",
+          "games/Test/client/Unity/Assets/Resources/Expedition"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证可编辑的远征内容、发布版本及历史包。"
+        ]
+      }
+    },
+    {
+      "id": "replay",
+      "owner": "回放",
+      "priority": 2,
+      "dependsOn": [
+        "flow",
+        "persistence",
+        "content"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证两段战报和原场景回看。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/src/Test.Application/Runtime/Expedition",
+          "games/Test/client/Unity/Assets/Scripts/Combat"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "验证两段战报和原场景回看。"
+        ]
+      }
+    },
+    {
+      "id": "integration",
+      "owner": "集成验证",
+      "priority": 2,
+      "dependsOn": [
+        "flow",
+        "persistence",
+        "replay",
+        "online",
+        "verification",
+        "feedback",
+        "browser"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "从同一玩家档案验证两段远征、版本恢复和联网结算。",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test",
+          "docs/validation/latest.md"
+        ],
+        "allowedTools": [
+          "game-build",
+          "portable-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "portable-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "从同一玩家档案验证两段远征、版本恢复和联网结算。"
+        ]
+      }
+    }
+  ]
+}

@@ -1,5 +1,14 @@
 # 最近验证
 
+## Test 雨夜远征与并行交付（2026-11-26）
+
+- 从 `e5d9c35` 的关联 worktree 并行交付领域规则、配置、Unity 面板、服务端和后台脚本。五张实际工单的交接位于 `artifacts/agent/boards/test-rain-pass-expedition/deliveries`，状态为 `ready-for-review`。后台脚本首轮触发 Windows 路径长度问题，改派后使用更短的隔离档案路径复跑。新版规格修复了初版导入时损坏的中文验收文字，初版看板保留执行记录。 [需求](../../games/Test/design/expedition/brief.md) · [工单规格](../../games/Test/design/expedition/board.json)
+- AgentKit 检查独立 worktree 的原始提交、规格和执行证据，并列出同基线交付的重叠文件。专项测试覆盖重复准备、异基线拒收、冲突检测和主工作区文件保护。标准验证通过框架 **577/577**、模板 **13/13**、AgentKit 契约和 Headless 示例。Test Application **41/41**，Domain **48/48**。
+- Unity **2022.3.16f1** 的 EditMode **16/16** 和 PlayMode **11/11** 通过。Windows Release Player 用同一档案跨三次后台启动，验证盐风堤 v1、安装 v2 后离线续玩杉林、首次奖励、装备解锁、两段回放和恢复联机后上榜。下载、设置、成绩同步、常规榜单和委托回放回归通过。远征报告位于 `artifacts/game-unity/Test/20261126-135412-fb5046f6/ExpeditionSmoke/summary.json`，该构建目录下的 `*Regression/report.json` 保存其余报告。余烬铸造厂覆盖常规委托下载与通关，独立的两段远征仍待验收。
+- 正式 WebGL Release Player 在无头 Chromium **157.0.8103.79** 完成营地、远征菜单、杉林训练、暂停、撤退和再次进入。原生 Resources 异步请求完成后，资源租约的等待链停住。Unity WebGL Player 改用同步加载内置 Resources，Test 补充远征配置类型的 IL2CPP 保留项。截图还复现了两套暂停 UI 叠加，修复后由营地面板接管委托暂停界面。报告与 7 张截图位于 `artifacts/game-unity/Test/20261126-135412-85b4fa3c/ExpeditionBrowser`。
+- 单独构建 WebGL Overlay 夹具，在无头 Chromium 中验证中文营地、滚动焦点、按钮位置、休整和待同步界面。30 张截图副本位于 `artifacts/game-unity/Test/20261126-133728-88a7936a/BrowserAgent/Overlay`。
+- 人工体验入口为 `RainPassCamp.unity` 或 Windows Player，可检查实体手柄、休整音效和两条首段路线的战斗节奏。 [启动方式](../../games/Test/README.md#雨夜远征)
+
 ## Test 委托通关回放（2026-11-26）
 
 - Unity **2022.3.16f1** 隔离导入、EditMode **16/16**、PlayMode **11/11** 和 Windows Release Player 构建通过。Test Application **26/26**，内容更新专项 **19/19**。报告位于 `artifacts/game-unity/Test/20261126-113801-a6ce9ebc/summary.json`。

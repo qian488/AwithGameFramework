@@ -102,6 +102,7 @@ namespace Test.Client.Combat
             var leaderboardUrl = Argument("-contract-leaderboard") ?? contractLeaderboardUrl;
             if (string.IsNullOrWhiteSpace(leaderboardUrl)) leaderboardUrl = scoreUrl;
             var profileRoot = SaveDirectory == null ? userRoot : Path.GetDirectoryName(Path.GetFullPath(SaveDirectory));
+            ConfigureExpedition(profileRoot, leaderboardUrl);
             replays = new ContractReplayStore(Path.Combine(profileRoot, "RainPassReplays"));
             string playerId = ContractSession.LoadOrCreatePlayerId(Path.Combine(profileRoot, "RainPassProfile"));
             session = new ContractSession(SaveDirectory ?? Path.Combine(userRoot, "RainPassContract"), playerId);
@@ -127,6 +128,7 @@ namespace Test.Client.Combat
             views = new ViewService(host.Context, new UnityViewFactory((RectTransform)contractCanvas.transform,
                 (request, content) =>
                 {
+                    if (BindExpeditionView(request, content)) return;
                     if (request.Key == PlayerSettingsPanel.Key)
                     {
                         settingsPanel = content.GetComponent<PlayerSettingsPanel>();
@@ -147,7 +149,7 @@ namespace Test.Client.Combat
                     }
                     panel = content.GetComponent<ContractPanel>();
                     if (panel == null) throw new InvalidOperationException("The contract panel prefab needs a ContractPanel component.");
-                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont, OpenLeaderboard, OpenReplay);
+                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont, OpenLeaderboard, OpenReplay, OpenExpedition);
                 }), resources);
             host.AddModule(new ResourceModule(resources));
             host.AddModule(new SceneModule(scenes));
@@ -162,6 +164,7 @@ namespace Test.Client.Combat
             await views.OpenAsync(new ViewRequest("RainPassContract/Panel"));
             operation = OpenAsync();
             await operation;
+            await InitializeExpeditionAsync();
             if (leaderboard != null)
             {
                 try { await leaderboard.InitializeAsync(CancellationToken.None); }
@@ -172,6 +175,7 @@ namespace Test.Client.Combat
                 gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
             if (Argument("-settings-evidence") != null) gameObject.AddComponent<PlayerSettingsEvidence>().Run(this);
             if (Argument("-leaderboard-evidence") != null) gameObject.AddComponent<LeaderboardEvidence>().Run(this);
+            if (Argument("-expedition-evidence") != null) gameObject.AddComponent<ExpeditionEvidence>().Run(this);
         }
 
         private void OpenSettings()
@@ -307,6 +311,7 @@ namespace Test.Client.Combat
 
         private void ApplyPlayerSettings(UserSettingsData snapshot)
         {
+            expeditionFeedback?.SetVolume(ExpeditionSfx(snapshot));
             pauseKey = PlayerSettingsPanel.KeyLabel(snapshot.InputBindings.Find(binding => binding.Action == "pause").Control);
             if (showcase != null) showcase.ApplyPlayerSettings(snapshot);
         }
@@ -335,9 +340,25 @@ namespace Test.Client.Combat
                 nextScoreExchange = Time.unscaledTime + 1;
                 scoreExchange = ExchangeScoresAsync();
             }
-            if (showcase != null && showcase.Run != null && operation.IsCompleted &&
+            if (expeditionView != null && expeditionPanel != null)
+                RainPassGamepad.Navigate(expeditionPanel, CloseExpedition);
+            if (expeditionLeg > 0 && showcase != null && showcase.Run.Status == RunStatus.Victory && operation.IsCompleted && expeditionIssue == null)
+                operation = FinishExpeditionLegAsync();
+            if (expeditionLeg == 0 && showcase != null && showcase.Run != null && operation.IsCompleted &&
                 session.TryRecordVictory(showcase.Run.Status, showcase.CommissionTicks))
                 operation = SaveAsync();
+            if (expeditionOnline != null && Phase == ContractPhase.Camp && operation.IsCompleted &&
+                expeditionViewOperation.IsCompleted && expedition.NextPending is Test.Application.Expedition.ExpeditionResult pending &&
+                Time.unscaledTime >= expeditionNextSync)
+            {
+                expeditionNextSync = Time.unscaledTime + 4;
+                expeditionViewOperation = SyncExpeditionAsync(pending);
+            }
+            if (expeditionView != null || !expeditionViewOperation.IsCompleted)
+            {
+                UpdatePanel();
+                return;
+            }
             if (downloads != null && !SettingsOpen && settingsOperation.IsCompleted &&
                 leaderboardView == null && leaderboardOperation.IsCompleted && (Phase == ContractPhase.Camp ||
                 Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused))
@@ -370,6 +391,11 @@ namespace Test.Client.Combat
         private void Primary()
         {
             if (!operation.IsCompleted) return;
+            if (expeditionLeg > 0 && expeditionIssue != null && showcase?.Run.Status == RunStatus.Victory)
+            {
+                operation = FinishExpeditionLegAsync();
+                return;
+            }
             if (Phase == ContractPhase.Opening) operation = OpenAsync();
             else if (Phase == ContractPhase.Camp)
             {
@@ -425,7 +451,9 @@ namespace Test.Client.Combat
                 {
                     bool started = offer == null ? showcase.StartCommission() : showcase.StartCommission(activeContract, banner);
                     if (!started) throw new InvalidOperationException("The contract battle could not start.");
+                    ApplyExpeditionKit();
                     if (activeContract != null) showcase.RecordReplay(activeContract, offer.Id);
+                    else if (expeditionLeg == 2) showcase.RecordBuiltInReplay(ContractSession.CedarId, expeditionRun.Version);
                     showcase.SetViewInput(new ViewInputRouter(views));
                     showcase.ApplyPlayerSettings(settings.Snapshot);
                     session.TryBeginBattle();
@@ -466,6 +494,7 @@ namespace Test.Client.Combat
 
         private void StartReturn()
         {
+            expeditionLeg = 0;
             if (session.TryReturn()) operation = ReturnAsync(null);
         }
 
@@ -507,6 +536,12 @@ namespace Test.Client.Combat
         private void UpdatePanel()
         {
             var offer = SelectedOffer;
+            panel.SetExpeditionAvailable(expeditionCatalog != null && operation.IsCompleted && contentOperation.IsCompleted && Phase == ContractPhase.Camp);
+            if (expeditionLeg > 0 && expeditionIssue != null && showcase?.Run.Status == RunStatus.Victory)
+            {
+                panel.Render(ContractPhase.Result, false, false, RunStatus.Victory, false, expeditionIssue, "Expedition");
+                return;
+            }
             panel.SetReplayAvailable(offer != null && operation.IsCompleted && contentOperation.IsCompleted &&
                 (Phase == ContractPhase.Camp || Phase == ContractPhase.Result && session.SavedResult));
             panel.SetSettingsAvailable(Phase == ContractPhase.Camp || Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused);
@@ -616,6 +651,8 @@ namespace Test.Client.Combat
                 await camp.contentOperation;
                 await camp.settingsOperation;
                 await camp.operation;
+                await camp.expeditionViewOperation;
+                camp.expeditionOnline?.Dispose();
                 await camp.replayOperation;
                 await camp.ReleaseBattleAsync();
                 camp.downloads?.Dispose();

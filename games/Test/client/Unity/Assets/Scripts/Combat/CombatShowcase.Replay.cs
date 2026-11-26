@@ -13,6 +13,9 @@ namespace Test.Client.Combat
         internal void RecordReplay(InstalledContract installed, string contractId) =>
             recording = new ContractReplayRecorder(run, space, installed, contractId);
 
+        internal void RecordBuiltInReplay(string contractId, string version) =>
+            recording = new ContractReplayRecorder(run, space, contractId, version, null, BossConfigurationHash);
+
         internal ContractReplay FinishReplay()
         {
             var replay = recording?.Finish();

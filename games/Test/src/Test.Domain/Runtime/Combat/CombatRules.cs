@@ -75,11 +75,11 @@ namespace Test.Domain.Combat
             return (attacker, hit, !hit.Alive ? ContactResult.Fall : hit.Broken(tick) ? ContactResult.Break : ContactResult.Hit);
         }
 
-        public static Vitality Recover(Vitality state, int tick, bool resting, int limit)
+        public static Vitality Recover(Vitality state, int tick, bool resting, int limit, int recoveryInterval = 12)
         {
             if (!state.Alive || state.Broken(tick)) return state;
             if (state.BrokenUntil != 0) return new Vitality(state.Health, limit / 3);
-            return resting && tick % 12 == 0 ? new Vitality(state.Health, Math.Max(0, state.Posture - 1)) : state;
+            return resting && tick % recoveryInterval == 0 ? new Vitality(state.Health, Math.Max(0, state.Posture - 1)) : state;
         }
 
         public static Vitality Finish(Vitality target, int tick, float distance, float reach) =>
