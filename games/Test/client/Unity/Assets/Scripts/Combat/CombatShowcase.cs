@@ -14,7 +14,7 @@ using Numerics = System.Numerics;
 namespace Test.Client.Combat
 {
     [DisallowMultipleComponent]
-    public sealed class CombatShowcase : GameHostBehaviour
+    public sealed partial class CombatShowcase : GameHostBehaviour
     {
         public const string ScenePath = "Assets/Scenes/CombatShowcase.unity";
         private const double StepSeconds = 1.0 / CombatRun.StepsPerSecond;
@@ -435,6 +435,7 @@ namespace Test.Client.Combat
         {
             base.Update();
             if (run == null || Failure != null || !IsReady) return;
+            if (playingReplay != null) return;
             bool automation = PassEvidence.Requested || evidenceInput != null;
             bool focused = RainPassGamepad.HasFocus;
             if (!automation && !UnityEngine.Application.isBatchMode && !focused && previousFocus && Playing) run.TogglePause();
@@ -577,7 +578,7 @@ namespace Test.Client.Combat
 
         private void Receive(InputActionEvent message)
         {
-            if (run == null || IsTrialSelection || PassEvidence.Requested) return;
+            if (run == null || IsTrialSelection || PassEvidence.Requested || playingReplay != null) return;
             bool pressed = message.Phase == InputActionPhase.Pressed;
             bool held = message.Phase != InputActionPhase.Released;
             switch (message.Action)
@@ -611,7 +612,7 @@ namespace Test.Client.Combat
 
         private void OnGUI()
         {
-            if (hud == null || run == null) return;
+            if (hud == null || run == null || playingReplay != null) return;
             if (IsTrialSelection)
             {
                 hud.DrawTrialSelection(this, opponents, trials, mapBossOptions, trialCatalogError, mapBossError, ref opponentScroll);
@@ -631,6 +632,7 @@ namespace Test.Client.Combat
 
         protected override void OnDestroy()
         {
+            recording?.Dispose();
             inputEvents?.Dispose();
             world?.Dispose();
             original.World?.Dispose();

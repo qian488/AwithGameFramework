@@ -142,6 +142,16 @@ namespace Test.Client.Tests
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(retreat.gameObject));
                 Assert.That(panel.GetComponentsInChildren<Text>().Any(label => label.text == "Press Esc / Menu / B to resume."), Is.True);
                 yield return RainPassContractFrames.Check(canvas, "22-gamepad-paused", "Retreat to camp");
+
+                panel.gameObject.SetActive(false);
+                var replayPrefab = Resources.Load<GameObject>(ContractReplayPanel.Key);
+                var replay = Object.Instantiate(replayPrefab, root.transform, false).GetComponent<ContractReplayPanel>();
+                replay.List("Salt Causeway", "Recorded version v1", true, true);
+                yield return RainPassContractFrames.Check(canvas, "23-replay-versions", "Previous", "Next", "Watch replay", "Close replay");
+                replay.Playing("v1", 420, 960, true, true, true, true);
+                yield return RainPassContractFrames.Check(canvas, "24-replay-playing", "Play", "0.5x", "Last deflect", "Last execution", "Close replay");
+                replay.List("Salt Causeway", "Replay needs installed content v1.", false, false);
+                yield return RainPassContractFrames.CheckWithDisabledButton(canvas, "25-replay-missing", "Watch replay", "Watch replay", "Close replay");
             }
             finally
             {

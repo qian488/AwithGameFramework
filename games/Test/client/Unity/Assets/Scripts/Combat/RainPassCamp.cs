@@ -22,7 +22,7 @@ using UnityEngine.SceneManagement;
 namespace Test.Client.Combat
 {
     [DisallowMultipleComponent]
-    public sealed class RainPassCamp : GameHostBehaviour
+    public sealed partial class RainPassCamp : GameHostBehaviour
     {
         public const string ScenePath = "Assets/Scenes/RainPassCamp.unity";
         private ContractSession session;
@@ -102,6 +102,7 @@ namespace Test.Client.Combat
             var leaderboardUrl = Argument("-contract-leaderboard") ?? contractLeaderboardUrl;
             if (string.IsNullOrWhiteSpace(leaderboardUrl)) leaderboardUrl = scoreUrl;
             var profileRoot = SaveDirectory == null ? userRoot : Path.GetDirectoryName(Path.GetFullPath(SaveDirectory));
+            replays = new ContractReplayStore(Path.Combine(profileRoot, "RainPassReplays"));
             string playerId = ContractSession.LoadOrCreatePlayerId(Path.Combine(profileRoot, "RainPassProfile"));
             session = new ContractSession(SaveDirectory ?? Path.Combine(userRoot, "RainPassContract"), playerId);
             if (!string.IsNullOrWhiteSpace(scoreUrl))
@@ -138,9 +139,15 @@ namespace Test.Client.Combat
                         if (leaderboardPanel == null) throw new InvalidOperationException("The leaderboard prefab needs a LeaderboardPanel component.");
                         return;
                     }
+                    if (request.Key == ContractReplayPanel.Key)
+                    {
+                        replayPanel = content.GetComponent<ContractReplayPanel>();
+                        if (replayPanel == null) throw new InvalidOperationException("Missing commission Replay panel component.");
+                        return;
+                    }
                     panel = content.GetComponent<ContractPanel>();
                     if (panel == null) throw new InvalidOperationException("The contract panel prefab needs a ContractPanel component.");
-                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont, OpenLeaderboard);
+                    panel.Bind(Primary, Secondary, OpenSettings, Translate, settingsFont, OpenLeaderboard, OpenReplay);
                 }), resources);
             host.AddModule(new ResourceModule(resources));
             host.AddModule(new SceneModule(scenes));
@@ -161,7 +168,7 @@ namespace Test.Client.Combat
                 catch (Exception exception) { Debug.LogWarning($"Rain Pass leaderboard cache: {exception.Message}", this); }
             }
             if (downloads != null) await BeginContent(RefreshOffersAsync);
-            if (Argument("-contract-evidence") != null || Argument("-scores-evidence") != null)
+            if (Argument("-contract-evidence") != null || Argument("-scores-evidence") != null || Argument("-contract-replay-evidence") != null)
                 gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
             if (Argument("-settings-evidence") != null) gameObject.AddComponent<PlayerSettingsEvidence>().Run(this);
             if (Argument("-leaderboard-evidence") != null) gameObject.AddComponent<LeaderboardEvidence>().Run(this);
@@ -318,6 +325,11 @@ namespace Test.Client.Combat
         {
             base.Update();
             if (panel == null || !IsReady) return;
+            if (replayView != null || !replayOperation.IsCompleted)
+            {
+                UpdateReplay();
+                return;
+            }
             if (scores != null && Phase != ContractPhase.Opening && scoreExchange.IsCompleted && Time.unscaledTime >= nextScoreExchange)
             {
                 nextScoreExchange = Time.unscaledTime + 1;
@@ -404,28 +416,16 @@ namespace Test.Client.Combat
                 else
                 {
                     activeContract = await downloads.ResolveAsync(offer.Id, installed[offer.Id]);
-                    var snapshot = activeContract.Snapshot;
-                    var catalog = UnityBundleCatalog.FromJson(File.ReadAllText(snapshot.GetPath("bundle-catalog.json")));
-                    battleStore = new ResourceStore(new UnityAssetBundleLoader(catalog, snapshot.GetPath), Host.Dispatcher);
-                    battleAssets = new ResourceScope(battleStore);
-                    banner = (await battleAssets.LoadAsync<Material>("contract-banner")).Value;
-                    var downloadedScenes = new SceneService(Host.Context, new UnityBundleSceneBackend(), battleStore);
-                    battle = await downloadedScenes.LoadAsync("contract-scene", SceneLoadMode.Additive);
+                    banner = await LoadContractSceneAsync(activeContract);
                 }
-                var scene = SceneManager.GetActiveScene();
-                foreach (var root in scene.GetRootGameObjects())
-                {
-                    showcase = root.GetComponentInChildren<CombatShowcase>();
-                    if (showcase != null) break;
-                }
-                if (showcase == null) throw new InvalidOperationException("The combat scene has no Rain Pass host.");
-                if (campCamera != null) campCamera.enabled = false;
+                AttachBattleShowcase();
                 while (!cancelRequested && !showcase.CommissionReady && !showcase.CommissionUnavailable)
                     await Task.Yield();
                 if (!cancelRequested)
                 {
                     bool started = offer == null ? showcase.StartCommission() : showcase.StartCommission(activeContract, banner);
                     if (!started) throw new InvalidOperationException("The contract battle could not start.");
+                    if (activeContract != null) showcase.RecordReplay(activeContract, offer.Id);
                     showcase.SetViewInput(new ViewInputRouter(views));
                     showcase.ApplyPlayerSettings(settings.Snapshot);
                     session.TryBeginBattle();
@@ -443,6 +443,25 @@ namespace Test.Client.Combat
             error = null;
             try { await session.SaveResultAsync(); }
             catch (Exception exception) { Report("Completion could not be saved.", exception); }
+            if (session.SavedResult && activeContract != null)
+            {
+                var replay = showcase.FinishReplay();
+                if (replay == null)
+                {
+                    replaySaveIssue = "This run exceeded the replay recording limit.";
+                    return;
+                }
+                try
+                {
+                    await replays.SaveAsync(replay);
+                    replaySaveIssue = null;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning($"Rain Pass replay save failed: {exception}", this);
+                    replaySaveIssue = "Replay could not be saved.";
+                }
+            }
         }
 
         private void StartReturn()
@@ -488,6 +507,8 @@ namespace Test.Client.Combat
         private void UpdatePanel()
         {
             var offer = SelectedOffer;
+            panel.SetReplayAvailable(offer != null && operation.IsCompleted && contentOperation.IsCompleted &&
+                (Phase == ContractPhase.Camp || Phase == ContractPhase.Result && session.SavedResult));
             panel.SetSettingsAvailable(Phase == ContractPhase.Camp || Phase == ContractPhase.Battle && showcase?.Run?.Status == RunStatus.Paused);
             panel.SetLeaderboardAvailable(Phase == ContractPhase.Camp && leaderboard != null && offer != null && InstalledVersion(offer.Id) != null);
             if (Phase == ContractPhase.Camp && downloads != null)
@@ -506,8 +527,8 @@ namespace Test.Client.Combat
                 return;
             }
             string resume = RainPassGamepad.HasPad ? pauseKey + " / Menu / B" : pauseKey;
-            panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult,
-                error ?? (Phase == ContractPhase.Battle ? contentIssue : null), offer?.Title,
+            panel.Render(Phase, Completed, cancelRequested, showcase?.Run?.Status, session.SavedResult && operation.IsCompleted,
+                error ?? (Phase == ContractPhase.Battle ? contentIssue : Phase == ContractPhase.Result ? replaySaveIssue : null), offer?.Title,
                 offer != null && showcase?.Run?.Status == RunStatus.Paused ?
                     (contentOperation.IsCompleted ? "F5 refreshes offers. U downloads the latest release." : "Downloading the latest release…") : null,
                 resume, session.SavedResult && session.HasResultSubmission ?
@@ -595,6 +616,7 @@ namespace Test.Client.Combat
                 await camp.contentOperation;
                 await camp.settingsOperation;
                 await camp.operation;
+                await camp.replayOperation;
                 await camp.ReleaseBattleAsync();
                 camp.downloads?.Dispose();
                 if (camp.scores != null)

@@ -20,9 +20,10 @@ namespace Test.Client.Combat
         {
             camp = value;
             string scoresOutput = RainPassCamp.Argument("-scores-evidence");
-            output = scoresOutput ?? RainPassCamp.Argument("-contract-evidence");
+            string replayOutput = RainPassCamp.Argument("-contract-replay-evidence");
+            output = replayOutput ?? scoresOutput ?? RainPassCamp.Argument("-contract-evidence");
             UnityEngine.Application.runInBackground = true;
-            StartCoroutine(Report(scoresOutput == null ? Verify() : VerifyScores()));
+            StartCoroutine(Report(replayOutput != null ? VerifyReplay() : scoresOutput == null ? Verify() : VerifyScores()));
         }
 
         private IEnumerator Report(IEnumerator flow)

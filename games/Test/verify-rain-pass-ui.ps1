@@ -50,7 +50,7 @@ $expected = @('01-camp', '02-loading', '03-cancelling', '04-paused', '05-defeate
     '08-reopened', '09-download-offer', '10-downloading', '11-update-failure',
     '12-settings-en', '13-settings-zh', '14-settings-save-failure', '15-score-pending', '16-score-synced',
     '17-leaderboard-loading', '18-leaderboard-loaded', '19-leaderboard-error', '20-leaderboard-cached', '21-leaderboard-empty',
-    '22-gamepad-paused')
+    '22-gamepad-paused', '23-replay-versions', '24-replay-playing', '25-replay-missing')
 $frames = @{}
 $completed = @()
 foreach ($message in $report.messages) {

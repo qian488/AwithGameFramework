@@ -89,6 +89,13 @@ namespace Test.Application.Combat
             return updater.OpenCurrent();
         }
 
+        public async Task<InstalledContract> OpenInstalledAsync(string id, string fingerprint)
+        {
+            await using var updater = For(id);
+            var snapshot = updater.OpenInstalled(fingerprint);
+            return snapshot == null ? null : await ResolveAsync(id, snapshot);
+        }
+
         public async Task<InstalledContract> InstallAsync(DownloadableContractOffer offer, CancellationToken token)
         {
             if (!Valid(offer.Id) || !Valid(offer.Version)) throw new InvalidDataException("Invalid contract offer.");

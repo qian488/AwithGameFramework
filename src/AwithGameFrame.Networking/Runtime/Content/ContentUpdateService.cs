@@ -48,6 +48,16 @@ namespace AwithGameFrame.Networking.Content
             return File.Exists(pointer) ? OpenVersion(ReadPointer(pointer)) : null;
         }
 
+        /// <summary>Verifies a retained installation by fingerprint without changing the active version.</summary>
+        public ContentSnapshot OpenInstalled(string fingerprint)
+        {
+            lock (sync) { if (closing) throw new ObjectDisposedException(nameof(ContentUpdateService)); }
+            if (!ContentManifest.IsHash(fingerprint)) throw new ArgumentException("Invalid content fingerprint.", nameof(fingerprint));
+            fingerprint = fingerprint.ToLowerInvariant();
+            var directory = System.IO.Path.Combine(root, "versions", fingerprint);
+            return System.IO.Directory.Exists(directory) ? OpenVersion(fingerprint) : null;
+        }
+
         public async Task<ContentSnapshot> UpdateAsync(ContentManifest manifest, Uri baseUri, CancellationToken cancellationToken = default)
         {
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));

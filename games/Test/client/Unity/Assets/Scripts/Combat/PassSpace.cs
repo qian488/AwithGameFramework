@@ -148,22 +148,36 @@ namespace Test.Client.Combat
         internal void DrawArrows(IReadOnlyList<ArrowFlight> arrows)
         {
             for (int index = 0; index < arrows.Count; index++)
+                DrawArrow(index, arrows[index].Position, arrows[index].Velocity);
+            HideUnusedArrows(arrows.Count);
+        }
+
+        internal void DrawReplayArrows(IReadOnlyList<ReplayArrow> arrows)
+        {
+            for (int index = 0; index < arrows.Count; index++)
+                DrawArrow(index, arrows[index].Position, arrows[index].Velocity);
+            HideUnusedArrows(arrows.Count);
+        }
+
+        private void DrawArrow(int index, Numerics.Vector3 position, Numerics.Vector3 velocity)
+        {
+            if (index == arrowModels.Count)
             {
-                if (index == arrowModels.Count)
-                {
-                    var model = PassWorld.Group("Flying arrow", world.Root.transform);
-                    world.Shape("Shaft", PrimitiveType.Cube, new Vector3(0, 0, -.38f), new Vector3(.032f, .032f, .76f), brass, model);
-                    world.Shape("Head", PrimitiveType.Cube, Vector3.zero, new Vector3(.062f, .045f, .14f), steel, model);
-                    world.Shape("Fletching", PrimitiveType.Cube, new Vector3(0, 0, -.72f), new Vector3(.095f, .045f, .16f), teal, model);
-                    arrowModels.Add(model);
-                }
-                var arrow = arrows[index];
-                var visual = arrowModels[index];
-                visual.localPosition = ToUnity(arrow.Position);
-                visual.localRotation = Quaternion.LookRotation(ToUnity(arrow.Velocity));
-                visual.gameObject.SetActive(true);
+                var model = PassWorld.Group("Flying arrow", world.Root.transform);
+                world.Shape("Shaft", PrimitiveType.Cube, new Vector3(0, 0, -.38f), new Vector3(.032f, .032f, .76f), brass, model);
+                world.Shape("Head", PrimitiveType.Cube, Vector3.zero, new Vector3(.062f, .045f, .14f), steel, model);
+                world.Shape("Fletching", PrimitiveType.Cube, new Vector3(0, 0, -.72f), new Vector3(.095f, .045f, .16f), teal, model);
+                arrowModels.Add(model);
             }
-            for (int index = arrows.Count; index < arrowModels.Count; index++) arrowModels[index].gameObject.SetActive(false);
+            var visual = arrowModels[index];
+            visual.localPosition = ToUnity(position);
+            visual.localRotation = Quaternion.LookRotation(ToUnity(velocity));
+            visual.gameObject.SetActive(true);
+        }
+
+        private void HideUnusedArrows(int visibleCount)
+        {
+            for (int index = visibleCount; index < arrowModels.Count; index++) arrowModels[index].gameObject.SetActive(false);
         }
 
         private Numerics.Vector3 ToLocal(Vector3 worldPoint)

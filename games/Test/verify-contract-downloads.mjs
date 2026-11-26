@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
-import { copyFile, mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { createServer as createTcpServer } from 'node:net';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -12,6 +12,7 @@ const [playerPath, publicationPath, legacySave, evidencePath, mode, scoreServerP
 const settings = mode === '--settings';
 const scores = mode === '--scores';
 const leaderboard = mode === '--leaderboard';
+const replay = mode === '--replay';
 if (!evidencePath || !legacySave || !publicationPath || !playerPath)
     throw new Error('Pass the Windows Player, publication directory, legacy slot-1.save and a new evidence directory.');
 const player = await realpath(playerPath);
@@ -162,11 +163,12 @@ async function exists(path) {
 async function run(name, offline = false, scoreStage = null, profile = data, contract = null) {
     const output = join(evidence, name);
     await mkdir(output);
-    const evidenceFlag = leaderboard && scoreStage !== 'leaderboard' ? '-leaderboard-evidence' :
+    const evidenceFlag = replay ? '-contract-replay-evidence' : leaderboard && scoreStage !== 'leaderboard' ? '-leaderboard-evidence' :
         scores || leaderboard ? '-scores-evidence' : settings ? '-settings-evidence' : '-contract-evidence';
     const args = ['-batchmode', '-nographics', '-contract-feed', feed, '-contract-data', profile,
         evidenceFlag, output, '-logFile', join(output, 'Player.log')];
     if (offline) args.push(settings ? '-settings-reopen' : '-contract-offline', 'true');
+    if (replay) args.push('-replay-stage', scoreStage);
     if (scores) args.push('-contract-scores', scoreAddress, '-scores-stage', scoreStage);
     if (leaderboard && scoreStage === 'leaderboard')
         args.push('-contract-scores', scoreAddress, '-scores-stage', scoreStage, '-leaderboard-contract', contract);
@@ -183,7 +185,7 @@ async function run(name, offline = false, scoreStage = null, profile = data, con
             const failure = join(output, 'failure.txt');
             if (await exists(failure)) throw new Error(await readFile(failure, 'utf8'));
             if (phase === 'initial' && await exists(join(output, 'publish-v2'))) {
-                phase = scores ? 'healthy' : 'faults';
+                phase = scores || replay ? 'healthy' : 'faults';
                 await writeFile(join(output, 'v2-available'), '');
             }
             if (phase === 'faults' && await exists(join(output, 'restore-v2'))) {
@@ -233,9 +235,18 @@ function closeFeed() {
 }
 
 const report = { passed: false, feed, player, data, requests,
-    scenario: leaderboard ? 'leaderboard' : scores ? 'contract-scores' : settings ? 'player-settings' : 'contract-downloads' };
+    scenario: replay ? 'contract-replay' : leaderboard ? 'leaderboard' : scores ? 'contract-scores' : settings ? 'player-settings' : 'contract-downloads' };
 try {
-    if (leaderboard) {
+    if (replay) {
+        report.record = await run('Record', false, 'record');
+        closeFeed();
+        report.offline = await run('Offline', true, 'offline');
+        const fingerprint = (await readFile(join(evidence, 'Record', 'fingerprint.txt'), 'utf8')).trim();
+        if (!/^[a-f0-9]{64}$/.test(fingerprint)) throw new Error('Invalid recorded content fingerprint.');
+        const retained = join(data, 'ContractDownloads', 'salt-causeway', 'versions', fingerprint);
+        await rename(retained, join(data, 'removed-v1'));
+        report.missing = await run('Missing', true, 'missing');
+    } else if (leaderboard) {
         phase = 'healthy';
         await startScoreServer('LeaderboardServer');
         const profiles = await Promise.all(Array.from({ length: 3 }, () =>

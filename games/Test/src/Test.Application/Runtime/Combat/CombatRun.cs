@@ -115,6 +115,7 @@ namespace Test.Application.Combat
         }
 
         public event Action<CombatCue> Cue;
+        internal event Action Stepped;
         public event Action Rebuilt;
         public CombatMap Map { get; }
         public Encounter Encounter { get; private set; }
@@ -188,6 +189,12 @@ namespace Test.Application.Combat
         public void Step(Vector3 move, Vector3 look, bool guard, Vector3? arrowAim = null)
         {
             if (Status != RunStatus.Fighting && Status != RunStatus.Proceed) return;
+            StepCombat(move, look, guard, arrowAim);
+            Stepped?.Invoke();
+        }
+
+        private void StepCombat(Vector3 move, Vector3 look, bool guard, Vector3? arrowAim)
+        {
             Tick++;
             var pressed = requested;
             requested = CombatButtons.None;

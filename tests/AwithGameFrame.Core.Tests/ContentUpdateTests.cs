@@ -247,6 +247,7 @@ namespace AwithGameFrame.Tests
             var first = await service.UpdateAsync(Manifest("1", handler.Bytes), ContentUri);
             await service.UpdateAsync(Manifest("2", handler.Bytes), ContentUri);
             File.WriteAllText(first.GetPath("config"), "corrupted");
+            Assert.Throws<InvalidDataException>(() => service.OpenInstalled(first.Fingerprint));
             Assert.ThrowsAsync<InvalidDataException>(async () => await service.RollbackAsync());
             Assert.That(service.OpenCurrent().Manifest.Version, Is.EqualTo("2"));
         }
@@ -268,6 +269,9 @@ namespace AwithGameFrame.Tests
 
             Assert.That(removed, Has.Count.EqualTo(1));
             Assert.That(removed, Does.Not.Contain(first.Fingerprint));
+            Assert.That(service.OpenInstalled(first.Fingerprint.ToUpperInvariant()).Manifest.Version, Is.EqualTo("1"));
+            Assert.That(service.OpenInstalled(removed[0]), Is.Null);
+            Assert.Throws<ArgumentException>(() => service.OpenInstalled("../invalid"));
             Assert.That(service.OpenCurrent().Manifest.Version, Is.EqualTo("4"));
             Assert.That(File.Exists(first.GetPath("config")), Is.True);
             Assert.That((await service.RollbackAsync()).Manifest.Version, Is.EqualTo("3"));

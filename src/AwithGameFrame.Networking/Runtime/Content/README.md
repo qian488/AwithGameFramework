@@ -28,4 +28,6 @@ var config = await scope.LoadAsync<byte[]>("config/levels.json", token);
 
 `PruneVersionsAsync(pinnedFingerprints)` 显式清理不再需要的已安装版本。当前 `active` 和 `active.bak` 会自动保留，调用方传入仍被旧会话或资源快照使用的 `ContentSnapshot.Fingerprint`，避免清理这些版本。该方法不清理 staging、partials 或未知目录，也不会替调用方判断旧快照是否仍在使用。
 
+`OpenInstalled(fingerprint)` 按指纹读取并校验本机保留版本，当前版本指针保持原值。版本目录缺失时返回 `null`，资源或清单损坏时抛出异常。使用期间由调用方持有快照并在安排清理时传入该指纹。
+
 这是原始文件分发基础。Unity AssetBundle/Addressables、Godot PCK 的构建、依赖关系、装载与卸载需要专用引擎后端；不能把文件下载成功等同于这些格式的完整更新管线。SHA-256 检查损坏，不验证发布者身份；应用决定可信清单和内容来源。本包不处理代码热更新。

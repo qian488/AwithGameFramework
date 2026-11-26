@@ -10,4 +10,6 @@
 
 `CombatRun` 持有当前武器、剩余箭数与飞行中的箭。`ICombatSpace.TraceArrow` 返回最先遇到的角色或场景遮挡，命中角色时沿用同一套战斗结算。`AirborneArrows` 提供当前步的只读视图供客户端渲染。
 
+`ContractReplayRecorder` 在每次成功推进战斗步后保存角色、飞行箭和表现状态，并记录弹反、处决发生的步数。`ContractReplayStore` 以委托与内容版本为键，用版本化存档保存最近一次成功回放。播放请求通过回放内的内容指纹取回保留版本，再由 Unity 应用记录的姿态。
+
 `TrialCatalog` 读取试炼对手配置并映射成 Domain 数据。`TrialSession` 启动和结算单场试炼，使用框架版本化存档按对手 ID 保存最佳步进数。Unity 提供存档目录，应用层等待写入成功后发布纪录。

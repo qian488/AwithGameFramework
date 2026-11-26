@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 委托通关回放（2026-11-26）
+
+- Unity **2022.3.16f1** 隔离导入、EditMode **16/16**、PlayMode **11/11** 和 Windows Release Player 构建通过。Test Application **26/26**，内容更新专项 **19/19**。报告位于 `artifacts/game-unity/Test/20261126-113801-a6ce9ebc/summary.json`。
+- Windows 后台 Player 用三次独立启动验证盐风堤 v1 的结算回放、v2 生效时离线回看 v1、历史包缺失后安全回营。核对了当局的弹反和处决时间、完成步数、最后位置、旗帜和 Boss 配置。报告在同一目录的 `ReplaySmoke/report.json`。体验入口见 [委托回放](../../games/Test/README.md#委托回放)。
+- 下载、玩家设置、成绩同步和榜单回归记录位于同一构建目录的 `*Regression/report.json`。回放列表、底部播放控件和版本缺失提示的无头截图位于 `artifacts/game-unity/Test/20261126-113120-dda0a8dd/Overlay-e652e4a1/Browser`。
+
 ## Test 手柄委托（2026-11-26）
 
 - Unity **2022.3.16f1** 隔离导入、EditMode **16/16**、PlayMode **11/11** 和 Windows Release Player 构建通过。PlayMode 注入虚拟 Xbox 布局手柄，从营地接取杉林委托，验证摇杆移动、转视角、锁定、弹反、处决、存档和回营。证据位于 `artifacts/game-unity/Test/20261126-111036-3909bae7/summary.json` 与同目录的 `PlayMode.xml`。后台 Player 的设置、下载、成绩同步及榜单回归报告位于同目录下的 `*Regression/report.json`。

@@ -23,6 +23,37 @@ namespace Test.Application.Tests
         }
 
         [Test]
+        public async Task ReplaySaveReplacesTheSameVersionAndRetainsOtherVersions()
+        {
+            var store = new ContractReplayStore(root);
+            var replay = new ContractReplay { ContractId = "salt-causeway", ContentVersion = "v1" };
+            var actor = new ReplayActor
+            {
+                Position = new System.Numerics.Vector3(1.25f, 0.02f, 4),
+                Facing = System.Numerics.Vector3.UnitZ
+            };
+            replay.Frames.Add(new ReplayFrame { Actors = new[] { actor, actor }, Arrows = Array.Empty<ReplayArrow>() });
+            replay.Frames.Add(new ReplayFrame
+            {
+                Actors = new[] { actor, actor }, Arrows = Array.Empty<ReplayArrow>(), Status = RunStatus.Victory
+            });
+            await store.SaveAsync(replay);
+            replay.ContentVersion = "v2";
+            await store.SaveAsync(replay);
+            replay.ContentVersion = "v1";
+            actor.Position = new System.Numerics.Vector3(2.5f, 0.02f, 5);
+            await store.SaveAsync(replay);
+
+            var reopened = new ContractReplayStore(root);
+            Assert.That(reopened.Versions("salt-causeway"), Is.EqualTo(new[] { "v1", "v2" }));
+            var latestV1 = await reopened.LoadAsync("salt-causeway", "v1");
+            var existingV2 = await reopened.LoadAsync("salt-causeway", "v2");
+            Assert.That(latestV1.Frames[1].Actors[0].Position, Is.EqualTo(actor.Position));
+            Assert.That(existingV2.Frames[1].Actors[0].Position, Is.EqualTo(new System.Numerics.Vector3(1.25f, 0.02f, 4)));
+            Assert.That(await reopened.LoadAsync("salt-causeway", "v3"), Is.Null);
+        }
+
+        [Test]
         public async Task CancelAndRetreatAllowAnotherAttemptWithoutSavingCompletion()
         {
             var session = new ContractSession(root);

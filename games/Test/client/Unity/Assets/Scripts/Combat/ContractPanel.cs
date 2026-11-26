@@ -23,6 +23,7 @@ namespace Test.Client.Combat
         [SerializeField] private Button retryReturn;
         [SerializeField] private Button settings;
         [SerializeField] private Button leaderboard;
+        [SerializeField] private Button replay;
         private Button[] buttons;
         private ContractAction primary;
         private ContractAction secondary;
@@ -35,7 +36,7 @@ namespace Test.Client.Combat
         private Font localizedFont;
 
         internal void Bind(Action onPrimary, Action onSecondary, Action onSettings = null,
-            Func<string, string> lookup = null, Font font = null, Action onLeaderboard = null)
+            Func<string, string> lookup = null, Font font = null, Action onLeaderboard = null, Action onReplay = null)
         {
             translate = lookup ?? (value => value);
             localizedFont = font;
@@ -55,6 +56,11 @@ namespace Test.Client.Combat
             {
                 leaderboard.gameObject.SetActive(false);
                 if (onLeaderboard != null) leaderboard.onClick.AddListener(() => onLeaderboard());
+            }
+            if (replay != null)
+            {
+                replay.gameObject.SetActive(false);
+                if (onReplay != null) replay.onClick.AddListener(() => onReplay());
             }
             if (localizedFont != null)
                 foreach (var label in GetComponentsInChildren<Text>(true)) label.font = localizedFont;
@@ -132,6 +138,12 @@ namespace Test.Client.Combat
             if (leaderboard == null) return;
             leaderboard.gameObject.SetActive(available);
             if (available) leaderboard.GetComponentInChildren<Text>().text = translate("Cloud scores");
+        }
+
+        internal void SetReplayAvailable(bool available)
+        {
+            if (replay == null) return;
+            replay.gameObject.SetActive(available);
         }
 
         private void Show(string title, string message, ContractAction primaryAction = ContractAction.None,
