@@ -42,6 +42,9 @@ namespace Test.Client.Combat
         private bool cancelRequested;
         private string error;
         private DownloadableContracts downloads;
+        private ContractScoreSync scores;
+        private Task scoreExchange = Task.CompletedTask;
+        private float nextScoreExchange;
         private IReadOnlyList<DownloadableContractOffer> offers = Array.Empty<DownloadableContractOffer>();
         private readonly Dictionary<string, ContentSnapshot> installed = new Dictionary<string, ContentSnapshot>();
         private int selection;
@@ -52,6 +55,7 @@ namespace Test.Client.Combat
         private ResourceScope battleAssets;
         private ResourceStore battleStore;
         [SerializeField] private string contractFeedUrl;
+        [SerializeField] private string contractScoreUrl;
         [SerializeField] private Camera campCamera;
         [SerializeField] private Canvas contractCanvas;
 
@@ -71,6 +75,9 @@ namespace Test.Client.Combat
         internal bool WasMigrated => session.WasMigrated;
         internal bool HasCompleted(string id) => session.HasCompleted(id);
         internal int? BestTicks(string id, string version) => session.BestTicks(id, version);
+        internal int PendingScoreCount => session.PendingScoreCount;
+        internal long ScoreCursor => session.ScoreCursor;
+        internal Test.Application.Protocol.SubmitContractScoreRequest PendingScore => session.NextPendingScore;
         internal string InstalledVersion(string id) => installed.TryGetValue(id, out var snapshot) ? snapshot.Manifest.Version : null;
         internal void UsePresentation(Camera camera, Canvas canvas)
         {
@@ -86,6 +93,9 @@ namespace Test.Client.Combat
             var dataRoot = Argument("-contract-data");
             var userRoot = dataRoot ?? UnityEngine.Application.persistentDataPath;
             session = new ContractSession(SaveDirectory ?? Path.Combine(userRoot, "RainPassContract"));
+            var scoreUrl = Argument("-contract-scores") ?? contractScoreUrl;
+            if (!string.IsNullOrWhiteSpace(scoreUrl))
+                scores = new ContractScoreSync(new Uri(scoreUrl), session, host.Dispatcher);
             var feed = Argument("-contract-feed") ?? contractFeedUrl;
             if (!string.IsNullOrWhiteSpace(feed))
                 downloads = new DownloadableContracts(new Uri(feed), Path.Combine(userRoot, "ContractDownloads"));
@@ -126,7 +136,8 @@ namespace Test.Client.Combat
             operation = OpenAsync();
             await operation;
             if (downloads != null) await BeginContent(RefreshOffersAsync);
-            if (Argument("-contract-evidence") != null) gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
+            if (Argument("-contract-evidence") != null || Argument("-scores-evidence") != null)
+                gameObject.AddComponent<ContractDownloadEvidence>().Run(this);
             if (Argument("-settings-evidence") != null) gameObject.AddComponent<PlayerSettingsEvidence>().Run(this);
         }
 
@@ -211,6 +222,11 @@ namespace Test.Client.Combat
         {
             base.Update();
             if (panel == null || !IsReady) return;
+            if (scores != null && Phase != ContractPhase.Opening && scoreExchange.IsCompleted && Time.unscaledTime >= nextScoreExchange)
+            {
+                nextScoreExchange = Time.unscaledTime + 1;
+                scoreExchange = ExchangeScoresAsync();
+            }
             if (showcase != null && showcase.Run != null && operation.IsCompleted &&
                 session.TryRecordVictory(showcase.Run.Status, showcase.CommissionTicks))
                 operation = SaveAsync();
@@ -222,6 +238,13 @@ namespace Test.Client.Combat
                 if (Input.GetKeyDown(KeyCode.Backspace) && Phase == ContractPhase.Camp && SelectedOffer != null) _ = RollbackSelected();
             }
             UpdatePanel();
+        }
+
+        private async Task ExchangeScoresAsync()
+        {
+            try { await scores.ExchangeAsync(); }
+            catch (OperationCanceledException) when (!IsReady) { }
+            catch (Exception exception) { Debug.LogWarning($"Rain Pass score connection: {exception.Message}", this); }
         }
 
         private void Primary()
@@ -367,6 +390,7 @@ namespace Test.Client.Combat
                     Format("Installed {0} · Available {1}. U updates. Backspace rolls back.", version, offer.Version);
                 if (offer != null && session.HasCompleted(offer.Id))
                     status = Translate(status) + (BestTicks(offer.Id, version ?? "") is int ticks ? Format(" Best {0:0.0}s.", ticks / 60f) : Translate(" Completed."));
+                if (PendingScoreCount != 0) status = Translate(status) + Format(" Pending scores: {0}.", PendingScoreCount);
                 panel.ShowOffer(offer?.Title ?? "Cedar Sentinel", status,
                     offer != null && version == null ? "Download" : "Accept contract",
                     !contentOperation.IsCompleted, offers.Count != 0, error ?? contentIssue);
@@ -376,7 +400,8 @@ namespace Test.Client.Combat
                 error ?? (Phase == ContractPhase.Battle ? contentIssue : null), offer?.Title,
                 offer != null && showcase?.Run?.Status == RunStatus.Paused ?
                     (contentOperation.IsCompleted ? "F5 refreshes offers. U downloads the latest release." : "Downloading the latest release…") : null,
-                pauseKey);
+                pauseKey, session.SavedResult && session.HasResultSubmission ?
+                    (session.IsResultPending ? "Saved locally. Score pending." : "Score synced.") : null);
         }
 
         internal Task RefreshOffers() => BeginContent(RefreshOffersAsync);
@@ -462,6 +487,12 @@ namespace Test.Client.Combat
                 await camp.operation;
                 await camp.ReleaseBattleAsync();
                 camp.downloads?.Dispose();
+                if (camp.scores != null)
+                {
+                    try { await camp.scores.DisposeAsync(); }
+                    catch (Exception exception) { Debug.LogWarning($"Rain Pass score shutdown: {exception.Message}", camp); }
+                    await camp.scoreExchange;
+                }
             }
         }
     }

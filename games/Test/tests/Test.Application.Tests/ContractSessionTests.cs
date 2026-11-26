@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -86,6 +87,39 @@ namespace Test.Application.Tests
             Assert.That(reopened.BestTicks("ember-foundry", "v1"), Is.EqualTo(581));
         }
 
+        [Test]
+        public async Task MigratesRecordedBestTimesAndQueuesEachNewResultOnlyAfterSavingIt()
+        {
+            var legacy = new VersionedSaveService<LegacyProgress>(root, new JsonSerializer(), 2);
+            await legacy.SaveAsync(1, new LegacyProgress
+            {
+                Contracts =
+                {
+                    ["salt-causeway"] = new LegacyRecord
+                    {
+                        FirstCompletedUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                        BestTicks = { ["v1"] = 300 }
+                    }
+                }
+            }, "Rain Pass contracts");
+            var session = new ContractSession(root);
+            await session.OpenAsync();
+            Assert.That(session.WasMigrated, Is.True);
+            Assert.That(session.PendingScoreCount, Is.Zero);
+            Assert.That(session.TryAccept("salt-causeway", "v1") && session.TryBeginBattle() &&
+                session.TryRecordVictory(RunStatus.Victory, 350), Is.True);
+            Assert.That(session.PendingScoreCount, Is.Zero);
+            await session.SaveResultAsync();
+            await session.SaveResultAsync();
+
+            var reopened = new ContractSession(root);
+            await reopened.OpenAsync();
+            Assert.That(reopened.PendingScoreCount, Is.EqualTo(1));
+            Assert.That(reopened.NextPendingScore.SubmissionId, Is.EqualTo(session.NextPendingScore.SubmissionId));
+            Assert.That(reopened.NextPendingScore.ElapsedTicks, Is.EqualTo(350));
+            Assert.That(reopened.BestTicks("salt-causeway", "v1"), Is.EqualTo(300));
+        }
+
         private static async Task Finish(ContractSession session, string id, string version, int ticks)
         {
             Assert.That(session.TryAccept(id, version) && session.TryBeginBattle() &&
@@ -96,5 +130,15 @@ namespace Test.Application.Tests
         }
 
         private sealed class LegacyCompletion { public bool Completed { get; set; } }
+        private sealed class LegacyProgress
+        {
+            public Dictionary<string, LegacyRecord> Contracts { get; set; } = new Dictionary<string, LegacyRecord>();
+        }
+
+        private sealed class LegacyRecord
+        {
+            public DateTime FirstCompletedUtc { get; set; }
+            public Dictionary<string, int> BestTicks { get; set; } = new Dictionary<string, int>();
+        }
     }
 }

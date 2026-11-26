@@ -66,7 +66,8 @@ namespace Test.Client.Combat
         }
 
         internal void Render(ContractPhase phase, bool completed, bool cancelling, RunStatus? battleStatus,
-            bool saved, string error, string contractTitle = null, string pauseMessage = null, string pauseKey = "Esc")
+            bool saved, string error, string contractTitle = null, string pauseMessage = null, string pauseKey = "Esc",
+            string scoreStatus = null)
         {
             showingOffer = false;
             switch (phase)
@@ -94,7 +95,7 @@ namespace Test.Client.Combat
                     break;
                 case ContractPhase.Result:
                     Show(contractTitle == null ? "Cedar Sentinel defeated" : string.Format(translate("{0} complete"), translate(contractTitle)),
-                        saved ? "Completion saved." : error == null ? "Saving completion…" : "",
+                        saved ? scoreStatus ?? "Completion saved." : error == null ? "Saving completion…" : "",
                         saved ? ContractAction.Return : error != null ? ContractAction.RetrySave : ContractAction.None,
                         errorMessage: error);
                     break;

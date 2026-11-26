@@ -77,6 +77,19 @@ namespace Test.Client.Tests
                 yield return RainPassContractFrames.Check(canvas, "13-settings-zh", "简体中文", "Esc", "应用并保存", "关闭");
                 settings.Report("Settings could not be saved. Your changes are active. Retry to keep them after restart.", retry: true);
                 yield return RainPassContractFrames.Check(canvas, "14-settings-save-failure", "简体中文", "Esc", "重试保存", "关闭");
+
+                settings.gameObject.SetActive(false);
+                var scores = Object.Instantiate(prefab, root.transform, false).GetComponent<ContractPanel>();
+                scores.Bind(() => {}, () => {}, lookup: key => string.IsNullOrEmpty(key) ? key : localization.GetText(key), font: font);
+                scores.Render(ContractPhase.Result, true, false, RunStatus.Victory, true, null,
+                    contractTitle: "Ember Foundry", scoreStatus: "Saved locally. Score pending.");
+                foreach (var label in scores.GetComponentsInChildren<Text>())
+                    foreach (char character in label.text)
+                        Assert.That(font.HasCharacter(character), Is.True, label.text);
+                yield return RainPassContractFrames.Check(canvas, "15-score-pending", "返回营地");
+                scores.Render(ContractPhase.Result, true, false, RunStatus.Victory, true, null,
+                    contractTitle: "Ember Foundry", scoreStatus: "Score synced.");
+                yield return RainPassContractFrames.Check(canvas, "16-score-synced", "返回营地");
             }
             finally
             {

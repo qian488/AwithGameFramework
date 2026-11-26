@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Test.Client.Combat
 {
-    internal sealed class ContractDownloadEvidence : MonoBehaviour
+    internal sealed partial class ContractDownloadEvidence : MonoBehaviour
     {
         private RainPassCamp camp;
         private string output;
@@ -19,9 +19,10 @@ namespace Test.Client.Combat
         internal void Run(RainPassCamp value)
         {
             camp = value;
-            output = RainPassCamp.Argument("-contract-evidence");
+            string scoresOutput = RainPassCamp.Argument("-scores-evidence");
+            output = scoresOutput ?? RainPassCamp.Argument("-contract-evidence");
             UnityEngine.Application.runInBackground = true;
-            StartCoroutine(Report(Verify()));
+            StartCoroutine(Report(scoresOutput == null ? Verify() : VerifyScores()));
         }
 
         private IEnumerator Report(IEnumerator flow)
@@ -137,7 +138,7 @@ namespace Test.Client.Combat
             Mark("second-contract-completed");
         }
 
-        private IEnumerator Finish(CombatShowcase battle)
+        private IEnumerator Finish(CombatShowcase battle, IEnumerator verifyScore = null)
         {
             var driver = battle.gameObject.AddComponent<PassEvidence>();
             var material = battle.CommissionMaterial;
@@ -149,6 +150,7 @@ namespace Test.Client.Combat
             }
             Require(battle.Run.Status == RunStatus.Victory, $"Victory in {battle.ActiveMapId} at {battle.CurrentArea}");
             yield return Until(() => Has("Return to camp"), "save completion");
+            if (verifyScore != null) yield return verifyScore;
             Click("Return to camp");
             yield return Until(() => camp.Phase == ContractPhase.Camp, "release battle");
             Require(camp.LoadedBattleCount == 0 && !scene.isLoaded && material == null &&

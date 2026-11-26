@@ -72,6 +72,14 @@ node games/Test/verify-contract-downloads.mjs '<Player>/Test.exe' '<发布目录
 
 后台验证启动本机 HTTP，并用同一 Windows Player 执行在线更新与离线重开。旧档参数使用旧版杉林委托完成后生成的 `slot-1.save`，脚本会复制到隔离数据目录。人工检查时可把发布目录通过本机 HTTP 提供，用 `-contract-feed http://127.0.0.1:<端口>/` 启动营地 Player，查看两个委托卡片、下载提示以及盐风堤更新后的旗帜和招式节奏。可额外传入 `-contract-data <独立目录>` 隔离试玩数据。
 
+### 委托成绩同步
+
+下载委托通关后，游戏先把成绩和待提交记录一起写入本机委托存档。结算显示待同步时可以返回营地或退出，营地显示尚未确认的成绩数。服务端确认后，本机同时保存确认游标和更新后的待提交列表。成绩按委托 ID 和实际游玩的内容版本记录。
+
+为 Test.Server 配置 `ScorePort` 和 `ScoreDirectory`。客户端可在场景的 `RainPassCamp` Inspector 设置 `Contract Score Url`，或通过 `-contract-scores http://127.0.0.1:<端口>/` 启动 Player。首版使用本机单档案。历史完成记录可迁移，新通关产生可同步的独立提交。
+
+在下载委托的后台验证命令末尾追加 `--scores '<Test.Server.dll>'`，并选择新的证据目录。脚本在独立服务进程上验证正常确认、离线通关后重开、服务端提交后断线、重复提交和双方重启。手动体验从营地选择已安装的下载委托，观察结算文字和回营后的待同步数量。 [服务端配置](server/Test.Server/README.md#委托成绩)
+
 ## Rain Pass 近战演示
 
 ### 雨夜试炼

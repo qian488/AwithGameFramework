@@ -1,0 +1,24 @@
+{
+  "namespace": "Test.Application.Protocol",
+  "version": 1,
+  "endpoints": [
+    {
+      "name": "SubmitContractScore",
+      "method": "POST",
+      "path": "contract-scores/submissions",
+      "request": [
+        { "name": "SubmissionId", "wireName": "submissionId", "type": "string" },
+        { "name": "ContractId", "wireName": "contractId", "type": "string" },
+        { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
+        { "name": "ElapsedTicks", "wireName": "elapsedTicks", "type": "int" }
+      ],
+      "response": [
+        { "name": "SubmissionId", "wireName": "submissionId", "type": "string" },
+        { "name": "Sequence", "wireName": "sequence", "type": "long" },
+        { "name": "ContractId", "wireName": "contractId", "type": "string" },
+        { "name": "ContentVersion", "wireName": "contentVersion", "type": "string" },
+        { "name": "ElapsedTicks", "wireName": "elapsedTicks", "type": "int" }
+      ]
+    }
+  ]
+}

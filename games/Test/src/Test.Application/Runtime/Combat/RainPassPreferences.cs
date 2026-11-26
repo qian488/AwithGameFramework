@@ -72,6 +72,8 @@ namespace Test.Application.Combat
             ("Defeated", "挑战失败"), ("Retry from the current checkpoint or return to camp.", "从当前检查点重试或返回营地。"),
             ("Cedar Sentinel defeated", "已击败杉林守卫"), ("{0} complete", "已完成{0}"),
             ("Completion saved.", "完成记录已保存。"), ("Saving completion…", "正在保存完成记录…"),
+            ("Saved locally. Score pending.", "成绩已保存到本机，待同步。"),
+            ("Score synced.", "成绩已同步。"), (" Pending scores: {0}.", " 待同步成绩：{0} 条。"),
             ("Returning to camp", "正在返回营地"), ("Closing the battle…", "正在关闭战斗…"),
             ("Checking or downloading content…", "正在查询或下载内容…"),
             ("Local contract. Use F5 to refresh the published offers.", "本地委托。按 F5 刷新发布列表。"),

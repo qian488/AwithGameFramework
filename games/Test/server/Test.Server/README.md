@@ -1,6 +1,6 @@
 # Test.Server
 
-.NET 8 进程入口，组合本游戏的 Application 与 `GameHost`。提供 JSON 配置、标准输出 JSONL 日志、固定步长 Tick、Ctrl+C 关闭；Linux/macOS 另外处理 SIGTERM。这里没有监听端口、账号、数据库、战斗服或生产部署方案。
+.NET 8 进程入口，组合本游戏的 Application 与 `GameHost`。提供 JSON 配置、标准输出 JSONL 日志、固定步长 Tick、Ctrl+C 关闭；Linux/macOS 另外处理 SIGTERM。按配置开放本机探针或委托成绩服务。
 
 启动时读取输出目录的 `server.json`，`TickRate` 范围为 1–240，`DispatchBudgetPerTick` 范围为 1–65536。可用 `--config <路径>` 指定其他文件，路径相对当前工作目录；`--run-for-seconds <正数>` 在指定秒数后正常关闭，便于本地检查。未知参数和非法配置以非零退出码结束。
 
@@ -15,3 +15,18 @@ Tick 使用固定秒数并有限追赶；严重卡顿时丢弃积压并写警告
 ```powershell
 node games/Test/verify-online.mjs artifacts/bin/Test.Server/Debug/net8.0/Test.Server.dll artifacts/TestOnlineCheck
 ```
+
+## 委托成绩
+
+设置 `ScorePort` 启用回环监听，并为 `ScoreDirectory` 指定独立存档目录。配置可通过 `--config` 传给 Test.Server。
+
+```json
+{
+  "ScorePort": 17830,
+  "ScoreDirectory": "artifacts/TestScoreLedger"
+}
+```
+
+客户端经 `/contract-scores/session` 提交成绩，在 `/contract-scores/recovery?after=<序号>` 补查确认。HTTP POST `/contract-scores/submissions` 接受同一协议。每次写盘提交成绩及其确认序号。同一个提交 ID 和相同内容返回原确认，改用该 ID 提交不同成绩时返回冲突。重启后从原存档目录恢复账本。
+
+`DropFirstScoreConfirmation` 是后台验收专用的故障注入开关。它在首次 WebSocket 提交写盘后断开连接，并在该进程退出前暂停补查。正常运行时保持默认值 false。

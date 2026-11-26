@@ -10,6 +10,9 @@ namespace Test.Server
         public int TickRate { get; set; } = 30;
         public int DispatchBudgetPerTick { get; set; } = 64;
         public int OnlineProbePort { get; set; }
+        public int ScorePort { get; set; }
+        public string ScoreDirectory { get; set; }
+        public bool DropFirstScoreConfirmation { get; set; }
 
         internal static ServerOptions Load(string[] args, out double? runForSeconds)
         {
@@ -44,6 +47,9 @@ namespace Test.Server
                 throw new InvalidDataException("DispatchBudgetPerTick must be between 1 and 65536.");
             if (options.OnlineProbePort < 0 || options.OnlineProbePort > 65535)
                 throw new InvalidDataException("OnlineProbePort must be zero (disabled) or a valid TCP port.");
+            if (options.ScorePort < 0 || options.ScorePort > 65535 ||
+                options.ScorePort != 0 && (options.ScorePort == options.OnlineProbePort || string.IsNullOrWhiteSpace(options.ScoreDirectory)))
+                throw new InvalidDataException("ScorePort needs a distinct TCP port and a score directory.");
             return options;
         }
     }

@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 委托成绩同步（2026-11-25）
+
+- Unity **2022.3.16f1** 后台导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建通过。Test Application 测试 **25/25**，包含旧档迁移与待提交记录随通关保存。
+- 用同一份 Player 分三次启动，连接独立 Test.Server，实战完成盐风堤 v1、v2 和余烬铸造厂 v1。离线结果重开后仍待确认。服务端落盘后中断首次确认，重启后客户端从游标 2 补回确认，再次重启使用游标 3。重复提交得到原确认，复用 ID 提交不同成绩返回 409。报告及进程日志在 `artifacts/game-unity/Test/20261125-180706-0ffc4f48/ScoreSmoke`。
+- 同一 Player 的下载委托与玩家设置回归通过，报告位于同一验证目录的 `ContractRegression/report.json` 和 `SettingsRegression/report.json`。人工体验入口见 [委托成绩同步](../../games/Test/README.md#委托成绩同步)。
+
 ## Test 玩家设置（2026-11-25）
 
 - Unity **2022.3.16f1** 隔离导入、EditMode **16/16**、PlayMode **10/10** 和 Windows Release Player 构建通过。后台 Player 验证了暂停键冲突、保存失败及重试、模态窗口释放并抑制持键、播放中的音乐增益、音效独立音量、两个委托应用同一设置和离线重开。报告在 `artifacts/game-unity/Test/20261125-173900-0e13bd35/SettingsSmokeRetry/report.json`。下载委托回归也通过，报告在同一目录下的 `ContractRegression/report.json`。

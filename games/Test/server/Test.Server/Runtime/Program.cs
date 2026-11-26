@@ -51,6 +51,7 @@ namespace Test.Server
             {
                 host.AddModule(new TestModule());
                 if (options.OnlineProbePort != 0) host.AddModule(new OnlineProbeModule(options.OnlineProbePort));
+                if (options.ScorePort != 0) host.AddModule(new ContractScoresModule(options));
                 Task startup = host.StartAsync(startupCancellation.Token);
                 PumpUntil(startup, host, context, () =>
                 {
