@@ -32,8 +32,7 @@ $version = $editor.VersionInfo.ProductVersion.Split('_')[0]
 if ($Name) {
     $source = Join-Path $repository ('games/' + $Name)
     Copy-Item -LiteralPath (Join-Path $source 'game.json') -Destination $validation
-    & (Join-Path $PSScriptRoot 'game.ps1') build -Name $Name
-    & (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $validation -ClientDirectory Fixture -SourceGameRoot $source
+    & (Join-Path $PSScriptRoot 'game.ps1') sync -Name $Name -ClientGameRoot $validation -ClientDirectory Fixture
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'UnityFixtures/AddressablesSmoke.cs') -Destination (Join-Path $project 'Assets/Editor')
 $fixtureAssembly = @{

@@ -75,6 +75,8 @@ powershell -File tools/agent.ps1 context --task $task
 
 并行执行时，先把规格放进基线提交，再从该提交建立关联 worktree。主工作区用 `ticket-start` 建立任务，随后用 `ticket-prepare --board <id> --ticket <id> --worktree <目录>` 校验并复制任务清单和基线。将返回的任务路径交给执行者，在对应 worktree 收集上下文和运行检查。主工作区用 `ticket-collect --board <id> --ticket <id> --worktree <目录>` 重新核对清单、基线与执行证据。若另一张已交付工单修改了同一路径，报告会标出工单和文件。主工作区保存交接摘要，主 Agent 负责源码集成和集成回归。
 
+任务的临时 worktree 默认放在主工作区的 `artifacts/worktrees/<短名称>`。如已复现 Windows 路径长度限制，可使用较短的临时路径，验证后记录证据位置并归拢 worktree。
+
 跟踪器对照接受 GitHub CLI `gh issue list --state all --json url,title,state` 输出的本地快照。`board-tracker --board editor-adoption --snapshot '<仓库相对快照路径>'` 按 `externalRef` 对照工单，输出未关联、缺失、状态一致或需复核。以实际评审决定是否更新远端议题。命令只读取快照。
 
 ## 清单与上下文

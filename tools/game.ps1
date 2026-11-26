@@ -9,7 +9,9 @@ param(
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
     [ValidateRange(0, 86400)][double]$RunForSeconds = 0,
     [string]$ServerConfig,
-    [switch]$Check
+    [switch]$Check,
+    [string]$ClientGameRoot,
+    [string]$ClientDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,6 +43,29 @@ function Assert-NoReparsePoint([string]$Path) {
         }
         if ($current -eq $repositoryRoot) { break }
         $current = [IO.Path]::GetDirectoryName($current)
+    }
+}
+
+function Enter-WorkspaceBuildLock {
+    $path = Join-Path $repositoryRoot 'artifacts/workspace-build.lock'
+    Assert-NoReparsePoint $path
+    [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path)) | Out-Null
+    $elapsed = [Diagnostics.Stopwatch]::StartNew()
+    $logged = $false
+    while ($true) {
+        try {
+            return [IO.File]::Open($path, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+        }
+        catch [IO.IOException] {
+            if ($elapsed.Elapsed.TotalMinutes -ge 15) {
+                throw [TimeoutException]::new("Timed out waiting for the workspace build lock at $path.", $_.Exception)
+            }
+            if (!$logged) {
+                Write-Host "Waiting for another workspace build or client sync in $repositoryRoot"
+                $logged = $true
+            }
+            Start-Sleep -Milliseconds 200
+        }
     }
 }
 
@@ -193,8 +218,74 @@ function Assert-PortableProjects([string]$Project) {
     }
 }
 
+function Invoke-GameBuild($game) {
+    if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
+        Invoke-GameConfiguration $game $true
+    }
+    if ((Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/schema.json')) -or
+        (Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/protobuf/buf.yaml'))) {
+        Invoke-GameProtocol $game $true
+    }
+    $applicationPath = Join-Path $gameRoot $game.applicationProject
+    Assert-PortableProjects $applicationPath
+    $outputRoot = Join-Path $repositoryRoot "artifacts/games/$Name/$Configuration"
+    $stage = Join-Path $outputRoot ('portable-stage-' + [Guid]::NewGuid().ToString('N'))
+    $portable = Join-Path $outputRoot 'portable'
+    Assert-NoReparsePoint $outputRoot
+    [IO.Directory]::CreateDirectory($stage) | Out-Null
+    try {
+        Invoke-DotNet @('build', $applicationPath, '--configuration', $Configuration, '--output', $stage,
+            '--nologo', '-p:CopyLocalLockFileAssemblies=true')
+        Invoke-DotNet @('build', (Join-Path $gameRoot $game.serverProject), '--configuration', $Configuration, '--nologo')
+        if (@(Get-ChildItem -LiteralPath $stage -Directory -Force).Count -gt 0) {
+            throw 'Client distribution currently supports flat managed DLL/PDB dependencies. Native runtimes and satellite/resource directories need explicit engine integration.'
+        }
+        foreach ($file in @(Get-ChildItem -LiteralPath $stage -File)) {
+            if ($file.Extension -notin @('.dll', '.pdb')) {
+                if ($file.Name -notlike '*.deps.json' -and $file.Extension -ne '.xml') {
+                    throw "Unsupported client build content: $($file.Name). Keep engine content in the client or define an explicit content integration."
+                }
+                Remove-Item -LiteralPath $file.FullName -Force
+            }
+        }
+        foreach ($required in @("$Name.Application.dll", "$Name.Domain.dll", 'AwithGameFrame.Core.dll',
+            'AwithGameFrame.Data.dll', 'AwithGameFrame.Gameplay.dll')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $stage $required))) { throw "Missing dependency output: $required" }
+        }
+        $files = @(Get-ChildItem -LiteralPath $stage -File | Sort-Object Name | ForEach-Object {
+            [ordered]@{ path = $_.Name; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+        })
+        $identity = Get-BuildIdentity $repositoryRoot $gameRoot $game
+        $build = [ordered]@{ schemaVersion = 1; name = $Name; configuration = $Configuration
+            applicationProject = $game.applicationProject; sourceCommit = $identity.sourceCommit
+            sourceDirty = $identity.sourceDirty; sourceFingerprint = $identity.sourceFingerprint
+            targetFramework = $identity.targetFramework; engineVersion = $identity.engineVersion; files = $files }
+        Write-Utf8 (Join-Path $stage 'build.json') (($build | ConvertTo-Json -Depth 6) + "`n")
+        # A successful complete build replaces the old set, so removed dependencies cannot linger.
+        $backup = Join-Path $outputRoot ('portable-previous-' + [Guid]::NewGuid().ToString('N'))
+        if (Test-Path -LiteralPath $portable) {
+            Assert-NoReparsePoint $portable
+            [IO.Directory]::Move($portable, $backup)
+        }
+        try { [IO.Directory]::Move($stage, $portable) }
+        catch {
+            if ((Test-Path -LiteralPath $backup) -and -not (Test-Path -LiteralPath $portable)) {
+                [IO.Directory]::Move($backup, $portable)
+            }
+            throw
+        }
+        if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
+        Write-Host "Built framework/game DLLs and symbols: $portable"
+    } finally {
+        if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
+    }
+}
+
 Assert-Identifier $Name
 if ($Check -and $Command -notin @('config', 'protocol')) { throw '-Check applies to the config or protocol command.' }
+if (($ClientGameRoot -or $ClientDirectory) -and ($Command -ne 'sync' -or !$ClientGameRoot -or !$ClientDirectory)) {
+    throw 'Use -ClientGameRoot and -ClientDirectory together with sync for an isolated client.'
+}
 $gameRoot = Join-Path $repositoryRoot "games/$Name"
 Assert-NoReparsePoint $gameRoot
 
@@ -278,75 +369,22 @@ switch ($Command) {
     }
     'config' { Invoke-GameConfiguration (Read-Game) ([bool]$Check) }
     'protocol' { Invoke-GameProtocol (Read-Game) ([bool]$Check) }
-    'build' {
+    { $_ -in @('build', 'sync') } {
         $game = Read-Game
-        if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
-            Invoke-GameConfiguration $game $true
-        }
-        if ((Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/schema.json')) -or
-            (Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/protobuf/buf.yaml'))) {
-            Invoke-GameProtocol $game $true
-        }
-        $applicationPath = Join-Path $gameRoot $game.applicationProject
-        Assert-PortableProjects $applicationPath
-        $outputRoot = Join-Path $repositoryRoot "artifacts/games/$Name/$Configuration"
-        $stage = Join-Path $outputRoot ('portable-stage-' + [Guid]::NewGuid().ToString('N'))
-        $portable = Join-Path $outputRoot 'portable'
-        Assert-NoReparsePoint $outputRoot
-        [IO.Directory]::CreateDirectory($stage) | Out-Null
+        $buildLock = Enter-WorkspaceBuildLock
         try {
-            Invoke-DotNet @('build', $applicationPath, '--configuration', $Configuration, '--output', $stage,
-                '--nologo', '-p:CopyLocalLockFileAssemblies=true')
-            Invoke-DotNet @('build', (Join-Path $gameRoot $game.serverProject), '--configuration', $Configuration, '--nologo')
-            if (@(Get-ChildItem -LiteralPath $stage -Directory -Force).Count -gt 0) {
-                throw 'Client distribution currently supports flat managed DLL/PDB dependencies. Native runtimes and satellite/resource directories need explicit engine integration.'
-            }
-            foreach ($file in @(Get-ChildItem -LiteralPath $stage -File)) {
-                if ($file.Extension -notin @('.dll', '.pdb')) {
-                    if ($file.Name -notlike '*.deps.json' -and $file.Extension -ne '.xml') {
-                        throw "Unsupported client build content: $($file.Name). Keep engine content in the client or define an explicit content integration."
-                    }
-                    Remove-Item -LiteralPath $file.FullName -Force
+            Invoke-GameBuild $game
+            if ($Command -eq 'sync') {
+                $sync = @{ RepositoryRoot = $repositoryRoot; GameRoot = $gameRoot; Configuration = $Configuration }
+                if ($ClientGameRoot) {
+                    $sync.GameRoot = $ClientGameRoot
+                    $sync.ClientDirectory = $ClientDirectory
+                    $sync.SourceGameRoot = $gameRoot
                 }
+                & (Join-Path $PSScriptRoot 'workspace-client.ps1') @sync
             }
-            foreach ($required in @("$Name.Application.dll", "$Name.Domain.dll", 'AwithGameFrame.Core.dll',
-                'AwithGameFrame.Data.dll', 'AwithGameFrame.Gameplay.dll')) {
-                if (-not (Test-Path -LiteralPath (Join-Path $stage $required))) { throw "Missing dependency output: $required" }
-            }
-            $files = @(Get-ChildItem -LiteralPath $stage -File | Sort-Object Name | ForEach-Object {
-                [ordered]@{ path = $_.Name; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
-            })
-            $identity = Get-BuildIdentity $repositoryRoot $gameRoot $game
-            $build = [ordered]@{ schemaVersion = 1; name = $Name; configuration = $Configuration
-                applicationProject = $game.applicationProject; sourceCommit = $identity.sourceCommit
-                sourceDirty = $identity.sourceDirty; sourceFingerprint = $identity.sourceFingerprint
-                targetFramework = $identity.targetFramework; engineVersion = $identity.engineVersion; files = $files }
-            Write-Utf8 (Join-Path $stage 'build.json') (($build | ConvertTo-Json -Depth 6) + "`n")
-            # A successful complete build replaces the old set, so removed dependencies cannot linger.
-            $backup = Join-Path $outputRoot ('portable-previous-' + [Guid]::NewGuid().ToString('N'))
-            if (Test-Path -LiteralPath $portable) {
-                Assert-NoReparsePoint $portable
-                [IO.Directory]::Move($portable, $backup)
-            }
-            try { [IO.Directory]::Move($stage, $portable) }
-            catch {
-                if ((Test-Path -LiteralPath $backup) -and -not (Test-Path -LiteralPath $portable)) {
-                    [IO.Directory]::Move($backup, $portable)
-                }
-                throw
-            }
-            if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
-            Write-Host "Built framework/game DLLs and symbols: $portable"
-        } finally {
-            if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
         }
-    }
-    'sync' {
-        $game = Read-Game
-        Write-Host "Building $Name before client sync so Unity receives current external assemblies."
-        & $PSCommandPath build -Name $Name -Configuration $Configuration
-        if ($LASTEXITCODE -ne 0) { throw "Game build failed before sync: $Name" }
-        & (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repositoryRoot -GameRoot $gameRoot -Configuration $Configuration
+        finally { $buildLock.Dispose() }
     }
     'run-server' {
         $game = Read-Game

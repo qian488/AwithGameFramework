@@ -49,6 +49,8 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 
 `verify-game-unity.ps1` 在 `<Game>-Unity-Verification` 隔离工作区构建和同步 DLL，使用 Unity 后台导入并编译客户端。加 `-RunTests` 才运行 EditMode 和 PlayMode，加 `-BuildScene` 才构建 Player。默认清理验证副本，保留 `summary.json`、日志和本次生成的报告与 Player。手动打开验证副本时使用 `-KeepProject`。游戏可另设后台 Player 冒烟入口。 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)
 
+同一仓库可以同时启动多个游戏 Unity 验证。外部构建和程序集同步按仓库检出目录依次运行，复制完成后，各任务在自己的工程副本中运行 Unity。每次验收保留 `portable-build.json`，可核对客户端实际接收的源码指纹和 DLL/PDB 哈希。
+
 追加 `-VisualSpec '<visual-cases.json>'` 可执行[画面自动验收](unity-visual-verification.md)。用例支持后台离屏截图和已有 PNG 检查，并保存实际画面、差异图与逐项报告。
 
 `verify-unity.ps1` 可用 `-PlayerTarget Android` 或 `WebGL` 构建示例。WebGL 使用 IL2CPP。验证具体游戏时，为 `verify-game-unity.ps1` 添加 `-BuildScene <Assets/...unity> -PlayerTarget WebGL`，在 `summary.json` 中找到 Player 路径。

@@ -44,8 +44,7 @@ $version = (Get-Item -LiteralPath $EditorPath).VersionInfo.ProductVersion.Split(
 if ($Name) {
     $source = Join-Path $repository ('games/' + $Name)
     Copy-Item -LiteralPath (Join-Path $source 'game.json') -Destination $validation
-    & (Join-Path $PSScriptRoot 'game.ps1') build -Name $Name
-    & (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $validation -ClientDirectory Fixture -SourceGameRoot $source
+    & (Join-Path $PSScriptRoot 'game.ps1') sync -Name $Name -ClientGameRoot $validation -ClientDirectory Fixture
 }
 
 function Invoke-HiddenProcess([string]$Executable, [string[]]$Arguments, [string]$Log, [int]$Timeout) {

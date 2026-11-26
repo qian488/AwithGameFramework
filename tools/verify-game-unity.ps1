@@ -110,9 +110,9 @@ $identity = [ordered]@{
 }
 $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identityPath -Encoding UTF8
 
-& (Join-Path $PSScriptRoot 'game.ps1') build -Name $Name
-if ($LASTEXITCODE -ne 0) { throw "Game build failed: $Name" }
-& (Join-Path $PSScriptRoot 'workspace-client.ps1') -RepositoryRoot $repository -GameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory -SourceGameRoot $root
+& (Join-Path $PSScriptRoot 'game.ps1') sync -Name $Name -ClientGameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory
+$portableBuildManifest = Join-Path $evidence 'portable-build.json'
+Copy-Item -LiteralPath (Join-Path $isolated 'Packages/com.awithgameframe.workspace/build.json') -Destination $portableBuildManifest
 
 $probe = Join-Path $isolated 'Assets/AwithGameWorkspaceProbe/Editor'
 [IO.Directory]::CreateDirectory($probe) | Out-Null
@@ -285,7 +285,7 @@ try {
     }
     $summary = [ordered]@{
         game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
-        mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log')
+        mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log'); portableBuildManifest = $portableBuildManifest
         testsRun = [bool]$RunTests; tests = $testReports
         buildScene = $BuildScene; buildScenes = @($buildScenes | Where-Object { $_ }); playerTarget = $(if ($BuildScene) { $PlayerTarget })
         buildVerified = [bool]$BuildScene; releasePlayer = [bool]$ReleasePlayer

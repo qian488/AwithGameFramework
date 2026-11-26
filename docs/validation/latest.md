@@ -1,5 +1,11 @@
 # 最近验证
 
+## Test 并发后台验证（2026-11-26）
+
+- 修复前，两条并发 `game.ps1 build -Name Test` 命令在共享 ConfigGen 中间文件触发 `CS2012`。修复后复跑同一组命令，两条均退出 0。日志位于 `artifacts/game-concurrency-before` 和 `artifacts/game-concurrency-after`。
+- 同时启动 Unity **2022.3.16f1** 的 Test Windows64 与 WebGL Release 验证。日志记录 WebGL 等待共享构建，两侧随后分别在隔离工程构建成功。两份产物清单的源码指纹一致，各自工程内复制的 **12 个** DLL/PDB 均与清单匹配。证据见 `artifacts/game-concurrency-after/portable-proof.json`。
+- Windows EditMode **16/16**、PlayMode **11/11** 和无图形盐风堤远征通过，报告位于 `artifacts/game-unity/Test/20261126-155148-4a967779`。无头 Chromium 通过 WebGL 的远征菜单、杉林训练、暂停、回营和再次进场，报告位于 `artifacts/game-unity/Test/20261126-155148-20012c65/ExpeditionBrowser`。标准验证通过。
+
 ## Test 远征配置校验与阶段编排（2026-11-26）
 
 - Test Application **46/46**、Domain **48/48**。回归覆盖零箭袋容量、未知装备或路线、地图不匹配时的字段诊断，以及按原内容指纹续玩、两种补给、撤退后保留休整点和存档失败重试。标准验证通过框架 **577/577**、模板 **13/13**、AgentKit 契约和 Headless 示例。
