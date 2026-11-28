@@ -50,6 +50,9 @@ function updateButtons() {
 function renderTools() {
     const scope = scopes.find(item => item.id === scopeSelect.value);
     scopePath.textContent = scope.path;
+    const prototypes = document.querySelector("#prototypes");
+    prototypes.hidden = !scope.id.startsWith("games/");
+    prototypes.href = "/prototypes.html?game=" + encodeURIComponent(scope.name);
     toolList.replaceChildren();
 
     const categories = new Map();

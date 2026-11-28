@@ -78,7 +78,7 @@ Unity 编辑器自动化还提供持久化操作审计和 `performance.inspect` 
 
 ## 长期方向与待定事项
 
-后续可在 Web 工具中增加独立的 AI 原型页面。先围绕一个具体 UI 原型定义可编辑、可版本化的资产，再通过 Unity uGUI 导出验证布局、资源绑定与重复生成。其他 UI 系统按各自需要实现导出。
+DevPanel 提供游戏范围内的 UI 原型编辑入口。Test 擂台赛大厅使用版本化设计文件，通过 Unity uGUI 导入验证布局、资源绑定和重复生成。 [试点与复跑入口](../games/Test/design/tournament-ui-pipeline/verification.md)
 
 H5、UE5 和更大规模游戏保留后续演进方向，需要独立的适配、构建与运行验证。框架升级与游戏独立演进的机制尚未确定，后续按维护者真实项目的同步需求决定。
 

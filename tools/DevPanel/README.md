@@ -20,3 +20,7 @@ dotnet run --project tools/DevPanel/AwithGameFrame.DevPanel.csproj
 同一控制台一次运行一项操作。右侧显示实际命令、实时日志、退出码和耗时。刷新可恢复当前或最近一次操作，完整日志写入 `artifacts/DevPanel/`，关闭进程后仍可从磁盘读取。
 
 工具列表和参数映射位于 [PanelCatalog.cs](PanelCatalog.cs)，构建、生成和验证由现有脚本或 .NET CLI 执行。脚本的参数和输出位置见 [开发工具](../README.md)。
+
+选择游戏后点击「UI 原型」。控制台读取该游戏 `ui-prototypes` 下成对的 `<id>.json` 和 `<id>.profile.json`。可编辑控件属性或 JSON，切换状态样本预览，再保存源文件。另一编辑者先保存时，页面会提示刷新并合并修改。
+
+启动控制台前将 `AWITH_UNITY_EDITOR` 设为对应版本的 Unity 可执行文件。「Unity 预检」会后台导入隔离项目，在页面显示节点、素材和失败原因。 [Test 试点与命令](../../games/Test/design/tournament-ui-pipeline/verification.md)

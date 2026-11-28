@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UI 原型 · AwithGameFrame</title>
+    <link rel="stylesheet" href="/panel.css">
+    <link rel="stylesheet" href="/prototypes.css">
+    <script src="/prototypes.js" type="module"></script>
+</head>
+<body>
+<header class="topbar"><div class="frame brand"><a href="/">AwithGameFrame</a></div></header>
+<main class="frame">
+    <div class="page-heading">
+        <h1>UI 原型</h1>
+        <label>工作区 <select id="game"></select></label>
+        <label>页面 <select id="prototype"></select></label>
+    </div>
+    <p id="notice" role="status"></p>
+    <div id="workspace" class="prototype-layout" hidden>
+        <section aria-label="预览">
+            <div class="prototype-bar">
+                <label>状态 <select id="fixture"></select></label>
+                <button id="save">保存设计</button>
+                <button id="preflight" class="secondary">Unity 预检</button>
+            </div>
+            <div id="preview"><div id="artboard"></div></div>
+            <pre id="unity-report" hidden></pre>
+        </section>
+        <aside aria-label="设计属性">
+            <label>控件 <select id="nodes"></select></label>
+            <div id="properties"></div>
+            <details>
+                <summary>编辑 JSON</summary>
+                <textarea id="source" rows="12" aria-label="原型 JSON"></textarea>
+                <button id="apply-source" class="secondary">应用到预览</button>
+            </details>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

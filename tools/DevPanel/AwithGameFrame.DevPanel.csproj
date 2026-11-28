@@ -5,4 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../adapters/unity/Editor/UiPrototype/UiPrototypeDocument.cs" Link="UiPrototypeDocument.cs" />
+  </ItemGroup>
 </Project>

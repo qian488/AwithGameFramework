@@ -1,0 +1,309 @@
+{
+  "schemaVersion": 1,
+  "title": "Dual-Mode Tournament",
+  "width": 720,
+  "height": 550,
+  "background": "#10232F",
+  "nodes": [
+    {
+      "id": "title",
+      "kind": "text",
+      "x": 32,
+      "y": 23,
+      "width": 600,
+      "height": 50,
+      "text": "Dual-Mode Tournament",
+      "fontSize": 34
+    },
+    {
+      "id": "accent",
+      "kind": "image",
+      "x": 32,
+      "y": 82,
+      "width": 656,
+      "height": 2,
+      "color": "#52999A"
+    },
+    {
+      "id": "status",
+      "kind": "text",
+      "x": 32,
+      "y": 94,
+      "width": 656,
+      "height": 42,
+      "text": "Join a tournament",
+      "binding": "status",
+      "color": "#BCE1DE",
+      "fontSize": 21
+    },
+    {
+      "id": "entry",
+      "kind": "panel",
+      "x": 32,
+      "y": 153,
+      "width": 656,
+      "height": 231,
+      "pages": [
+        "join"
+      ]
+    },
+    {
+      "id": "server-label",
+      "kind": "text",
+      "x": 0,
+      "y": 0,
+      "width": 153,
+      "height": 48,
+      "text": "Server",
+      "parent": "entry",
+      "fontSize": 19,
+      "color": "#BCD0D7"
+    },
+    {
+      "id": "server",
+      "kind": "input",
+      "x": 170,
+      "y": 0,
+      "width": 486,
+      "height": 48,
+      "parent": "entry",
+      "text": "Server",
+      "binding": "server",
+      "color": "#263B48",
+      "fontSize": 20,
+      "padding": 12
+    },
+    {
+      "id": "room-label",
+      "kind": "text",
+      "x": 0,
+      "y": 74,
+      "width": 153,
+      "height": 48,
+      "text": "Room code",
+      "parent": "entry",
+      "fontSize": 19,
+      "color": "#BCD0D7"
+    },
+    {
+      "id": "room",
+      "kind": "input",
+      "x": 170,
+      "y": 74,
+      "width": 486,
+      "height": 48,
+      "parent": "entry",
+      "text": "Room code",
+      "binding": "room",
+      "color": "#263B48",
+      "fontSize": 20,
+      "padding": 12
+    },
+    {
+      "id": "player-label",
+      "kind": "text",
+      "x": 0,
+      "y": 148,
+      "width": 153,
+      "height": 48,
+      "text": "Player name",
+      "parent": "entry",
+      "fontSize": 19,
+      "color": "#BCD0D7"
+    },
+    {
+      "id": "player",
+      "kind": "input",
+      "x": 170,
+      "y": 148,
+      "width": 486,
+      "height": 48,
+      "parent": "entry",
+      "text": "Player name",
+      "binding": "player",
+      "color": "#263B48",
+      "fontSize": 20,
+      "padding": 12
+    },
+    {
+      "id": "join",
+      "kind": "button",
+      "x": 440,
+      "y": 463,
+      "width": 248,
+      "height": 51,
+      "binding": "join",
+      "text": "Join room",
+      "pages": [
+        "join"
+      ],
+      "color": "#275966",
+      "fontSize": 18,
+      "padding": 8
+    },
+    {
+      "id": "score",
+      "kind": "text",
+      "x": 32,
+      "y": 147,
+      "width": 620,
+      "height": 57,
+      "text": "Score   1 – 0",
+      "binding": "score",
+      "pages": [
+        "lobby",
+        "reconnect",
+        "results"
+      ],
+      "fontSize": 39
+    },
+    {
+      "id": "next",
+      "kind": "text",
+      "x": 32,
+      "y": 219,
+      "width": 628,
+      "height": 47,
+      "text": "Round 2 · BBads",
+      "binding": "next",
+      "pages": [
+        "lobby",
+        "reconnect"
+      ],
+      "fontSize": 23
+    },
+    {
+      "id": "first",
+      "kind": "text",
+      "x": 32,
+      "y": 284,
+      "width": 656,
+      "height": 47,
+      "text": "Player 1   Ready",
+      "binding": "first",
+      "pages": [
+        "lobby",
+        "reconnect"
+      ],
+      "fontSize": 20
+    },
+    {
+      "id": "second",
+      "kind": "text",
+      "x": 32,
+      "y": 343,
+      "width": 656,
+      "height": 47,
+      "text": "Player 2   Preparing",
+      "binding": "second",
+      "pages": [
+        "lobby",
+        "reconnect"
+      ],
+      "fontSize": 20
+    },
+    {
+      "id": "ready",
+      "kind": "button",
+      "x": 411,
+      "y": 463,
+      "width": 277,
+      "height": 51,
+      "binding": "ready",
+      "text": "Ready for next round",
+      "pages": [
+        "lobby",
+        "reconnect"
+      ],
+      "color": "#275966",
+      "fontSize": 18,
+      "padding": 8
+    },
+    {
+      "id": "retry",
+      "kind": "button",
+      "x": 411,
+      "y": 463,
+      "width": 277,
+      "height": 51,
+      "binding": "retry",
+      "text": "Reconnect",
+      "pages": [
+        "reconnect"
+      ],
+      "color": "#275966",
+      "fontSize": 18,
+      "padding": 8
+    },
+    {
+      "id": "back",
+      "kind": "button",
+      "x": 32,
+      "y": 463,
+      "width": 218,
+      "height": 51,
+      "binding": "back",
+      "text": "Return to selection",
+      "color": "#364552",
+      "fontSize": 18,
+      "padding": 8
+    },
+    {
+      "id": "details",
+      "kind": "button",
+      "x": 374,
+      "y": 403,
+      "width": 314,
+      "height": 43,
+      "binding": "details",
+      "text": "Show BBads backpacks",
+      "pages": [
+        "results"
+      ],
+      "color": "#384C58",
+      "fontSize": 18,
+      "padding": 8
+    },
+    {
+      "id": "backpack-icon",
+      "kind": "image",
+      "x": 328,
+      "y": 408,
+      "width": 35,
+      "height": 35,
+      "asset": "fish",
+      "binding": "backpack-icon",
+      "pages": [
+        "results"
+      ]
+    },
+    {
+      "id": "report",
+      "kind": "scroll",
+      "x": 32,
+      "y": 221,
+      "width": 656,
+      "height": 174,
+      "binding": "report",
+      "color": "#182731",
+      "padding": 8,
+      "pages": [
+        "results"
+      ]
+    },
+    {
+      "id": "rounds",
+      "kind": "list",
+      "x": 7,
+      "y": 4,
+      "width": 601,
+      "height": 160,
+      "parent": "report",
+      "binding": "rounds",
+      "text": "Round results",
+      "spacing": 6,
+      "fontSize": 20,
+      "padding": 8
+    }
+  ]
+}

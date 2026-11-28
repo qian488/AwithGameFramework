@@ -80,6 +80,13 @@ namespace Test.Client.Combat
             serverUrl = server;
             roomId = room;
             playerId = player;
+            if (IsTournament)
+            {
+                UpdateTournamentLobby();
+                tournamentLobby.FillForm(server, room, player);
+                tournamentLobby.Join.onClick.Invoke();
+                return tournamentLobby.Joining;
+            }
             return ConnectAsync();
         }
 
@@ -118,6 +125,7 @@ namespace Test.Client.Combat
 
         private void OnDisable()
         {
+            if (tournamentLobby != null) tournamentLobby.Hide();
             _ = DisconnectAsync(leave: true);
             ResetMatchView();
             SetCursor(false);
@@ -262,7 +270,8 @@ namespace Test.Client.Combat
                     ResetInput();
                 }
             }
-            bool inCombat = InCombat;
+            UpdateTournamentLobby();
+            bool inCombat = InCombat && !TournamentLobbyVisible;
             if (owner != null) SetCursor(inCombat);
             if (arena != null && GameplayMode == RainPassMode)
             {
@@ -549,6 +558,7 @@ namespace Test.Client.Combat
 
         private void OnGUI()
         {
+            if (TournamentLobbyVisible) return;
             var matrix = GUI.matrix;
             float scale = Mathf.Min(1.4f, Screen.width / 730f, Screen.height / 690f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
@@ -589,8 +599,7 @@ namespace Test.Client.Combat
                         if (roomState == Running && !snapshot.PeerConnected) GUILayout.Label("Opponent reconnecting");
                         if (GameplayMode == BBadsMode) DrawBBadsPhase();
                     }
-                    if (IsTournament && tournament != null && tournament.Phase != Running) DrawTournament();
-                    else if (!IsTournament && IsFinished)
+                    if (!IsTournament && IsFinished)
                     {
                         GUILayout.Label(winner < 0 ? "Match ended" : winner == joined?.PlayerSlot ? "Victory" : "Defeat");
                         if (GUILayout.Button("Play again")) _ = PlayAgainAsync();

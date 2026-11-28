@@ -6,7 +6,8 @@
                         "games/Test/src",
         "games/Test/server",
         "games/Test/configuration",
-        "games/Test/protocol"
+        "games/Test/protocol",
+        "games/Test/ui-prototypes"
                     ],
     "entryPoints":  [
                         "games/Test/game.json",
@@ -15,7 +16,8 @@
         "games/Test/protocol/README.md",
         "games/Test/server/Test.Server/README.md",
         "games/Test/design/pvp-framework-validation/integration.md",
-        "games/Test/design/dual-mode-tournament/verification.md"
+        "games/Test/design/dual-mode-tournament/verification.md",
+        "games/Test/design/tournament-ui-pipeline/verification.md"
                     ],
     "readme":  "games/Test/README.md",
     "dependencies":  [

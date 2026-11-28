@@ -418,6 +418,10 @@ namespace Test.Application.Protocol
         public int ReadyMask { get; set; }
         [DataMember(Name = "connectedMask", IsRequired = true)]
         public int ConnectedMask { get; set; }
+        [DataMember(Name = "firstPlayerId", IsRequired = false)]
+        public string FirstPlayerId { get; set; }
+        [DataMember(Name = "secondPlayerId", IsRequired = false)]
+        public string SecondPlayerId { get; set; }
         [DataMember(Name = "winner", IsRequired = true)]
         public int Winner { get; set; }
         [DataMember(Name = "endReason", IsRequired = false)]

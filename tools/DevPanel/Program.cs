@@ -34,6 +34,7 @@ app.Use(async (context, next) =>
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapGet("/api/scopes", () => catalog.Read());
+app.MapPrototypes(catalog);
 app.MapGet("/api/run", (PanelRunner runner) => new { run = runner.Latest() });
 app.MapPost("/api/run", (HttpRequest request, RunRequest input, PanelRunner runner) =>
 {

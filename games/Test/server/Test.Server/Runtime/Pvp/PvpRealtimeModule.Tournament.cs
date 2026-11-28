@@ -245,7 +245,10 @@ namespace Test.Server.Pvp
             int connected = (room.Players[0]?.Peer != null ? 1 : 0) | (room.Players[1]?.Peer != null ? 2 : 0);
             // Until the save succeeds, clients keep the last confirmed stage and score.
             bool running = room.Match != null && room.State == PvpTournament.Running;
-            peer.Send("tournamentState", room.Tournament.Describe(room.Id, room.ReadyMask, connected, running, room.StorageFailed));
+            var state = room.Tournament.Describe(room.Id, room.ReadyMask, connected, running, room.StorageFailed);
+            state.FirstPlayerId = room.Players[0]?.Id;
+            state.SecondPlayerId = room.Players[1]?.Id;
+            peer.Send("tournamentState", state);
         }
 
         private void PersistTournament(Room room, PvpTournament next, Action committed, Action failed = null)

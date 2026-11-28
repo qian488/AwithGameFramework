@@ -1,5 +1,5 @@
 {
   "name": "Test.Client.Combat.Editor",
-  "references": ["Test.Client", "AwithGameFrame.Unity"],
+  "references": ["Test.Client", "AwithGameFrame.Unity", "AwithGameFrame.Extensions", "UnityEngine.UI"],
   "includePlatforms": ["Editor"]
 }

@@ -2,6 +2,8 @@
 
 `Editor/Automation` 提供项目内的场景和资产操作。使用现代包或通过游戏工作区同步生成的程序集接入，命令与范围见 [Unity 编辑器自动化](../../docs/reference/unity-editor-automation.md)。
 
+`Editor/UiPrototype` 将项目声明的布局、资源键和控件绑定编译为 uGUI Prefab。运行时的 `UnityPrototypeView` 提供对应的原生控件引用，游戏通过自己的 MonoBehaviour 接线。 [预检和导入](../../games/Test/design/tournament-ui-pipeline/verification.md)
+
 Unity 需要的代码集中在本包，通用能力来自 src 下的 Core、Data、Gameplay。
 
 | 目录 | 职责 / 程序集 |

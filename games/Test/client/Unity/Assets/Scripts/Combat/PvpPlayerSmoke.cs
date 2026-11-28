@@ -70,6 +70,8 @@ namespace Test.Client.Combat
 
                 client = showcase.ActivePvp;
                 await client.StartSmokeAsync(this, report.server, report.roomId, report.playerId, report.mode);
+                if (report.mode == PvpTournamentRules.Tournament)
+                    report.nativeJoin = client.TournamentLobby != null && client.TournamentLobby.Joining.IsCompletedSuccessfully;
                 if (report.slot < 0) throw new InvalidOperationException(client.ConnectionError ?? "PvP join failed.");
 
                 bool tournament = report.mode == PvpTournamentRules.Tournament;
@@ -140,7 +142,14 @@ namespace Test.Client.Combat
             if (state.Phase != PvpTournament.AwaitingReady || state.ConnectedMask != 3 ||
                 state.TournamentVersion == readyVersion) return;
             readyVersion = state.TournamentVersion;
-            _ = client.StartTournamentReadyAsync();
+            var ready = client.TournamentLobby?.Ready;
+            if (ready == null || !ready.isActiveAndEnabled || !ready.IsInteractable())
+            {
+                RecordFailure("The native lobby did not expose the ready action.");
+                return;
+            }
+            ready.onClick.Invoke();
+            report.nativeReady++;
         }
 
         internal void RecordSnapshot(PvpSnapshotMessage snapshot, PlayerSnapshot[] players, int localSimulationTick)
@@ -251,6 +260,11 @@ namespace Test.Client.Combat
         private void ValidateTournament()
         {
             var state = finishedTournament;
+            var lobby = client.TournamentLobby;
+            if (!report.nativeJoin || report.nativeReady < state.Rounds.Length || lobby.Page != "results" ||
+                !lobby.Details.isActiveAndEnabled)
+                throw new InvalidOperationException("The native lobby did not present the completed tournament.");
+            lobby.Details.onClick.Invoke();
             int expectedSecond = splitSeries ? 1 : 0;
             if (state.EndReason != "Completed" || state.Winner != 0 || state.FirstScore != 2 ||
                 state.SecondScore != expectedSecond || state.Rounds.Length != 2 + expectedSecond)
@@ -327,6 +341,8 @@ namespace Test.Client.Combat
             public bool passed;
             public string error, mode, server, roomId, playerId, matchId, unityVersion, endReason;
             public bool batchMode;
+            public bool nativeJoin;
+            public int nativeReady;
             public int slot = -1, winner = -1, inputsSent;
             public string tournamentId;
             public int firstScore, secondScore;

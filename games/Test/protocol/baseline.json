@@ -56,6 +56,8 @@
         { "name": "SecondScore", "wireName": "secondScore", "type": "int" },
         { "name": "ReadyMask", "wireName": "readyMask", "type": "int" },
         { "name": "ConnectedMask", "wireName": "connectedMask", "type": "int" },
+        { "name": "FirstPlayerId", "wireName": "firstPlayerId", "type": "string", "required": false },
+        { "name": "SecondPlayerId", "wireName": "secondPlayerId", "type": "string", "required": false },
         { "name": "Winner", "wireName": "winner", "type": "int" },
         { "name": "EndReason", "wireName": "endReason", "type": "string", "required": false },
         { "name": "Rounds", "wireName": "rounds", "type": "PvpTournamentRoundSummary[]" }

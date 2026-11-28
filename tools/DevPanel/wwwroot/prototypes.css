@@ -1,0 +1,21 @@
+.brand a, #prototypes { color: inherit; }
+.prototype-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 20px; }
+.prototype-layout[hidden], [hidden] { display: none; }
+.prototype-layout aside, #preview, #unity-report { padding: 16px; border: 1px solid #78888a66; border-radius: 10px; }
+.prototype-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+#preview { background: #172730; display: grid; place-items: center; overflow: hidden; min-height: 290px; }
+#artboard { position: relative; overflow: hidden; flex: none; transform-origin: center; }
+.prototype-node { position: absolute; overflow: hidden; display: flex; align-items: center; white-space: pre-wrap; color: white; }
+.prototype-button, .prototype-input { border-radius: 4px; }
+.prototype-button { justify-content: center; }
+.prototype-image img { width: 100%; height: 100%; object-fit: contain; }
+.prototype-scroll { display: block; overflow: auto; }
+.prototype-list { align-items: flex-start; height: auto !important; }
+.prototype-selected { outline: 2px solid #ecb962; outline-offset: -2px; }
+#properties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+#properties label { display: grid; gap: 4px; min-width: 0; }
+#properties input, #properties select, #source { box-sizing: border-box; width: 100%; min-width: 0; }
+#source { margin: 10px 0; font-family: monospace; }
+#notice { min-height: 24px; white-space: pre-line; }
+#unity-report { max-height: 220px; overflow: auto; white-space: pre-wrap; }
+@media (max-width: 800px) { .prototype-layout { grid-template-columns: 1fr; } }

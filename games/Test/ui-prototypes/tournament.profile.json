@@ -1,0 +1,175 @@
+{
+  "title": "擂台赛大厅",
+  "output": "Assets/Resources/Tournament/GeneratedView.prefab",
+  "font": "Assets/Resources/RainPassContract/RainPassUI.ttf",
+  "assets": [
+    {
+      "key": "fish",
+      "path": "Assets/BBads/Resources/BBads/Items/Fish1.png"
+    },
+    {
+      "key": "fish-slot",
+      "path": "Assets/BBads/Resources/BBads/Items/Bag_Slot_Fish.png"
+    }
+  ],
+  "bindings": [
+    {
+      "key": "status",
+      "kind": "text"
+    },
+    {
+      "key": "server",
+      "kind": "input"
+    },
+    {
+      "key": "room",
+      "kind": "input"
+    },
+    {
+      "key": "player",
+      "kind": "input"
+    },
+    {
+      "key": "join",
+      "kind": "button"
+    },
+    {
+      "key": "score",
+      "kind": "text"
+    },
+    {
+      "key": "next",
+      "kind": "text"
+    },
+    {
+      "key": "first",
+      "kind": "text"
+    },
+    {
+      "key": "second",
+      "kind": "text"
+    },
+    {
+      "key": "ready",
+      "kind": "button"
+    },
+    {
+      "key": "retry",
+      "kind": "button"
+    },
+    {
+      "key": "back",
+      "kind": "button"
+    },
+    {
+      "key": "details",
+      "kind": "button"
+    },
+    {
+      "key": "backpack-icon",
+      "kind": "image"
+    },
+    {
+      "key": "report",
+      "kind": "scroll"
+    },
+    {
+      "key": "rounds",
+      "kind": "list"
+    }
+  ],
+  "fixtures": [
+    {
+      "page": "join",
+      "title": "入场",
+      "values": [
+        {
+          "key": "status",
+          "text": "Join a tournament"
+        },
+        {
+          "key": "server",
+          "text": "http://127.0.0.1:17840"
+        },
+        {
+          "key": "room",
+          "text": "evening-match"
+        },
+        {
+          "key": "player",
+          "text": "Wayfarer"
+        }
+      ]
+    },
+    {
+      "page": "lobby",
+      "title": "局间就绪",
+      "values": [
+        {
+          "key": "status",
+          "text": "Round 1 confirmed"
+        },
+        {
+          "key": "score",
+          "text": "Score   1 – 0"
+        },
+        {
+          "key": "next",
+          "text": "Round 2 · BBads"
+        },
+        {
+          "key": "first",
+          "text": "Player 1   Ready"
+        },
+        {
+          "key": "second",
+          "text": "Player 2   Preparing"
+        }
+      ]
+    },
+    {
+      "page": "reconnect",
+      "title": "重连",
+      "values": [
+        {
+          "key": "status",
+          "text": "Opponent reconnecting…"
+        },
+        {
+          "key": "score",
+          "text": "Score   1 – 0"
+        },
+        {
+          "key": "next",
+          "text": "Round 2 · BBads"
+        },
+        {
+          "key": "first",
+          "text": "Player 1   Ready"
+        },
+        {
+          "key": "second",
+          "text": "Player 2   Waiting to connect"
+        }
+      ]
+    },
+    {
+      "page": "results",
+      "title": "赛后战报",
+      "values": [
+        {
+          "key": "status",
+          "text": "Victory"
+        },
+        {
+          "key": "score",
+          "text": "Score   2 – 1"
+        },
+        {
+          "key": "rounds",
+          "text": "1. Rain Pass   Player 1 won\n2. BBads   Player 2 won\n3. Rain Pass   Player 1 won"
+        }
+      ]
+    }
+  ]
+}

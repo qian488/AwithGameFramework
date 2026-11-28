@@ -4,7 +4,6 @@ using Test.Application.Combat.Pvp;
 using Test.Application.Protocol;
 using Test.Domain.Combat.Pvp;
 using UnityEngine;
-using PlayerSnapshot = Test.Application.Protocol.PvpPlayerSnapshot;
 
 namespace Test.Client.Combat
 {
@@ -12,7 +11,9 @@ namespace Test.Client.Combat
     {
         private PvpTournamentState tournament;
         private Task readyRequest;
-        private Vector2 reportScroll;
+        private TournamentLobbyView tournamentLobby;
+        internal TournamentLobbyView TournamentLobby => tournamentLobby;
+        private bool TournamentLobbyVisible => tournamentLobby != null && tournamentLobby.IsOpen;
 
         private bool IsTournament => mode == PvpTournamentRules.Tournament;
         private string GameplayMode => IsTournament ? tournament?.Mode : mode;
@@ -45,62 +46,70 @@ namespace Test.Client.Combat
         {
             var previous = tournament;
             tournament = state;
-            if (previous == null || previous.MatchId != state.MatchId || previous.Phase != state.Phase)
-            {
-                ResetRoundView();
-                reportScroll = Vector2.zero;
-            }
+            if (previous == null || previous.MatchId != state.MatchId || previous.Phase != state.Phase) ResetRoundView();
             roomState = state.Phase;
             if (arena != null) arena.gameObject.SetActive(state.Phase == Running && GameplayMode == RainPassMode);
+            UpdateTournamentLobby();
             smoke?.RecordTournament(state);
         }
 
-        private void DrawTournament()
+        private void UpdateTournamentLobby()
         {
+            if (!IsTournament || tournament?.Phase == Running && IsConnected &&
+                tournament.ConnectedMask == 3 && snapshot?.PeerConnected != false)
+            {
+                if (TournamentLobbyVisible) tournamentLobby.Hide();
+                return;
+            }
+            if (tournamentLobby == null)
+            {
+                var prefab = Resources.Load<GameObject>("Tournament/Lobby")?.GetComponent<TournamentLobbyView>();
+                if (prefab == null) throw new InvalidOperationException("Tournament/Lobby prefab is required.");
+                tournamentLobby = Instantiate(prefab, transform, false);
+                tournamentLobby.Initialize(serverUrl, roomId, playerId, ConnectFromLobbyAsync, StartTournamentReadyAsync,
+                    ReconnectAsync, () =>
+                    {
+                        if (owner != null) owner.ClosePvp();
+                        else _ = LeaveAsync();
+                    });
+            }
             var state = tournament;
-            GUILayout.Label($"Score   {state.FirstScore} – {state.SecondScore}");
-            if (state.Phase == PvpTournament.AwaitingReady)
-            {
-                GUILayout.Label($"Round {state.RoundNumber}   {TournamentModeName(state.Mode)}");
-                for (int slot = 0; slot < 2; slot++)
+            bool canJoin = connection == null && joined == null;
+            bool canReady = state?.Phase == PvpTournament.AwaitingReady && joined != null && IsConnected &&
+                state.ConnectedMask == 3 && (state.ReadyMask & (1 << joined.PlayerSlot)) == 0;
+            bool canReconnect = joined != null && !IsConnected && ConnectionStatus == "Disconnected";
+            bool finished = state?.Phase is PvpTournament.Finished or PvpTournament.StorageError;
+            string page = canJoin || joined == null ? "join" : finished ? "results" :
+                !IsConnected || state?.Phase == Running ? "reconnect" : "lobby";
+            string message = error;
+            if (string.IsNullOrEmpty(message))
+                message = page switch
                 {
-                    int mask = 1 << slot;
-                    string status = (state.ConnectedMask & mask) == 0 ? "Waiting to connect" :
-                        (state.ReadyMask & mask) == 0 ? "Preparing" : "Ready";
-                    GUILayout.Label($"Player {slot + 1}{(slot == joined?.PlayerSlot ? " (you)" : "")}   {status}");
-                }
-                if (joined != null && IsConnected && state.ConnectedMask == 3 &&
-                    (state.ReadyMask & (1 << joined.PlayerSlot)) == 0 && GUILayout.Button("Ready for next round"))
-                    _ = StartTournamentReadyAsync();
-            }
-            else if (state.Phase == PvpTournament.Finished)
-            {
-                string outcome = state.Winner < 0 && state.EndReason == "Completed" ? "Draw" :
-                    state.Winner < 0 ? "Tournament stopped" : state.Winner == joined?.PlayerSlot ? "Victory" : "Defeat";
-                GUILayout.Label($"{outcome}   {TournamentReason(state.EndReason)}");
-            }
-            else if (state.Phase == PvpTournament.StorageError)
-                GUILayout.Label("The server could not save the tournament.");
-
-            if (state.Rounds == null || state.Rounds.Length == 0) return;
-            reportScroll = GUILayout.BeginScrollView(reportScroll, GUILayout.MaxHeight(245));
-            for (int index = 0; index < state.Rounds.Length; index++)
-            {
-                var round = state.Rounds[index];
-                string result = round.Winner < 0 ? "Draw" : $"Player {round.Winner + 1} won";
-                GUILayout.Label($"{index + 1}. {TournamentModeName(round.Mode)}   {result}   {TournamentReason(round.Reason)}");
-                if (round.FirstBackpack != null && round.SecondBackpack != null)
-                {
-                    GUILayout.Label("Player 1 backpack");
-                    DrawBackpack(new PlayerSnapshot { Backpack = round.FirstBackpack }, editable: false);
-                    GUILayout.Label("Player 2 backpack");
-                    DrawBackpack(new PlayerSnapshot { Backpack = round.SecondBackpack }, editable: false);
-                }
-            }
-            GUILayout.EndScrollView();
+                    "join" => canJoin ? "Join a tournament" : "Connecting…",
+                    "reconnect" => IsConnected ? "Opponent reconnecting…" : ConnectionStatus,
+                    "results" => TournamentOutcome(state),
+                    _ when state?.ConnectedMask != 3 => "Waiting for the other player",
+                    _ when state?.Rounds?.Length > 0 => $"Round {state.Rounds.Length} confirmed",
+                    _ => "Both players connected"
+                };
+            tournamentLobby.Present(page, message, state, joined?.PlayerSlot ?? -1, canJoin, canReady, canReconnect);
         }
 
-        private static string TournamentModeName(string value) => value == BBadsMode ? "BBads" : "Rain Pass";
+        private Task ConnectFromLobbyAsync()
+        {
+            serverUrl = tournamentLobby.Server.text;
+            roomId = tournamentLobby.Room.text;
+            playerId = tournamentLobby.Player.text;
+            return ConnectAsync();
+        }
+
+        private string TournamentOutcome(PvpTournamentState state)
+        {
+            if (state.Phase == PvpTournament.StorageError) return "The server could not save the tournament.";
+            string outcome = state.Winner < 0 && state.EndReason == "Completed" ? "Draw" :
+                state.Winner < 0 ? "Tournament stopped" : state.Winner == joined?.PlayerSlot ? "Victory" : "Defeat";
+            return (outcome + "   " + TournamentReason(state.EndReason)).TrimEnd();
+        }
 
         private static string TournamentReason(string value) => value switch
         {

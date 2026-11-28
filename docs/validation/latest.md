@@ -1,5 +1,12 @@
 # 最近验证
 
+## Test 擂台赛大厅 Web 原型与 Unity 交付（2026-11-28）
+
+- 无头 Chromium 从 DevPanel 的 Test 入口修改就绪按钮的宽度、文字和背包图标。重启 DevPanel 后重新读出改动，重复节点提交返回错误且保留原设计。浏览器的「Unity 预检」按钮启动后台导入并显示通过及报告。
+- Unity **2022.3.16f1** 在隔离项目导入修改稿后，生成 Prefab 的 GUID、就绪控件的文件 ID 和外层 Lobby Prefab 保持一致。重复导入无文件更新。缺失素材、重复节点和无效绑定三个负例均保留了已有 Prefab。
+- 就绪、重连和展开战报以 **1280×720、1920×1080、3440×1440** 离屏截图，运行九项布局及图像对照。人为压窄就绪按钮时定位到控件裁切。画面证据位于 `artifacts/game-unity/Test/20261128-174401-fee34038/TournamentUI-4dc2981e`。
+- EditMode **16/16**、PlayMode **33/33**，覆盖键盘 Tab 和虚拟手柄确认。Windows Release Player 通过原生入场、就绪和战报控件完成 **2 比 0** 与 **2 比 1** 两条赛程，第二条在 BBads 进行中重启 Test.Server。标准 `tools/verify.ps1` 通过。实体手柄与转场观感留待人工体验。 [复跑入口](../../games/Test/design/tournament-ui-pipeline/verification.md)
+
 ## Test 双玩法擂台赛（2026-11-28）
 
 - Unity **2022.3.16f1** 后台隔离导入、EditMode **16/16**、PlayMode **32/32** 和 Windows Release 构建通过。两组隐藏 Windows Player 打完 **2 比 0** 和 **2 比 1**。后一组在 BBads 进行中重启 Test.Server，保留了 1 比 0 的比分和原席位，以新对局 ID 重赛，再完成 Rain Pass 决胜。两端战报一致，Rain Pass 可按存档逐帧复算，BBads 终局背包与服务端快照一致。 [后台复跑及人工验收](../../games/Test/design/dual-mode-tournament/verification.md)
