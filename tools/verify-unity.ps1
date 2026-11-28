@@ -11,6 +11,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'unity-verification-cleanup.ps1')
 if ($RunPlayerSmoke -and (-not $BuildPlayer -or $PlayerTarget -ne 'Windows64')) {
     throw '-RunPlayerSmoke requires -BuildPlayer and Windows64.'
 }
@@ -21,6 +22,11 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $editor = Get-Item -LiteralPath $EditorPath
 $validationRoot = Join-Path $repositoryRoot ('artifacts/UnityValidation/' + [Guid]::NewGuid().ToString('N'))
 $sampleRoot = Join-Path $repositoryRoot 'samples/Unity'
+$previousProfile = $env:ALLUSERSPROFILE
+try {
+if (!$previousProfile -and [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+    $env:ALLUSERSPROFILE = [Environment]::GetFolderPath('CommonApplicationData')
+}
 New-Item -ItemType Directory -Force -Path $validationRoot | Out-Null
 
 # Import a disposable copy, leaving the sample's recorded editor version intact.
@@ -48,7 +54,7 @@ $processOptions = @{
 if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $processOptions.WindowStyle = 'Hidden' }
 Write-Host "Validating with Unity $editorVersion; log: $logPath"
 $unityProcess = Start-Process @processOptions
-if (-not $unityProcess.WaitForExit(300000)) { $unityProcess.Kill(); throw "Unity import timed out. See $logPath" }
+if (-not $unityProcess.WaitForExit(300000)) { $unityProcess.Kill(); $unityProcess.WaitForExit(10000) | Out-Null; throw "Unity import timed out. See $logPath" }
 $unityProcess.Refresh()
 if ($unityProcess.ExitCode -ne 0) {
     if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Tail 60 }
@@ -75,7 +81,7 @@ function Invoke-UnityStep {
     $stepOptions = @{ FilePath = $editor.FullName; ArgumentList = $stepArguments; PassThru = $true }
     if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $stepOptions.WindowStyle = 'Hidden' }
     $stepProcess = Start-Process @stepOptions
-    if (-not $stepProcess.WaitForExit(300000)) { $stepProcess.Kill(); throw "Unity $Name timed out. See $stepLog" }
+    if (-not $stepProcess.WaitForExit(300000)) { $stepProcess.Kill(); $stepProcess.WaitForExit(10000) | Out-Null; throw "Unity $Name timed out. See $stepLog" }
     $stepProcess.Refresh()
     if ($stepProcess.ExitCode -ne 0 -or (Select-String -LiteralPath $stepLog -Pattern 'error CS\d+|Scripts have compiler errors' -Quiet)) {
         throw "Unity $Name failed ($($stepProcess.ExitCode)). See $stepLog"
@@ -128,7 +134,7 @@ if ($BuildPlayer) {
         $playerOptions = @{ FilePath = $playerPath; ArgumentList = (@('-batchmode', '-nographics', '-awith-shared-smoke', '-logFile', ('"' + $playerLog + '"')) + $contentArguments); PassThru = $true }
         if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $playerOptions.WindowStyle = 'Hidden' }
         $playerProcess = Start-Process @playerOptions
-        if (-not $playerProcess.WaitForExit(120000)) { $playerProcess.Kill(); throw "Unity Player timed out. See $playerLog" }
+        if (-not $playerProcess.WaitForExit(120000)) { $playerProcess.Kill(); $playerProcess.WaitForExit(10000) | Out-Null; throw "Unity Player timed out. See $playerLog" }
         $playerProcess.Refresh()
         if ($playerProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $playerLog) -or
             -not (Select-String -LiteralPath $playerLog -SimpleMatch 'UNITY_SHARED_HOST_PASSED' -Quiet)) {
@@ -152,4 +158,9 @@ if ($BuildPlayer) {
             [ordered]@{ path = $_.FullName.Substring($playerDirectory.Length + 1); size = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
         })
     } | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 (Join-Path $validationRoot 'Build-report.json')
+}
+}
+finally {
+    $env:ALLUSERSPROFILE = $previousProfile
+    Clear-UnityVerificationProjectFiles $validationRoot $validationRoot
 }

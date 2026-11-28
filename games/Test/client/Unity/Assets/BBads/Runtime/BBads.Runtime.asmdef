@@ -1,0 +1,8 @@
+{
+  "name": "BBads.Runtime",
+  "rootNamespace": "BBads",
+  "references": ["BBads.Quality", "spine-unity", "spine-csharp", "UnityEngine.UI", "Unity.TextMeshPro", "AwithGameFrame.Unity", "AwithGameFrame.Extensions"],
+  "overrideReferences": true,
+  "precompiledReferences": ["Test.Application.dll", "Test.Domain.dll", "AwithGameFrame.Core.dll", "AwithGameFrame.Gameplay.dll"],
+  "autoReferenced": true
+}

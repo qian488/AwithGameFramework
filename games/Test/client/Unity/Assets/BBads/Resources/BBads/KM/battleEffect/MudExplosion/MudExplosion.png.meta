@@ -1,0 +1,1091 @@
+fileFormatVersion: 2
+guid: 3b8754ee48030924f89d196daefa0929
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2881276971190897962
+    second: MudExplosion_0
+  - first:
+      213: 446963340066540067
+    second: MudExplosion_1
+  - first:
+      213: -5367902023799712360
+    second: MudExplosion_2
+  - first:
+      213: 4823205116017387168
+    second: MudExplosion_3
+  - first:
+      213: -3020623681641419737
+    second: MudExplosion_4
+  - first:
+      213: -1082555069503983554
+    second: MudExplosion_5
+  - first:
+      213: -7645459552717791252
+    second: MudExplosion_6
+  - first:
+      213: -9166350854879721374
+    second: MudExplosion_7
+  - first:
+      213: 5825465634695402158
+    second: MudExplosion_8
+  - first:
+      213: 6699205471682168817
+    second: MudExplosion_9
+  - first:
+      213: -879427298814515675
+    second: MudExplosion_10
+  - first:
+      213: -9168733531513920267
+    second: MudExplosion_11
+  - first:
+      213: 8854862513818809112
+    second: MudExplosion_12
+  - first:
+      213: 80451580292977998
+    second: MudExplosion_13
+  - first:
+      213: -1626328462843169752
+    second: MudExplosion_14
+  - first:
+      213: 4642995284014756041
+    second: MudExplosion_15
+  - first:
+      213: -4424852552294324926
+    second: MudExplosion_16
+  - first:
+      213: -1442282640018493016
+    second: MudExplosion_17
+  - first:
+      213: -2441128654658260845
+    second: MudExplosion_18
+  - first:
+      213: 3485214774577298127
+    second: MudExplosion_19
+  - first:
+      213: 7612010157786863424
+    second: MudExplosion_20
+  - first:
+      213: -2669782334527008571
+    second: MudExplosion_21
+  - first:
+      213: -319775334190146743
+    second: MudExplosion_22
+  - first:
+      213: 897773885308480850
+    second: MudExplosion_23
+  - first:
+      213: -267167125879933915
+    second: MudExplosion_24
+  - first:
+      213: 9168581044555469133
+    second: MudExplosion_25
+  - first:
+      213: 4378381033564948734
+    second: MudExplosion_26
+  - first:
+      213: -5675815101895497936
+    second: MudExplosion_27
+  - first:
+      213: -2759393889565998063
+    second: MudExplosion_28
+  - first:
+      213: -5008678956853746046
+    second: MudExplosion_29
+  - first:
+      213: 1212171459269218624
+    second: MudExplosion_30
+  - first:
+      213: -4790241849445978111
+    second: MudExplosion_31
+  - first:
+      213: -8565064613644199654
+    second: MudExplosion_32
+  - first:
+      213: 5412784827830052038
+    second: MudExplosion_33
+  - first:
+      213: 4829012236536354085
+    second: MudExplosion_34
+  - first:
+      213: -1204266409391990217
+    second: MudExplosion_35
+  - first:
+      213: 6901615821235214461
+    second: MudExplosion_36
+  externalObjects: {}
+  serializedVersion: 12
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 0
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Server
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: MudExplosion_0
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 224
+        width: 51
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a2dc85fb32a5cf720800000000000000
+      internalID: 2881276971190897962
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_1
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 224
+        width: 18
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32ac9482acee33600800000000000000
+      internalID: 446963340066540067
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_2
+      rect:
+        serializedVersion: 2
+        x: 120
+        y: 160
+        width: 47
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 895515abc816185b0800000000000000
+      internalID: -5367902023799712360
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_3
+      rect:
+        serializedVersion: 2
+        x: 440
+        y: 183
+        width: 24
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0a62013af777fe240800000000000000
+      internalID: 4823205116017387168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_4
+      rect:
+        serializedVersion: 2
+        x: 586
+        y: 1
+        width: 226
+        height: 225
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72c61a7f3c69416d0800000000000000
+      internalID: -3020623681641419737
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_5
+      rect:
+        serializedVersion: 2
+        x: 812
+        y: 203
+        width: 41
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e30ba6066edf9f0f0800000000000000
+      internalID: -1082555069503983554
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_6
+      rect:
+        serializedVersion: 2
+        x: 925
+        y: 137
+        width: 59
+        height: 66
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cef93af4b0fd5e590800000000000000
+      internalID: -7645459552717791252
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_7
+      rect:
+        serializedVersion: 2
+        x: 1304
+        y: 1
+        width: 222
+        height: 222
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 268cb4086749ac080800000000000000
+      internalID: -9166350854879721374
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_8
+      rect:
+        serializedVersion: 2
+        x: 1526
+        y: 161
+        width: 45
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea2d34f412638d050800000000000000
+      internalID: 5825465634695402158
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_9
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 153
+        width: 18
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f708f0f1eb58fc50800000000000000
+      internalID: 6699205471682168817
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_10
+      rect:
+        serializedVersion: 2
+        x: 159
+        y: 149
+        width: 33
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5262168f785abc3f0800000000000000
+      internalID: -879427298814515675
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_11
+      rect:
+        serializedVersion: 2
+        x: 375
+        y: 166
+        width: 14
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5f466ed5e6d12c080800000000000000
+      internalID: -9168733531513920267
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_12
+      rect:
+        serializedVersion: 2
+        x: 883
+        y: 143
+        width: 25
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 813b71f8a8ac2ea70800000000000000
+      internalID: 8854862513818809112
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_13
+      rect:
+        serializedVersion: 2
+        x: 1140
+        y: 122
+        width: 72
+        height: 66
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e455bf83942dd1100800000000000000
+      internalID: 80451580292977998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_14
+      rect:
+        serializedVersion: 2
+        x: 42
+        y: 140
+        width: 36
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 824302431ee1e69e0800000000000000
+      internalID: -1626328462843169752
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_15
+      rect:
+        serializedVersion: 2
+        x: 337
+        y: 144
+        width: 22
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9c073857c9b3f6040800000000000000
+      internalID: 4642995284014756041
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_16
+      rect:
+        serializedVersion: 2
+        x: 812
+        y: 97
+        width: 74
+        height: 56
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 245240d2c04c792c0800000000000000
+      internalID: -4424852552294324926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_17
+      rect:
+        serializedVersion: 2
+        x: 1118
+        y: 122
+        width: 26
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a13cf7949bfbfbe0800000000000000
+      internalID: -1442282640018493016
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_18
+      rect:
+        serializedVersion: 2
+        x: 1526
+        y: 1
+        width: 172
+        height: 160
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 39031181c6e5f1ed0800000000000000
+      internalID: -2441128654658260845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_19
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 103
+        width: 59
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fca7f9c3f58fd5030800000000000000
+      internalID: 3485214774577298127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_20
+      rect:
+        serializedVersion: 2
+        x: 54
+        y: 113
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0471d8988ea43a960800000000000000
+      internalID: 7612010157786863424
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_21
+      rect:
+        serializedVersion: 2
+        x: 202
+        y: 97
+        width: 97
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c097e2ac1703fad0800000000000000
+      internalID: -2669782334527008571
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_22
+      rect:
+        serializedVersion: 2
+        x: 299
+        y: 104
+        width: 30
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94b1aad170eef8bf0800000000000000
+      internalID: -319775334190146743
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_23
+      rect:
+        serializedVersion: 2
+        x: 966
+        y: 83
+        width: 91
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 25d2f629798857c00800000000000000
+      internalID: 897773885308480850
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_24
+      rect:
+        serializedVersion: 2
+        x: 1057
+        y: 76
+        width: 66
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 524b34e1ae4da4cf0800000000000000
+      internalID: -267167125879933915
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_25
+      rect:
+        serializedVersion: 2
+        x: 177
+        y: 99
+        width: 32
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d41db1ff1e75d3f70800000000000000
+      internalID: 9168581044555469133
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_26
+      rect:
+        serializedVersion: 2
+        x: 542
+        y: 95
+        width: 44
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef842f43a5223cc30800000000000000
+      internalID: 4378381033564948734
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_27
+      rect:
+        serializedVersion: 2
+        x: 1188
+        y: 72
+        width: 116
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 037a8b09c347b31b0800000000000000
+      internalID: -5675815101895497936
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_28
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 1
+        width: 50
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 114090990e9a4b9d0800000000000000
+      internalID: -2759393889565998063
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_29
+      rect:
+        serializedVersion: 2
+        x: 131
+        y: 50
+        width: 47
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 28622ce96099d7ab0800000000000000
+      internalID: -5008678956853746046
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_30
+      rect:
+        serializedVersion: 2
+        x: 459
+        y: 39
+        width: 29
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 041db94158f72d010800000000000000
+      internalID: 1212171459269218624
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_31
+      rect:
+        serializedVersion: 2
+        x: 841
+        y: 1
+        width: 57
+        height: 68
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 100ff8fea64a58db0800000000000000
+      internalID: -4790241849445978111
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_32
+      rect:
+        serializedVersion: 2
+        x: 919
+        y: 34
+        width: 79
+        height: 52
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a1918711d17c22980800000000000000
+      internalID: -8565064613644199654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_33
+      rect:
+        serializedVersion: 2
+        x: 1091
+        y: 1
+        width: 55
+        height: 66
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c42f6c6f131e1b40800000000000000
+      internalID: 5412784827830052038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_34
+      rect:
+        serializedVersion: 2
+        x: 1159
+        y: 40
+        width: 47
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 52593ce3b09140340800000000000000
+      internalID: 4829012236536354085
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_35
+      rect:
+        serializedVersion: 2
+        x: 1698
+        y: 1
+        width: 74
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 73a5145c416994fe0800000000000000
+      internalID: -1204266409391990217
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MudExplosion_36
+      rect:
+        serializedVersion: 2
+        x: 338
+        y: 1
+        width: 33
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d78d0f8e50777cf50800000000000000
+      internalID: 6901615821235214461
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      MudExplosion_0: 2881276971190897962
+      MudExplosion_1: 446963340066540067
+      MudExplosion_10: -879427298814515675
+      MudExplosion_11: -9168733531513920267
+      MudExplosion_12: 8854862513818809112
+      MudExplosion_13: 80451580292977998
+      MudExplosion_14: -1626328462843169752
+      MudExplosion_15: 4642995284014756041
+      MudExplosion_16: -4424852552294324926
+      MudExplosion_17: -1442282640018493016
+      MudExplosion_18: -2441128654658260845
+      MudExplosion_19: 3485214774577298127
+      MudExplosion_2: -5367902023799712360
+      MudExplosion_20: 7612010157786863424
+      MudExplosion_21: -2669782334527008571
+      MudExplosion_22: -319775334190146743
+      MudExplosion_23: 897773885308480850
+      MudExplosion_24: -267167125879933915
+      MudExplosion_25: 9168581044555469133
+      MudExplosion_26: 4378381033564948734
+      MudExplosion_27: -5675815101895497936
+      MudExplosion_28: -2759393889565998063
+      MudExplosion_29: -5008678956853746046
+      MudExplosion_3: 4823205116017387168
+      MudExplosion_30: 1212171459269218624
+      MudExplosion_31: -4790241849445978111
+      MudExplosion_32: -8565064613644199654
+      MudExplosion_33: 5412784827830052038
+      MudExplosion_34: 4829012236536354085
+      MudExplosion_35: -1204266409391990217
+      MudExplosion_36: 6901615821235214461
+      MudExplosion_4: -3020623681641419737
+      MudExplosion_5: -1082555069503983554
+      MudExplosion_6: -7645459552717791252
+      MudExplosion_7: -9166350854879721374
+      MudExplosion_8: 5825465634695402158
+      MudExplosion_9: 6699205471682168817
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

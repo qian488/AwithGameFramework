@@ -1,6 +1,8 @@
 {
   "name": "AwithGameFrame.Unity.Editor",
   "references": ["AwithGameFrame.Unity", "UnityEngine.UI"],
+  "overrideReferences": true,
+  "precompiledReferences": ["Newtonsoft.Json.dll"],
   "includePlatforms": ["Editor"],
   "autoReferenced": false
 }

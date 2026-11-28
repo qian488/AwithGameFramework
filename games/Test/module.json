@@ -22,6 +22,7 @@
                          "networking"
                      ],
     "verificationTools":  [
-                              "game-build"
+                              "game-build",
+                              "game-unity-tests"
                           ]
 }

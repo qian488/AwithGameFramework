@@ -100,9 +100,107 @@ function Read-Game {
     return $game
 }
 
+function Get-ConfigurationCopyPath([string]$Relative, [string]$Prefix) {
+    if (-not $Relative.StartsWith($Prefix, [StringComparison]::Ordinal) -or
+        $Relative -notmatch '^[A-Za-z0-9_. -]+(/[A-Za-z0-9_. -]+)+$' -or
+        $Relative -match '(^|/)[. ]+(/|$)|[. ](/|$)') {
+        throw "Expected a path under $Prefix in configuration/copies.json, got '$Relative'."
+    }
+    $path = Join-Path $gameRoot $Relative
+    Assert-NoReparsePoint $path
+    return $path
+}
+
+function Get-ConfigurationDifferenceLine([byte[]]$Source, [byte[]]$Copy) {
+    $limit = [Math]::Min($Source.Length, $Copy.Length)
+    $line = 1
+    for ($index = 0; $index -lt $limit -and $Source[$index] -eq $Copy[$index]; $index++) {
+        if ($Source[$index] -eq 10 -or ($Source[$index] -eq 13 -and
+            ($index + 1 -eq $Source.Length -or $Source[$index + 1] -ne 10))) {
+            $line++
+        }
+    }
+    if ($index -eq $limit -and $Source.Length -eq $Copy.Length) { return 0 }
+    return $line
+}
+
+function Invoke-GameConfigurationCopies($Game, [bool]$Verify) {
+    $manifest = Join-Path $gameRoot 'configuration/copies.json'
+    Assert-NoReparsePoint $manifest
+    if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { return }
+
+    $clientPrefix = if ($Game.engine -eq 'unity') { 'client/Unity/Assets/' } else { 'client/Godot/' }
+    $destinations = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    $copies = [IO.File]::ReadAllText($manifest) | ConvertFrom-Json
+    $bindings = foreach ($binding in $copies) {
+        if (-not $binding -or -not $binding.PSObject.Properties['source'] -or
+            -not $binding.PSObject.Properties['destination'] -or
+            $binding.source -isnot [string] -or $binding.destination -isnot [string]) {
+            throw "Expected source and destination paths in $manifest."
+        }
+        $source = Get-ConfigurationCopyPath $binding.source 'configuration/'
+        $destination = Get-ConfigurationCopyPath $binding.destination $clientPrefix
+        $extension = [IO.Path]::GetExtension($source)
+        if ($extension -notin @('.csv', '.json') -or $extension -ne [IO.Path]::GetExtension($destination)) {
+            throw "Expected matching CSV or JSON extensions in $manifest for '$($binding.source)' and '$($binding.destination)'."
+        }
+        if (-not $destinations.Add($destination)) { throw "Duplicate destination '$($binding.destination)' in $manifest." }
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "$($binding.source):1: canonical configuration file is missing."
+        }
+        if (Test-Path -LiteralPath $destination -PathType Container) {
+            throw "$($binding.destination):1: expected a configuration file."
+        }
+        @{ Source = $source; Destination = $destination; Paths = $binding }
+    }
+
+    $diagnostics = foreach ($binding in $bindings) {
+        $bytes = [IO.File]::ReadAllBytes($binding.Source)
+        $exists = Test-Path -LiteralPath $binding.Destination -PathType Leaf
+        if ($exists) {
+            $line = Get-ConfigurationDifferenceLine $bytes ([IO.File]::ReadAllBytes($binding.Destination))
+            if ($line -eq 0) { continue }
+        }
+        else { $line = 1 }
+
+        if ($Verify) {
+            $reason = if ($exists) { 'differs from' } else { 'is missing, expected a copy of' }
+            "$($binding.Paths.destination):$($line): $reason $($binding.Paths.source)"
+            continue
+        }
+
+        [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($binding.Destination)) | Out-Null
+        $temporary = Join-Path $gameRoot (".configuration-copy-$([Guid]::NewGuid().ToString('N')).tmp")
+        try {
+            [IO.File]::WriteAllBytes($temporary, $bytes)
+            if ($exists) { [IO.File]::Replace($temporary, $binding.Destination, [NullString]::Value) }
+            else { [IO.File]::Move($temporary, $binding.Destination) }
+        }
+        finally {
+            if ([IO.File]::Exists($temporary)) { [IO.File]::Delete($temporary) }
+        }
+        Write-Host "Updated configuration copy: $($binding.Paths.destination)"
+    }
+    if ($diagnostics) {
+        throw (($diagnostics -join [Environment]::NewLine) + [Environment]::NewLine +
+            "Run game.ps1 config -Name $Name to refresh configuration copies.")
+    }
+    Write-Host "Configuration copies verified: $(@($copies).Count) files."
+}
+
+function Test-GameConfiguration {
+    return ((Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) -or
+        (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/copies.json')))
+}
+
 function Invoke-GameConfiguration($Game, [bool]$Verify) {
     $source = Join-Path $gameRoot 'configuration'
     $schema = Join-Path $source 'schema.json'
+    if (-not (Test-Path -LiteralPath $schema) -and
+        (Test-Path -LiteralPath (Join-Path $source 'copies.json'))) {
+        Invoke-GameConfigurationCopies $Game $Verify
+        return
+    }
     $data = Join-Path $source 'Data'
     $application = Split-Path -Parent (Join-Path $gameRoot $Game.applicationProject)
     $output = Join-Path $application 'Runtime/Generated/Configuration'
@@ -123,6 +221,7 @@ function Invoke-GameConfiguration($Game, [bool]$Verify) {
     if ($Verify) { $arguments += '--check' }
     try { Invoke-DotNet $arguments }
     catch { throw "Configuration for $Name failed. After updating source data, run game.ps1 config -Name $Name. $($_.Exception.Message)" }
+    Invoke-GameConfigurationCopies $Game $Verify
 }
 
 function Invoke-GameProtocol($Game, [bool]$Verify) {
@@ -219,7 +318,7 @@ function Assert-PortableProjects([string]$Project) {
 }
 
 function Invoke-GameBuild($game) {
-    if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
+    if (Test-GameConfiguration) {
         Invoke-GameConfiguration $game $true
     }
     if ((Test-Path -LiteralPath (Join-Path $gameRoot 'protocol/schema.json')) -or
@@ -367,7 +466,12 @@ switch ($Command) {
         $applicationXml.Save($applicationPath)
         Write-Host "Created $moduleName and referenced it from $Name.Application."
     }
-    'config' { Invoke-GameConfiguration (Read-Game) ([bool]$Check) }
+    'config' {
+        $game = Read-Game
+        $buildLock = Enter-WorkspaceBuildLock
+        try { Invoke-GameConfiguration $game ([bool]$Check) }
+        finally { $buildLock.Dispose() }
+    }
     'protocol' { Invoke-GameProtocol (Read-Game) ([bool]$Check) }
     { $_ -in @('build', 'sync') } {
         $game = Read-Game
@@ -388,7 +492,7 @@ switch ($Command) {
     }
     'run-server' {
         $game = Read-Game
-        if (Test-Path -LiteralPath (Join-Path $gameRoot 'configuration/schema.json')) {
+        if (Test-GameConfiguration) {
             Invoke-GameConfiguration $game $true
         }
         Assert-PortableProjects (Join-Path $gameRoot $game.applicationProject)

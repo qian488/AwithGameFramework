@@ -87,8 +87,20 @@ namespace AwithGameFrame.Unity.Editor
             {
                 var result = new CaseResult { id = item.id, source = string.IsNullOrWhiteSpace(item.scene) ? item.image : item.scene };
                 report.cases.Add(result);
+                void RecordError(string message, string stackTrace, LogType type)
+                {
+                    if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert) return;
+                    string issue = $"Unity {type} during capture: {message}";
+                    if (!result.issues.Contains(issue)) result.issues.Add(issue);
+                }
+                bool capturesScene = !string.IsNullOrWhiteSpace(item.scene);
+                if (capturesScene) Application.logMessageReceived += RecordError;
                 try { Inspect(item, Path.GetDirectoryName(specificationPath), outputDirectory, result); }
                 catch (Exception exception) { result.issues.Add(exception.Message); }
+                finally
+                {
+                    if (capturesScene) Application.logMessageReceived -= RecordError;
+                }
                 foreach (var issue in result.issues) Debug.LogWarning($"Visual case {item.id}: {issue}");
             }
             report.passed = report.cases.All(result => result.issues.Count == 0);

@@ -1,0 +1,26 @@
+id,displayName,type,frameResourcePath,pictureResourcePath,cooldown,fishCost,shape,mergeGroup,mergeLevel,nextItemId,summonUnitId,activationAmount
+Fish1,Fish Lv.1,Fish,BBads/Items/Bag_Slot_Fish,BBads/Items/Fish1,2.6,0,SlotV2,Fish,1,Fish2,,1
+Fish2,Fish Lv.2,Fish,BBads/Items/Bag_Slot_Fish,BBads/Items/Fish1,2.3,0,SlotV2,Fish,2,Fish3,,1.25
+Fish3,Fish Lv.3,Fish,BBads/Items/Bag_Slot_Fish,BBads/Items/Fish1,2.0,0,SlotV2,Fish,3,Fish4,,1.5
+Fish4,Fish Lv.4,Fish,BBads/Items/Bag_Slot_Fish,BBads/Items/Fish1,1.7,0,SlotV2,Fish,4,,,2
+CatGangster1,Gangster Cat Lv.1,Cat,BBads/Items/Bag_Slot3,BBads/Items/Cat_Gangster1,0,2,SlotNE3,CatGangster,1,CatGangster2,CatGangster1,0
+CatGangster2,Gangster Cat Lv.2,Cat,BBads/Items/Bag_Slot3,BBads/Items/Cat_Gangster1,0,2,SlotNE3,CatGangster,2,CatGangster3,CatGangster2,0
+CatGangster3,Gangster Cat Lv.3,Cat,BBads/Items/Bag_Slot3,BBads/Items/Cat_Gangster3,0,2,SlotNE3,CatGangster,3,CatGangster4,CatGangster3,0
+CatGangster4,Gangster Cat Lv.4,Cat,BBads/Items/Bag_Slot3,BBads/Items/Cat_Gangster3,0,2,SlotNE3,CatGangster,4,,CatGangster4,0
+CatBaseball1,Baseball Cat Lv.1,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Baseball1,0,2,SlotH2,CatBaseball,1,CatBaseball2,CatBaseball1,0
+CatBaseball2,Baseball Cat Lv.2,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Baseball1,0,2,SlotH2,CatBaseball,2,CatBaseball3,CatBaseball2,0
+CatBaseball3,Baseball Cat Lv.3,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Baseball1,0,2,SlotH2,CatBaseball,3,CatBaseball4,CatBaseball3,0
+CatBaseball4,Baseball Cat Lv.4,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Baseball1,0,2,SlotH2,CatBaseball,4,,CatBaseball4,0
+CatGrenade1,Grenade Cat Lv.1,Cat,BBads/Items/Bag_Slot1,BBads/Items/Cat_Grenade1,0,2,Slot1,CatGrenade,1,CatGrenade2,CatGrenade1,0
+CatGrenade2,Grenade Cat Lv.2,Cat,BBads/Items/Bag_Slot1,BBads/Items/Cat_Grenade1,0,2,Slot1,CatGrenade,2,CatGrenade3,CatGrenade2,0
+CatGrenade3,Grenade Cat Lv.3,Cat,BBads/Items/Bag_Slot1,BBads/Items/Cat_Grenade1,0,2,Slot1,CatGrenade,3,CatGrenade4,CatGrenade3,0
+CatGrenade4,Grenade Cat Lv.4,Cat,BBads/Items/Bag_Slot1,BBads/Items/Cat_Grenade1,0,2,Slot1,CatGrenade,4,,CatGrenade4,0
+CatRocket1,Rocket Cat Lv.1,Cat,BBads/Items/Bag_Slot4,BBads/Items/Cat_Rocket1,0,2,SlotV2,CatRocket,1,CatRocket2,CatRocket1,0
+CatRocket2,Rocket Cat Lv.2,Cat,BBads/Items/Bag_Slot4,BBads/Items/Cat_Rocket1,0,2,SlotV2,CatRocket,2,CatRocket3,CatRocket2,0
+CatRocket3,Rocket Cat Lv.3,Cat,BBads/Items/Bag_Slot4,BBads/Items/Cat_Rocket1,0,2,SlotV2,CatRocket,3,CatRocket4,CatRocket3,0
+CatRocket4,Rocket Cat Lv.4,Cat,BBads/Items/Bag_Slot4,BBads/Items/Cat_Rocket1,0,2,SlotV2,CatRocket,4,,CatRocket4,0
+CatStray1,Stray Cat Lv.1,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Stray1,0,2,SlotH2,CatStray,1,CatStray2,CatStray1,0
+CatStray2,Stray Cat Lv.2,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Stray1,0,2,SlotH2,CatStray,2,CatStray3,CatStray2,0
+CatStray3,Stray Cat Lv.3,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Stray1,0,2,SlotH2,CatStray,3,CatStray4,CatStray3,0
+CatStray4,Stray Cat Lv.4,Cat,BBads/Items/Bag_Slot2,BBads/Items/Cat_Stray1,0,2,SlotH2,CatStray,4,,CatStray4,0
+EmptySlotV3,Vertical Slot x3,Slot,BBads/Items/Bag_Slot,,0,0,SlotV3,EmptySlot,1,,,0

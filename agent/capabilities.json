@@ -103,6 +103,16 @@
       "checks": ["unity-editor-verify"]
     },
     {
+      "id": "unity.game-tests",
+      "kind": "verification",
+      "description": "Compile a named Unity game in a hidden disposable project, run its tests, and report the failed step with its logs.",
+      "owner": "tools/verify-game-unity.ps1",
+      "entryPoint": "tools/verify-game-unity.ps1 -RunTests",
+      "modes": ["background"],
+      "parameters": ["gameName", "editorPath"],
+      "checks": ["game-unity-tests"]
+    },
+    {
       "id": "unity.visual-verification",
       "kind": "verification",
       "description": "Run hidden Unity rendering checks and produce screenshots, difference images and machine-readable visual reports.",
@@ -111,6 +121,43 @@
       "modes": ["background", "manual"],
       "parameters": ["gameName", "editorPath", "visualSpec"],
       "checks": ["unity-verify"]
+    },
+    {
+      "id": "unity.resource-audit",
+      "kind": "verification",
+      "description": "Verify declared Resources keys, Unity types, fallback resolution and Sprite Atlas membership in an isolated game workspace.",
+      "owner": "docs/reference/unity-resource-audit.md",
+      "entryPoint": "tools/verify-game-unity.ps1 -ResourceSpec | -AtlasSpec",
+      "modes": ["background"],
+      "parameters": ["gameName", "editorPath", "resourceSpec", "atlasSpec"]
+    },
+    {
+      "id": "unity.migration-preflight",
+      "kind": "verification",
+      "description": "Import disposable copies of Unity projects and locate broken scripts, GUIDs and object references.",
+      "owner": "tools/verify-unity-migration.ps1",
+      "entryPoint": "tools/verify-unity-migration.ps1",
+      "modes": ["background"],
+      "parameters": ["editorPath", "projectPath", "sourceProjectPath", "sourceEditorPath", "targetProjectPath"]
+    },
+    {
+      "id": "unity.art-import-profile",
+      "kind": "content",
+      "description": "Preview and apply project texture import settings with Sprite geometry and identity checks.",
+      "owner": "docs/reference/unity-art-import-profiles.md",
+      "entryPoint": "AwithGameFrame.Unity.Editor.Content.UnityArtImportProfileMenu.RunBatch",
+      "modes": ["background", "manual"],
+      "parameters": ["profilePath", "mode", "reportPath"],
+      "mutatesProject": true
+    },
+    {
+      "id": "unity.player-smoke",
+      "kind": "verification",
+      "description": "Run an existing Windows Player in batch mode and record game smoke results and offscreen screenshots.",
+      "owner": "tools/run-unity-player-smoke.ps1",
+      "entryPoint": "tools/run-unity-player-smoke.ps1",
+      "modes": ["background"],
+      "parameters": ["playerPath", "flag", "successMarker", "captureFlag", "evidenceDirectory"]
     },
     {
       "id": "content.generated-asset-manifest",

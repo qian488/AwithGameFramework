@@ -1,0 +1,691 @@
+fileFormatVersion: 2
+guid: 2a14a93b1ac7ed149a3b61a000361ef6
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -499079485150400874
+    second: OrbExplosion_0
+  - first:
+      213: -4916470167809855484
+    second: OrbExplosion_1
+  - first:
+      213: -8308224201660019892
+    second: OrbExplosion_2
+  - first:
+      213: -6397998567085150249
+    second: OrbExplosion_3
+  - first:
+      213: 9170314451674559122
+    second: OrbExplosion_4
+  - first:
+      213: 4147437039949499977
+    second: OrbExplosion_5
+  - first:
+      213: 4981517932636575392
+    second: OrbExplosion_6
+  - first:
+      213: -8585586015493709088
+    second: OrbExplosion_7
+  - first:
+      213: 309403019133406120
+    second: OrbExplosion_8
+  - first:
+      213: 1469253822999258589
+    second: OrbExplosion_9
+  - first:
+      213: -7069288856632401138
+    second: OrbExplosion_10
+  - first:
+      213: 4956601527957970646
+    second: OrbExplosion_11
+  - first:
+      213: -1628823643255563987
+    second: OrbExplosion_12
+  - first:
+      213: -7579332464488622731
+    second: OrbExplosion_13
+  - first:
+      213: -6689959802476216501
+    second: OrbExplosion_14
+  - first:
+      213: -8590861872842022709
+    second: OrbExplosion_15
+  - first:
+      213: 8370093020022973561
+    second: OrbExplosion_16
+  - first:
+      213: 3127207119111667245
+    second: OrbExplosion_17
+  - first:
+      213: 4625897040492364849
+    second: OrbExplosion_18
+  - first:
+      213: 5912931288428749617
+    second: OrbExplosion_19
+  - first:
+      213: 7529712411130453177
+    second: OrbExplosion_20
+  externalObjects: {}
+  serializedVersion: 12
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 0
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Nintendo Switch
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Server
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: OrbExplosion_0
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 28
+        width: 225
+        height: 226
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 69eecec3ad9e219f0800000000000000
+      internalID: -499079485150400874
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_1
+      rect:
+        serializedVersion: 2
+        x: 226
+        y: 28
+        width: 222
+        height: 222
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 40073e25e6035cbb0800000000000000
+      internalID: -4916470167809855484
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_2
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 213
+        width: 72
+        height: 42
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c4b40c18b1243bc80800000000000000
+      internalID: -8308224201660019892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_3
+      rect:
+        serializedVersion: 2
+        x: 561
+        y: 168
+        width: 33
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7df6e67833eb537a0800000000000000
+      internalID: -6397998567085150249
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_4
+      rect:
+        serializedVersion: 2
+        x: 813
+        y: 179
+        width: 31
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29271ba4860834f70800000000000000
+      internalID: 9170314451674559122
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_5
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 114
+        width: 102
+        height: 53
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94ecc768308ae8930800000000000000
+      internalID: 4147437039949499977
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_6
+      rect:
+        serializedVersion: 2
+        x: 620
+        y: 101
+        width: 76
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0a69a01aa28e12540800000000000000
+      internalID: 4981517932636575392
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_7
+      rect:
+        serializedVersion: 2
+        x: 696
+        y: 125
+        width: 102
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e2afedd10fd9d880800000000000000
+      internalID: -8585586015493709088
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_8
+      rect:
+        serializedVersion: 2
+        x: 901
+        y: 104
+        width: 39
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ab41e718683b4400800000000000000
+      internalID: 309403019133406120
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_9
+      rect:
+        serializedVersion: 2
+        x: 940
+        y: 28
+        width: 229
+        height: 173
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd561cc4196d36410800000000000000
+      internalID: 1469253822999258589
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_10
+      rect:
+        serializedVersion: 2
+        x: 1169
+        y: 28
+        width: 211
+        height: 160
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e036cc55d37d4ed90800000000000000
+      internalID: -7069288856632401138
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_11
+      rect:
+        serializedVersion: 2
+        x: 1380
+        y: 28
+        width: 176
+        height: 145
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6ded71714d269c440800000000000000
+      internalID: 4956601527957970646
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_12
+      rect:
+        serializedVersion: 2
+        x: 1556
+        y: 28
+        width: 161
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d299efdb6814569e0800000000000000
+      internalID: -1628823643255563987
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_13
+      rect:
+        serializedVersion: 2
+        x: 1717
+        y: 28
+        width: 148
+        height: 117
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 575d193d74dc0d690800000000000000
+      internalID: -7579332464488622731
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_14
+      rect:
+        serializedVersion: 2
+        x: 529
+        y: 28
+        width: 50
+        height: 67
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4f33cb210d7823a0800000000000000
+      internalID: -6689959802476216501
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_15
+      rect:
+        serializedVersion: 2
+        x: 594
+        y: 55
+        width: 39
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc0edca94a027c880800000000000000
+      internalID: -8590861872842022709
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_16
+      rect:
+        serializedVersion: 2
+        x: 777
+        y: 28
+        width: 39
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 974227b414b882470800000000000000
+      internalID: 8370093020022973561
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_17
+      rect:
+        serializedVersion: 2
+        x: 852
+        y: 57
+        width: 31
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2e39b16e42166b20800000000000000
+      internalID: 3127207119111667245
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_18
+      rect:
+        serializedVersion: 2
+        x: 1865
+        y: 28
+        width: 48
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 134041a69dc723040800000000000000
+      internalID: 4625897040492364849
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_19
+      rect:
+        serializedVersion: 2
+        x: 1913
+        y: 28
+        width: 64
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 133a614cda3fe0250800000000000000
+      internalID: 5912931288428749617
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OrbExplosion_20
+      rect:
+        serializedVersion: 2
+        x: 1977
+        y: 28
+        width: 51
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9bcd7463b89ee7860800000000000000
+      internalID: 7529712411130453177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      OrbExplosion_0: -499079485150400874
+      OrbExplosion_1: -4916470167809855484
+      OrbExplosion_10: -7069288856632401138
+      OrbExplosion_11: 4956601527957970646
+      OrbExplosion_12: -1628823643255563987
+      OrbExplosion_13: -7579332464488622731
+      OrbExplosion_14: -6689959802476216501
+      OrbExplosion_15: -8590861872842022709
+      OrbExplosion_16: 8370093020022973561
+      OrbExplosion_17: 3127207119111667245
+      OrbExplosion_18: 4625897040492364849
+      OrbExplosion_19: 5912931288428749617
+      OrbExplosion_2: -8308224201660019892
+      OrbExplosion_20: 7529712411130453177
+      OrbExplosion_3: -6397998567085150249
+      OrbExplosion_4: 9170314451674559122
+      OrbExplosion_5: 4147437039949499977
+      OrbExplosion_6: 4981517932636575392
+      OrbExplosion_7: -8585586015493709088
+      OrbExplosion_8: 309403019133406120
+      OrbExplosion_9: 1469253822999258589
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

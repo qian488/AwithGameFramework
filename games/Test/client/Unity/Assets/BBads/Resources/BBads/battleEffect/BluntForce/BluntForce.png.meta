@@ -1,0 +1,991 @@
+fileFormatVersion: 2
+guid: b8741e2b2018ec24d9f0f3dcf242f75e
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1892139674437595058
+    second: BluntForce_0
+  - first:
+      213: -4562140683908472104
+    second: BluntForce_1
+  - first:
+      213: 7894584234000285227
+    second: BluntForce_2
+  - first:
+      213: 7007099537652167863
+    second: BluntForce_3
+  - first:
+      213: 2830669769464131504
+    second: BluntForce_4
+  - first:
+      213: -5908462992050025251
+    second: BluntForce_5
+  - first:
+      213: -6678162958822454617
+    second: BluntForce_6
+  - first:
+      213: 8928668803958587930
+    second: BluntForce_7
+  - first:
+      213: -8508112423525742846
+    second: BluntForce_8
+  - first:
+      213: -5770634609328971437
+    second: BluntForce_9
+  - first:
+      213: -3569753572566848247
+    second: BluntForce_10
+  - first:
+      213: 6752176393414205721
+    second: BluntForce_11
+  - first:
+      213: -5456008123582014662
+    second: BluntForce_12
+  - first:
+      213: 8842478863762400351
+    second: BluntForce_13
+  - first:
+      213: 1442719277575732818
+    second: BluntForce_14
+  - first:
+      213: -3157723337286317070
+    second: BluntForce_15
+  - first:
+      213: 4753174655840721998
+    second: BluntForce_16
+  - first:
+      213: -4971451773613055132
+    second: BluntForce_17
+  - first:
+      213: -3074486758352489778
+    second: BluntForce_18
+  - first:
+      213: -3391947347371852459
+    second: BluntForce_19
+  - first:
+      213: -8755862958365319700
+    second: BluntForce_20
+  - first:
+      213: -1535100039532814303
+    second: BluntForce_21
+  - first:
+      213: -7545613179538695338
+    second: BluntForce_22
+  - first:
+      213: -7921446791249007103
+    second: BluntForce_23
+  - first:
+      213: -9110148993639117489
+    second: BluntForce_24
+  - first:
+      213: 8783275385999317531
+    second: BluntForce_25
+  - first:
+      213: -3647311114799110318
+    second: BluntForce_26
+  - first:
+      213: -4229064547801680781
+    second: BluntForce_27
+  - first:
+      213: -2537445308016798109
+    second: BluntForce_28
+  - first:
+      213: 7950518648898024946
+    second: BluntForce_29
+  - first:
+      213: 2992304172542089044
+    second: BluntForce_30
+  - first:
+      213: -6931910612397451182
+    second: BluntForce_31
+  - first:
+      213: 8940875433821936112
+    second: BluntForce_32
+  externalObjects: {}
+  serializedVersion: 12
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 0
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Server
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: BluntForce_0
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 181
+        width: 90
+        height: 74
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bfa648420b324a10800000000000000
+      internalID: 1892139674437595058
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_1
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 146
+        width: 13
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8d22740283500b0c0800000000000000
+      internalID: -4562140683908472104
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_2
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 181
+        width: 33
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2e7cf498823f8d60800000000000000
+      internalID: 7894584234000285227
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_3
+      rect:
+        serializedVersion: 2
+        x: 566
+        y: 102
+        width: 110
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b4bf8f77e73e3160800000000000000
+      internalID: 7007099537652167863
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_4
+      rect:
+        serializedVersion: 2
+        x: 195
+        y: 135
+        width: 17
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0bfa855682f884720800000000000000
+      internalID: 2830669769464131504
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_5
+      rect:
+        serializedVersion: 2
+        x: 338
+        y: 117
+        width: 25
+        height: 54
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ddc015e863ce00ea0800000000000000
+      internalID: -5908462992050025251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_6
+      rect:
+        serializedVersion: 2
+        x: 475
+        y: 107
+        width: 28
+        height: 59
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7aa473fdb266253a0800000000000000
+      internalID: -6678162958822454617
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_7
+      rect:
+        serializedVersion: 2
+        x: 676
+        y: 102
+        width: 59
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a12401998f009eb70800000000000000
+      internalID: 8928668803958587930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_8
+      rect:
+        serializedVersion: 2
+        x: 126
+        y: 103
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 20709a624dc1de980800000000000000
+      internalID: -8508112423525742846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_9
+      rect:
+        serializedVersion: 2
+        x: 265
+        y: 98
+        width: 14
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3512f5e95669aefa0800000000000000
+      internalID: -5770634609328971437
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_10
+      rect:
+        serializedVersion: 2
+        x: 523
+        y: 92
+        width: 28
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 90da8730a00b57ec0800000000000000
+      internalID: -3569753572566848247
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_11
+      rect:
+        serializedVersion: 2
+        x: 808
+        y: 85
+        width: 15
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9116b3eb7ac84bd50800000000000000
+      internalID: 6752176393414205721
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_12
+      rect:
+        serializedVersion: 2
+        x: 826
+        y: 85
+        width: 13
+        height: 46
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3b9f3ec48d5844b0800000000000000
+      internalID: -5456008123582014662
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_13
+      rect:
+        serializedVersion: 2
+        x: 902
+        y: 1
+        width: 107
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5425785dabc6ba70800000000000000
+      internalID: 8842478863762400351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_14
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 93
+        width: 19
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 25e72820a81950410800000000000000
+      internalID: 1442719277575732818
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_15
+      rect:
+        serializedVersion: 2
+        x: 739
+        y: 94
+        width: 14
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2fb8616ea538d24d0800000000000000
+      internalID: -3157723337286317070
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_16
+      rect:
+        serializedVersion: 2
+        x: 135
+        y: 82
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e4c96c48a2ba6f140800000000000000
+      internalID: 4753174655840721998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_17
+      rect:
+        serializedVersion: 2
+        x: 271
+        y: 78
+        width: 17
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 463eec7a3fad10bb0800000000000000
+      internalID: -4971451773613055132
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_18
+      rect:
+        serializedVersion: 2
+        x: 427
+        y: 63
+        width: 40
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec2f1c5259a3555d0800000000000000
+      internalID: -3074486758352489778
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_19
+      rect:
+        serializedVersion: 2
+        x: 529
+        y: 74
+        width: 37
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55d721fdbd16de0d0800000000000000
+      internalID: -3391947347371852459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_20
+      rect:
+        serializedVersion: 2
+        x: 849
+        y: 57
+        width: 53
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ced52a8a70dec7680800000000000000
+      internalID: -8755862958365319700
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_21
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 65
+        width: 19
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 12065f8b5aa32bae0800000000000000
+      internalID: -1535100039532814303
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_22
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 62
+        width: 25
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65b1715aac8984790800000000000000
+      internalID: -7545613179538695338
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_23
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 59
+        width: 35
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10ee17cec1e511290800000000000000
+      internalID: -7921446791249007103
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_24
+      rect:
+        serializedVersion: 2
+        x: 407
+        y: 73
+        width: 20
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f4d024702cf329180800000000000000
+      internalID: -9110148993639117489
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_25
+      rect:
+        serializedVersion: 2
+        x: 753
+        y: 47
+        width: 62
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1adbe28d6674e970800000000000000
+      internalID: 8783275385999317531
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_26
+      rect:
+        serializedVersion: 2
+        x: 566
+        y: 51
+        width: 21
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 257a0198dd5226dc0800000000000000
+      internalID: -3647311114799110318
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_27
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 1
+        width: 9
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 374351843385f45c0800000000000000
+      internalID: -4229064547801680781
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_28
+      rect:
+        serializedVersion: 2
+        x: 230
+        y: 1
+        width: 12
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3665da2bfee29ccd0800000000000000
+      internalID: -2537445308016798109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_29
+      rect:
+        serializedVersion: 2
+        x: 369
+        y: 1
+        width: 14
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2f57fa7669ae55e60800000000000000
+      internalID: 7950518648898024946
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_30
+      rect:
+        serializedVersion: 2
+        x: 495
+        y: 1
+        width: 22
+        height: 47
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4575a408accc68920800000000000000
+      internalID: 2992304172542089044
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_31
+      rect:
+        serializedVersion: 2
+        x: 679
+        y: 1
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2581a4d5608eccf90800000000000000
+      internalID: -6931910612397451182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BluntForce_32
+      rect:
+        serializedVersion: 2
+        x: 822
+        y: 1
+        width: 23
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0f919f516de541c70800000000000000
+      internalID: 8940875433821936112
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      BluntForce_0: 1892139674437595058
+      BluntForce_1: -4562140683908472104
+      BluntForce_10: -3569753572566848247
+      BluntForce_11: 6752176393414205721
+      BluntForce_12: -5456008123582014662
+      BluntForce_13: 8842478863762400351
+      BluntForce_14: 1442719277575732818
+      BluntForce_15: -3157723337286317070
+      BluntForce_16: 4753174655840721998
+      BluntForce_17: -4971451773613055132
+      BluntForce_18: -3074486758352489778
+      BluntForce_19: -3391947347371852459
+      BluntForce_2: 7894584234000285227
+      BluntForce_20: -8755862958365319700
+      BluntForce_21: -1535100039532814303
+      BluntForce_22: -7545613179538695338
+      BluntForce_23: -7921446791249007103
+      BluntForce_24: -9110148993639117489
+      BluntForce_25: 8783275385999317531
+      BluntForce_26: -3647311114799110318
+      BluntForce_27: -4229064547801680781
+      BluntForce_28: -2537445308016798109
+      BluntForce_29: 7950518648898024946
+      BluntForce_3: 7007099537652167863
+      BluntForce_30: 2992304172542089044
+      BluntForce_31: -6931910612397451182
+      BluntForce_32: 8940875433821936112
+      BluntForce_4: 2830669769464131504
+      BluntForce_5: -5908462992050025251
+      BluntForce_6: -6678162958822454617
+      BluntForce_7: 8928668803958587930
+      BluntForce_8: -8508112423525742846
+      BluntForce_9: -5770634609328971437
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

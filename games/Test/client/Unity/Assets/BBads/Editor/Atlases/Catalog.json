@@ -1,0 +1,43 @@
+{
+  "groups": [
+    {
+      "name": "Backpack",
+      "sources": [
+        "Resources/BBads/Items/Bag_Slot.png",
+        "Resources/BBads/Items/Bag_Slot1.png",
+        "Resources/BBads/Items/Bag_Slot2.png",
+        "Resources/BBads/Items/Bag_Slot3.png",
+        "Resources/BBads/Items/Bag_Slot4.png",
+        "Resources/BBads/Items/Bag_Slot_Fish.png",
+        "Resources/BBads/Items/Cat_Baseball1.png",
+        "Resources/BBads/Items/Cat_Gangster1.png",
+        "Resources/BBads/Items/Cat_Gangster3.png",
+        "Resources/BBads/Items/Cat_Grenade1.png",
+        "Resources/BBads/Items/Cat_Rocket1.png",
+        "Resources/BBads/Items/Cat_Stray1.png",
+        "Resources/BBads/Items/Fish1.png"
+      ]
+    },
+    {
+      "name": "BattleHud",
+      "sources": [
+        "Art/CF/1/ATK.png",
+        "Art/CF/1/Data_Frame.png",
+        "Art/CF/1/HP.png",
+        "Art/CF/1/Wave_Bar.png",
+        "Art/CF/1/Wave_Bar2.png",
+        "Art/CF/1/Wave_Base.png"
+      ]
+    },
+    {
+      "name": "WorldCombat",
+      "sources": [
+        "Resources/BBads/HealthBar/Unit_HealthBar.png",
+        "Resources/BBads/HealthBar/Unit_HealthBar1.png",
+        "Resources/BBads/HealthBar/Unit_HealthBar2.png",
+        "Resources/BBads/projectile/CatGangster1.png",
+        "Resources/BBads/projectile/CatGrenade.png"
+      ]
+    }
+  ]
+}

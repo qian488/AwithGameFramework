@@ -310,9 +310,14 @@ try {
         foreach ($definition in @(Get-ChildItem -LiteralPath $stage -Filter '*.asmdef' -File -Recurse)) {
             $asmdef = Get-Content -LiteralPath $definition.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
             $references = @($asmdef.references | Where-Object { $_ -notin @('AwithGameFrame.Core', 'AwithGameFrame.Data', 'AwithGameFrame.Gameplay', 'AwithGameFrame.Networking') })
+            $nativeDllNames = if ($asmdef.PSObject.Properties['precompiledReferences']) {
+                $asmdef.precompiledReferences
+            }
             $asmdef | Add-Member -NotePropertyName references -NotePropertyValue $references -Force
             $asmdef | Add-Member -NotePropertyName overrideReferences -NotePropertyValue $true -Force
-            $asmdef | Add-Member -NotePropertyName precompiledReferences -NotePropertyValue $dllNames -Force
+            $asmdef | Add-Member -NotePropertyName precompiledReferences -NotePropertyValue @(
+                @($nativeDllNames) + $dllNames | Where-Object { $_ } | Select-Object -Unique
+            ) -Force
             Write-Utf8 $definition.FullName (($asmdef | ConvertTo-Json -Depth 10) + "`n")
         }
         $package = [ordered]@{

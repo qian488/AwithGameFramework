@@ -2,12 +2,14 @@
 param([Parameter(Mandatory = $true)][string]$EditorPath, [switch]$DiagnosticsOnly, [switch]$RunLiveEditor)
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'unity-verification-cleanup.ps1')
 if ($DiagnosticsOnly -and -not $RunLiveEditor) {
     throw '-DiagnosticsOnly requires -RunLiveEditor because it opens an interactive editor session.'
 }
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $editor = Get-Item -LiteralPath $EditorPath
 $isolatedProject = Join-Path $repository ('artifacts/UnityAutomationValidation/' + [Guid]::NewGuid().ToString('N'))
+try {
 foreach ($directory in @('Assets/Editor', 'Assets/Scenes', 'Packages', 'ProjectSettings')) {
     [IO.Directory]::CreateDirectory((Join-Path $isolatedProject $directory)) | Out-Null
 }
@@ -126,7 +128,7 @@ try {
 }
 finally { [Environment]::SetEnvironmentVariable('ALLUSERSPROFILE', $previousProfile) }
 try {
-    if (!$setup.WaitForExit(180000)) { $setup.Kill(); throw "Unity fixture setup timed out. See $setupLog" }
+    if (!$setup.WaitForExit(180000)) { $setup.Kill(); $setup.WaitForExit(10000) | Out-Null; throw "Unity fixture setup timed out. See $setupLog" }
     if ($setup.ExitCode -ne 0 -or !(Test-Path -LiteralPath (Join-Path $isolatedProject 'Assets/Automation Fixture.prefab'))) {
         throw "Unity fixture setup failed. See $setupLog"
     }
@@ -510,7 +512,14 @@ if ((Get-FileHash -LiteralPath $savedFile).Hash -cne $before -or $restoredScene.
 
 $options.ArgumentList = $options.ArgumentList -replace '^AutomationValidation.FixtureValues.CreateFixture$', 'AutomationValidation.FixtureValues.EditPrefab'
 $prefabEdit = Start-Process @options
-try { if (!$prefabEdit.WaitForExit(120000) -or $prefabEdit.ExitCode -ne 0) { throw 'Could not change the test Prefab through Unity.' } }
+try {
+    if (!$prefabEdit.WaitForExit(120000)) {
+        $prefabEdit.Kill()
+        $prefabEdit.WaitForExit(10000) | Out-Null
+        throw 'Changing the test Prefab through Unity timed out.'
+    }
+    if ($prefabEdit.ExitCode -ne 0) { throw 'Could not change the test Prefab through Unity.' }
+}
 finally { $prefabEdit.Dispose() }
 $list = & $commandPath @defaults -Action checkpoint.list | ConvertFrom-Json
 if ($list.checkpoints.id -notcontains $sceneCheckpoint.id -or $list.checkpoints.id -notcontains $prefabCheckpoint.id) { throw 'Checkpoints were not discoverable after restart.' }
@@ -523,3 +532,8 @@ if ((Get-FileHash -LiteralPath (Join-Path $isolatedProject $prefab)).Hash -ne $s
 
 Write-Host 'UNITY_EDITOR_AUTOMATION_BATCH_PASSED'
 if ($RunLiveEditor) { Write-Host 'UNITY_EDITOR_AUTOMATION_PASSED' }
+}
+finally {
+    Save-UnityAutomationEvidence $isolatedProject
+    Clear-UnityVerificationProjectFiles $isolatedProject $isolatedProject
+}

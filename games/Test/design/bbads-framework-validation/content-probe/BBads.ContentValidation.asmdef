@@ -1,0 +1,7 @@
+{
+  "name": "BBads.ContentValidation",
+  "references": ["BBads.Runtime", "Unity.TextMeshPro", "UnityEngine.UI"],
+  "overrideReferences": true,
+  "precompiledReferences": ["nunit.framework.dll"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

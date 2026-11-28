@@ -1,0 +1,419 @@
+{
+  "version": 1,
+  "id": "test-bbads-integration",
+  "brief": "games/Test/design/bbads-integration/brief.md",
+  "decisionSource": "用户要求将现有 BBads 迁入 Test，并用实际素材验证压缩、分辨率档位和图集合批，参考 trunk 的资源流程。",
+  "tickets": [
+    {
+      "id": "source-baseline",
+      "owner": "",
+      "priority": 0,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "固定 BBads 源工程行为与迁移清单",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-integration/source-baseline.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "docs-verify"
+        ],
+        "acceptance": [
+          "A1. 记录启用的场景、已有玩法、包和动态加载键及源版本的运行证据或明确缺口。"
+        ]
+      }
+    },
+    {
+      "id": "unity-version",
+      "owner": "",
+      "priority": 0,
+      "dependsOn": [
+        "source-baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "在 Test 的 Unity 基线上接通原生依赖",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Packages/manifest.json",
+          "games/Test/client/Unity/Packages/packages-lock.json",
+          "games/Test/client/Unity/ProjectSettings/GraphicsSettings.asset",
+          "games/Test/client/Unity/ProjectSettings/QualitySettings.asset",
+          "games/Test/client/Unity/Assets/BBads.meta",
+          "games/Test/client/Unity/Assets/BBads/Compatibility",
+          "games/Test/client/Unity/Assets/BBads/Compatibility.meta",
+          "games/Test/design/bbads-integration/unity-version.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A2. Unity 2022.3.16f1 的最小夹具实际验证 2D 灯、代表材质、TMP 与 Spine 动画并记录转换决定。"
+        ]
+      }
+    },
+    {
+      "id": "data",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "source-baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "迁移六张 BBads 配置并校验引用",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/configuration/BBads",
+          "games/Test/src/Test.Application/Runtime/BBads/Configuration",
+          "games/Test/tests/Test.Application.Tests/BBadsConfigurationTests.cs",
+          "games/Test/design/bbads-integration/data.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A3. 六张表与源数据核对，错误定位到表、行和字段。"
+        ]
+      }
+    },
+    {
+      "id": "domain",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "source-baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "迁移背包和战斗的纯规则",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/src/Test.Domain/Runtime/BBads",
+          "games/Test/tests/Test.Domain.Tests/BBads"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A4. .NET 测试覆盖源规则、无效摆放和重复结算。"
+        ]
+      }
+    },
+    {
+      "id": "application",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "data",
+        "domain"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "接通背包、召唤、波次与战斗会话",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/src/Test.Application/Runtime/BBads/Session",
+          "games/Test/tests/Test.Application.Tests/BBadsSessionTests.cs"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A5. 可独立测试召唤与刷怪调度，退出后会话释放订阅和调度。"
+        ]
+      }
+    },
+    {
+      "id": "unity-client",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "unity-version",
+        "application"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "迁入原场景并组合 Test 客户端",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/BBads/Scenes",
+          "games/Test/client/Unity/Assets/BBads/Scenes.meta",
+          "games/Test/client/Unity/Assets/BBads/Runtime",
+          "games/Test/client/Unity/Assets/BBads/Runtime.meta",
+          "games/Test/client/Unity/Assets/BBads/Source",
+          "games/Test/client/Unity/Assets/BBads/Source.meta",
+          "games/Test/game.json",
+          "games/Test/client/Unity/ProjectSettings/EditorBuildSettings.asset",
+          "games/Test/design/bbads-integration/asset-map.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A2/A5. 实际打开 BBadsBattle 并走通源玩法，核对原生表现、场景引用、动态资源和重开行为。"
+        ]
+      }
+    },
+    {
+      "id": "art-import",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "source-baseline",
+        "unity-version"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "实现 BBads 贴图导入规则和报告",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/BBads/Editor/Import",
+          "games/Test/client/Unity/Assets/BBads/Editor/Import.meta",
+          "games/Test/client/Unity/Assets/BBads/Editor.meta",
+          "games/Test/client/Unity/Assets/BBads/ImportSettings",
+          "games/Test/client/Unity/Assets/BBads/ImportSettings.meta",
+          "games/Test/design/bbads-integration/art-import.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A6. 代表组可预览、应用和复跑导入规则，保留 GUID、切片和有效引用。"
+        ]
+      }
+    },
+    {
+      "id": "art-quality",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "art-import",
+        "unity-client"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "接通两档压缩纹理与资源选择",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/BBads/Quality",
+          "games/Test/client/Unity/Assets/BBads/Quality.meta",
+          "games/Test/client/Unity/Assets/BBads/Editor/Quality",
+          "games/Test/client/Unity/Assets/BBads/Editor/Quality.meta",
+          "games/Test/design/bbads-integration/art-quality.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A7. Player 能强制选择高低档，记录实际分辨率、纹理格式和缺档回退。"
+        ]
+      }
+    },
+    {
+      "id": "art-atlas",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "art-import",
+        "unity-client"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "按使用场景打图集并验证合批",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/client/Unity/Assets/BBads/Atlases",
+          "games/Test/client/Unity/Assets/BBads/Atlases.meta",
+          "games/Test/client/Unity/Assets/BBads/Editor/Atlases",
+          "games/Test/client/Unity/Assets/BBads/Editor/Atlases.meta",
+          "games/Test/design/bbads-integration/art-atlas.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build"
+        ],
+        "requiredChecks": [
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A8. 背包/HUD 与世界代表组验证真实图集绑定，记录批次前后差异和拆批原因。"
+        ]
+      }
+    },
+    {
+      "id": "integration",
+      "owner": "",
+      "priority": 2,
+      "dependsOn": [
+        "art-quality",
+        "art-atlas"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "完成 Test 双演示和 BBads 端到端验收",
+        "readModules": [
+          "game-test"
+        ],
+        "writePaths": [
+          "games/Test/README.md",
+          "games/Test/verify-bbads.mjs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsTests.cs.meta",
+          "docs/validation/latest.md",
+          "games/Test/design/bbads-integration/integration.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "samples",
+          "adapters",
+          "tools",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace"
+        ],
+        "allowedTools": [
+          "game-build",
+          "portable-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "portable-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A9/A10. Windows 正式 Player 打通真实流程与现有 Test 回归，记录移动档构建和设备验收的实际覆盖。"
+        ]
+      }
+    }
+  ]
+}

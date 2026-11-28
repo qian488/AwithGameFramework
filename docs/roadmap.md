@@ -28,6 +28,8 @@ Godot 宿主实现每树退出协调和启动期暂停回放。存储实例捕�
 
 Unity 工作区提供[画面自动验收](reference/unity-visual-verification.md)。项目可定义控件布局断言、画面异常阈值和基准图，后台输出实际画面、差异图和报告。
 
+已有 Unity 工程可以在隔离副本运行迁移预检。游戏可登记动态 Resources 键与图集成员，并用纹理导入配置统一检查和重导入设置。已有 Windows Player 的项目冒烟可复用后台启动、超时和截图证据格式。 [迁移预检](reference/unity-migration-audit.md) · [资源与图集审计](reference/unity-resource-audit.md) · [纹理导入配置](reference/unity-art-import-profiles.md) · [Player 冒烟](reference/unity-player-smoke.md)
+
 Unity 编辑器自动化还提供持久化操作审计和 `performance.inspect` 快照，可记录编辑器操作结果、对象/组件数量和 Profiler 内存计数。它们用于发现明显异常，不能替代目标设备上的持续性能和人工画面验收。
 
 已有 [AgentKit](../agent/README.md)：任务读写范围与脏工作区基线、模块发现与按模块选择的有限上下文/预算、固定工具目录、具体计划与真实确认、执行日志/耗时、机器检查与人工评审分离、本地事件监看。提供任务/评审/交接模板及可编译的[Domain/Application 功能模板](../templates/portable-feature/README.md)，标准验证包含工具契约、文档本地链接、行为回归和模板。

@@ -1,0 +1,12 @@
+{
+  "exceptions": [
+    {
+      "path": "Assets/BBads/Art/CF/1/Wave_Bar.png",
+      "reason": "Preserve the source import for the thin filled progress-bar edge; compare visually before opting in."
+    },
+    {
+      "path": "Assets/BBads/Art/CF/1/Wave_Bar2.png",
+      "reason": "Preserve the source import for the thin filled progress-bar edge; compare visually before opting in."
+    }
+  ]
+}

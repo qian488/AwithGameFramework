@@ -1,0 +1,90 @@
+using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+namespace Test.BBads.AtlasTools
+{
+    public static class BBadsAtlasBuild
+    {
+        public static void BuildFixtures()
+        {
+            string workspace = Directory.GetParent(Application.dataPath).FullName;
+            string output = Path.Combine(workspace, "..");
+            BBadsAtlases.Validate();
+
+            var catalog = BBadsAtlases.ReadCatalog();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            var probe = new GameObject("BBads Atlas Probe").AddComponent<BBadsAtlasProbe>();
+            probe.groups = catalog.Select(group => new BBadsAtlasProbe.Group
+            {
+                name = group.name,
+                sprites = BBadsAtlases.GetSprites(group, BBadsAtlases.Resolve(group)).Select(sprite =>
+                {
+                    string path = AssetDatabase.GetAssetPath(sprite);
+                    const string marker = "/Resources/";
+                    int resources = path.IndexOf(marker, StringComparison.Ordinal);
+                    return new BBadsAtlasProbe.SpriteReference
+                    {
+                        sprite = sprite,
+                        resourceKey = resources < 0 ? "" :
+                            Path.ChangeExtension(path.Substring(resources + marker.Length), null)
+                    };
+                }).ToArray(),
+                world = group.name == "WorldCombat"
+            }).ToArray();
+
+            const string scene = "Assets/AtlasProbe/Probe.unity";
+            if (!EditorSceneManager.SaveScene(probe.gameObject.scene, scene))
+                throw new InvalidOperationException("Could not save the atlas probe scene.");
+
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
+                new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
+            PlayerSettings.runInBackground = true;
+            PlayerSettings.colorSpace = ColorSpace.Gamma;
+
+            Build(scene, Path.Combine(output, "atlas", "AtlasProbe.exe"));
+            // Excluding an atlas from the build leaves a late-binding request in its sprites.
+            // Remove the atlas assets from this scratch project for a genuinely unpacked baseline.
+            string heldAtlases = Path.Combine(workspace, "AtlasAssets");
+            Directory.CreateDirectory(heldAtlases);
+            var paths = catalog.SelectMany(group => new[] { group.Path, group.Path + ".meta" }).ToArray();
+            try
+            {
+                foreach (string path in paths)
+                    File.Move(path, Path.Combine(heldAtlases, Path.GetFileName(path)));
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                Build(scene, Path.Combine(output, "baseline", "AtlasProbe.exe"));
+            }
+            finally
+            {
+                foreach (string path in paths)
+                {
+                    string held = Path.Combine(heldAtlases, Path.GetFileName(path));
+                    if (File.Exists(held))
+                        File.Move(held, path);
+                }
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            }
+        }
+
+        private static void Build(string scene, string path)
+        {
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = new[] { scene },
+                target = BuildTarget.StandaloneWindows64,
+                locationPathName = path,
+                options = BuildOptions.Development
+            });
+            if (report.summary.result != BuildResult.Succeeded)
+                throw new InvalidOperationException("Probe Player build failed: " + path);
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(path), "build-bytes.txt"),
+                report.summary.totalSize.ToString());
+        }
+    }
+}

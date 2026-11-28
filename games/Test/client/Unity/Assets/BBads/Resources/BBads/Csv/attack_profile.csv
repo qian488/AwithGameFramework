@@ -1,0 +1,14 @@
+id,attackAnimation,hitDelay,projectileResourcePath,projectileSpeed,projectileScale,projectileSpawnOffsetX,projectileSpawnOffsetY,projectileTrajectory,projectileArcHeight,projectileRotationOffset,castEffectResourcePath,castEffectScale,castEffectOffsetX,castEffectOffsetY,hitEffectResourcePath,hitEffectScale,hitEffectOffsetX,hitEffectOffsetY,randomHitRotation
+bbads_cat_baseball_melee,Attack,0.3,,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,,0.5,0,0,true
+bbads_cat_gangster_projectile,Attack,0.3,BBads/projectile/CatGangster1,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,,0.5,0,0,true
+bbads_cat_grenade_projectile,Attack,0.3,BBads/projectile/CatGrenade,6,0.5,0,0.15,Arc,0.6,0,,0.5,0,0,BBads/battleEffect/CannonImpact,0.5,0,0,true
+bbads_enemy_cat_baseball_melee,Attack,0.3,,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,,0.5,0,0,true
+km_melee_basic,Attack,0.3,,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,,0.5,0,0,true
+km_giant_zombie,Attack,0.8,,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/GiantBlow,0.5,0,0,true
+km_mage_normal,Attack,0.3,KM/projectile/NormalMage,6,1,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/BlueOrbBow,0.5,0,0,true
+km_mage_normal2,Attack,0.3,KM/projectile/NormalMage2,6,1,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/BlueOrbBow,0.5,0,0,true
+km_mage_rare,Attack,0.3,KM/projectile/RareMage,6,1,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/BlueOrbBow,0.5,0,0,true
+km_skeleton_archer,Attack,0.3,KM/projectile/SkeletonArcher,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,,0.5,0,0,true
+km_skeleton_mage,Attack,0.3,KM/projectile/SkeletonMage,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/RedOrbBow,0.5,0,0,true
+km_fire_elemental,Attack,0.3,KM/projectile/FireElemental,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/MudExplosion,0.5,0,0,true
+km_ice_imp,Attack,0.4,KM/projectile/IceImp,6,0.5,0,0.15,Homing,0,0,,0.5,0,0,KM/battleEffect/OrbExplosion,0.5,0,0,true

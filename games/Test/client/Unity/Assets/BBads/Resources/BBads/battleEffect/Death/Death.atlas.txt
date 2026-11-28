@@ -1,0 +1,13 @@
+Death.png
+size:256,64
+filter:Linear,Linear
+pma:true
+gutou
+bounds:100,15,44,35
+offsets:1,1,46,37
+tougu
+bounds:2,2,47,48
+offsets:1,1,49,50
+yanwu
+bounds:51,3,47,47
+offsets:1,1,49,49

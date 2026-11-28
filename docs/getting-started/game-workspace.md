@@ -63,6 +63,8 @@ powershell -File tools/game.ps1 protocol -Name MyGame -Check
 
 生成的 C# DTO 与 JSON 位于 Application 的 `Runtime/Generated/Configuration`，随游戏源码提交并由生成命令维护。存在 `configuration/schema.json` 时，`build`、`run-server` 和仓库标准验证会只读检查产物。项目按需将 JSON 声明为程序集资源，再用生成 DTO 的 `SchemaHash` 加载。完整接线见 [Test 的 Boss 配置](../../games/Test/configuration/README.md)。协议继续使用显式输入和输出。
 
+已有场景或 Prefab 通过 GUID 引用 CSV 或 JSON 时，可在 `configuration/copies.json` 登记 `source` 和 `destination`。源路径位于 `configuration/`，目标位于本游戏客户端。运行 `game.ps1 config -Name <Game>` 更新文件字节并保留同路径的 Unity `.meta`。检查模式定位到缺失文件或首个差异行，构建和客户端同步会执行同一检查。 [Test 的 CSV 映射](../../games/Test/configuration/copies.json)
+
 ```powershell
 powershell -File tools/game.ps1 build -Name MyGame -Configuration Debug
 ```

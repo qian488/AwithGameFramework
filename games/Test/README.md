@@ -32,6 +32,24 @@ powershell -File tools/game.ps1 run-server -Name Test
 - `Assets/Scenes/SampleScene.unity` 用于验证 `GameHost`。场景中的星环实例关闭了 `Play On Enable`，由宿主控制首播和每 3 秒重播。
 - `Assets/Scenes/CombatShowcase.unity` 包含雨夜试炼和原版 Rain Pass。打开后点击 Play，或使用 `Tools > Test > Rain Pass > Open and Play`。
 - `Assets/Scenes/RainPassCamp.unity` 是雨夜委托的独立入口。打开后点击 Play。
+- `Assets/BBads/Scenes/BBadsBattle.unity` 是背包战斗和美术流水线演示。
+
+## BBads 背包战斗
+
+在 Unity 中打开 `BBadsBattle.unity` 并点击 Play，也可从 `SampleScene` 的 **Open BBads** 进入。战斗上方的 **Restart** 重开，**Exit** 返回 Test 的粒子场景。默认按源配置自动摆放和合并。要检查手动拖放，在战斗场景的 `BattleDemoBootstrap` 上关闭 **Auto Place Items**，再将道具拖入背包。相邻的鱼给猫道具充能，猫道具召唤单位，敌人按波次产生，基地毁坏后停止刷怪。
+
+Test.Domain 处理格子、合并与伤害。Test.Application 处理配置、刷怪、召唤顺序和充能。Unity 负责拖拽、场景接线、碰撞、动画、HUD 和资源表现。修改 CSV 后运行 `tools/game.ps1 config -Name Test`，修改外部 C# 后运行 `tools/game.ps1 sync -Name Test`。 [BBads 配置](configuration/BBads/README.md)
+
+| 维护内容 | 入口 |
+| --- | --- |
+| 预览和应用纹理压缩 | [导入规则](design/bbads-integration/art-import.md) |
+| 替换档位图片和核对逻辑尺寸 | [画质档位](design/bbads-integration/art-quality.md) |
+| 编辑合批分组和复测 | [Sprite Atlas V2](design/bbads-integration/art-atlas.md) |
+| 后台命令、截图与验收 | [集成验证](design/bbads-integration/verification.md) |
+
+[原工程与版本迁移](design/bbads-integration/source-baseline.md) · [需求](design/bbads-integration/brief.md)
+
+[BBads 框架能力验证与补强](design/bbads-framework-validation/brief.md)覆盖完整对局、框架接入、工具回归和工单交接。
 
 ## 雨夜委托
 

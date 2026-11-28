@@ -47,13 +47,17 @@ powershell -File tools/verify-game-unity.ps1 -Name Test -EditorPath '<Unity.exe>
 
 编辑器自动化脚本在独立工程导入现代 UPM 包，生成验证 Prefab 和序列化组件。默认用批处理通过公共 CLI 验证查找与放置、字段读写与预览、白名单、原生粒子字段落盘，以及场景与 Prefab 的重启恢复。成功标记为 `UNITY_EDITOR_AUTOMATION_BATCH_PASSED`。
 
-`verify-game-unity.ps1` 在 `<Game>-Unity-Verification` 隔离工作区构建和同步 DLL，使用 Unity 后台导入并编译客户端。加 `-RunTests` 才运行 EditMode 和 PlayMode，加 `-BuildScene` 才构建 Player。默认清理验证副本，保留 `summary.json`、日志和本次生成的报告与 Player。手动打开验证副本时使用 `-KeepProject`。游戏可另设后台 Player 冒烟入口。 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)
+`verify-game-unity.ps1` 在 `<Game>-Unity-Verification` 隔离工作区构建和同步 DLL，使用 Unity 后台导入并编译客户端。加 `-RunTests` 才运行 EditMode 和 PlayMode，加 `-BuildScene` 才构建 Player。脚本退出时默认清理验证副本，保留 `summary.json`、日志、报告和 Player。使用 `-KeepProject` 可以保留供后续步骤使用的工程副本。使用结束后可清理 `verificationProject` 指向的目录。游戏可另设后台 Player 冒烟入口。 [Test 的 Rain Pass 验证](../../games/Test/README.md#rain-pass-近战演示)
+
+共享示例、最小适配、编辑器自动化、迁移预检、Addressables 和 HybridCLR 命令退出时也会清理各自的临时工程文件与 Unity 缓存。日志、截图、报告和构建产物仍位于验证输出目录。编辑器自动化将操作证据移至 `AutomationEvidence`。
+
+用 `-RunTests -TestMode PlayMode -TestFilter Test.Client.Tests.BBadsTimingTests` 后台复跑单个测试夹具。导入、测试或后续校验失败时，`summary.json` 包含失败阶段、错误和已知的报告路径。AgentKit 可用 `game-unity-tests` 配方运行指定游戏的两套测试，任务参数填写 `gameName` 和本机 `editorPath`。
 
 同一仓库可以同时启动多个游戏 Unity 验证。外部构建和程序集同步按仓库检出目录依次运行，复制完成后，各任务在自己的工程副本中运行 Unity。每次验收保留 `portable-build.json`，可核对客户端实际接收的源码指纹和 DLL/PDB 哈希。
 
 追加 `-VisualSpec '<visual-cases.json>'` 可执行[画面自动验收](unity-visual-verification.md)。用例支持后台离屏截图和已有 PNG 检查，并保存实际画面、差异图与逐项报告。
 
-`verify-unity.ps1` 可用 `-PlayerTarget Android` 或 `WebGL` 构建示例。WebGL 使用 IL2CPP。验证具体游戏时，为 `verify-game-unity.ps1` 添加 `-BuildScene <Assets/...unity> -PlayerTarget WebGL`，在 `summary.json` 中找到 Player 路径。
+`verify-unity.ps1` 可用 `-PlayerTarget Android` 或 `WebGL` 构建示例。WebGL 使用 IL2CPP。验证具体游戏时，为 `verify-game-unity.ps1` 添加 `-BuildScene <Assets/...unity> -PlayerTarget WebGL`。已配置 Android JDK 和 SDK 的编辑器可使用 `-PlayerTarget Android` 构建 APK。`summary.json` 记录 Player 路径。
 
 ```powershell
 npm install --prefix artifacts/UnityWebGLTools --no-save playwright-core@1.65.1

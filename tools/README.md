@@ -17,8 +17,11 @@
 | 发布文件与大小/hash 清单 | [publish-content.ps1](publish-content.ps1) | 写入独立发布目录 |
 | 经真实 HTTP 下载并验证内容安装 | [verify-content.ps1](verify-content.ps1) | 校验清单和下载文件；不替代原生资源加载 |
 | 验证完整 Unity 示例 | [verify-unity.ps1](verify-unity.ps1) | 后台导入、PlayMode 和构建。追加 `-RunPlayerSmoke` 可后台运行 Windows Player |
-| 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 默认后台导入并编译。用 `-RunTests` 运行 EditMode 和 PlayMode，用 `-BuildScene` 构建 Player。 [验证参考](../docs/reference/verification.md#unity) |
+| 验证指定游戏的 Unity 工程 | [verify-game-unity.ps1](verify-game-unity.ps1) | 默认后台导入并编译。`-RunTests` 跑两种测试模式，`-TestMode` 和 `-TestFilter` 可缩小复现范围。`-BuildScene` 构建 Player。 [验证参考](../docs/reference/verification.md#unity) |
 | 自动检查 Unity 画面 | [verify-game-unity.ps1](verify-game-unity.ps1) `-VisualSpec` | [画面自动验收](../docs/reference/unity-visual-verification.md)包含离屏截图、控件布局断言和基准图对比 |
+| 审计 Unity 配置资源键和图集成员 | [verify-game-unity.ps1](verify-game-unity.ps1) `-ResourceSpec`、`-AtlasSpec` | 在隔离工程加载实际资源并检查类型、数量、回退和图集绑定。 [清单格式](../docs/reference/unity-resource-audit.md) |
+| 预检已有 Unity 工程 | [verify-unity-migration.ps1](verify-unity-migration.ps1) | 在副本中导入并核对版本、包、场景和 Prefab 引用。 [迁移预检](../docs/reference/unity-migration-audit.md) |
+| 后台运行已有 Unity Player | [run-unity-player-smoke.ps1](run-unity-player-smoke.ps1) | 调用项目冒烟入口，记录退出码、成功标记及可选离屏截图。 [Player 冒烟](../docs/reference/unity-player-smoke.md) |
 | 验证 Unity 基础适配 | [verify-unity-minimal.ps1](verify-unity-minimal.ps1) | 独立工程仅安装基础适配及其依赖 |
 | 验证 Unity Addressables 资源后端 | [verify-unity-addressables.ps1](verify-unity-addressables.ps1) | 在独立工程构建真实资产目录，后台验证租约、类型和取消行为 |
 | 验证 Unity WebGL 启动 | [verify-unity-webgl.mjs](verify-unity-webgl.mjs) | 无界面浏览器加载 WebGL Player，保存控制台证据和截图 |

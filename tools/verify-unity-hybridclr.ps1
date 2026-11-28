@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'unity-verification-cleanup.ps1')
 $editor = (Get-Item -LiteralPath $EditorPath).FullName
 $package = Get-Item -LiteralPath $HybridClrPackagePath
 $native = Get-Item -LiteralPath $PatchedIl2CppPath
@@ -21,6 +22,7 @@ if (!(Test-Path -LiteralPath (Join-Path $native.FullName 'hybridclr/RuntimeApi.c
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $validation = Join-Path $repository ('artifacts/UnityHybridClrValidation/' + [guid]::NewGuid().ToString('N'))
 $project = if ($Name) { Join-Path $validation 'client/Fixture' } else { $validation }
+try {
 foreach ($directory in @('Packages', 'ProjectSettings')) {
     [IO.Directory]::CreateDirectory((Join-Path $project $directory)) | Out-Null
 }
@@ -53,6 +55,7 @@ function Invoke-HiddenProcess([string]$Executable, [string[]]$Arguments, [string
     try {
         if (!$process.WaitForExit($Timeout * 1000)) {
             $process.Kill()
+            $process.WaitForExit(10000) | Out-Null
             throw "HybridCLR check timed out. See $Log"
         }
         if ($process.ExitCode -ne 0) { throw "HybridCLR process returned $($process.ExitCode). See $Log" }
@@ -78,3 +81,8 @@ try {
     Write-Host "AWITH_HYBRIDCLR_PLAYER_PASSED $runtimeLog"
 }
 finally { [Environment]::SetEnvironmentVariable('ALLUSERSPROFILE', $previousProfile) }
+}
+finally {
+    Clear-UnityVerificationProjectFiles $project $validation
+    $null = Remove-UnityVerificationDirectory (Join-Path $project 'HybridCLRData') $validation
+}

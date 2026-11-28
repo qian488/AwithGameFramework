@@ -52,6 +52,8 @@ powershell -File tools/verify-unity.ps1 -EditorPath '<Unity.exe>' -RunVisualSmok
 
 `summary.json` 的 `visual` 字段指向 `Visual/visual-report.json`。每个用例记录分辨率、像素比例、问题描述和实际 PNG。使用基准图时，差异图以红色标出超过容差的像素。日志和报告中的引擎、图形设备及色彩空间用于定位环境差异。用例失败时命令返回非零退出码。
 
+场景捕获期间收到 Unity Error、Exception 或 Assert 时，用例失败并在报告中保留消息。已经运行到指定业务状态的 Player 可通过后台冒烟生成 PNG，再将 PNG 交给 `image` 用例。项目负责设定状态、时间与相机。 [Player 冒烟](unity-player-smoke.md)
+
 直接捕获针对 Unity Built-in 渲染管线下已保存的编辑态场景，以及相机空间或世界空间 Canvas。Screen Space Overlay 和其他渲染管线使用项目已有的真实截图作为 PNG 输入，运行时生成的 UI、IMGUI 和 UI Toolkit 也可用这一入口。构图、动效节奏和整体可读性继续纳入人工验收。
 
 ## 参考实现

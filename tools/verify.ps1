@@ -311,7 +311,8 @@ Push-Location $repositoryRoot
 try {
     & (Join-Path $PSScriptRoot 'generate-config.ps1') -Check
     foreach ($gameDirectory in Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'games') -Directory) {
-        if (Test-Path -LiteralPath (Join-Path $gameDirectory.FullName 'configuration/schema.json')) {
+        if ((Test-Path -LiteralPath (Join-Path $gameDirectory.FullName 'configuration/schema.json')) -or
+            (Test-Path -LiteralPath (Join-Path $gameDirectory.FullName 'configuration/copies.json'))) {
             & (Join-Path $PSScriptRoot 'game.ps1') config -Name $gameDirectory.Name -Check
         }
     }

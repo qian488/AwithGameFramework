@@ -1,0 +1,16 @@
+GiantBlow.png
+size:128,128
+filter:Linear,Linear
+pma:true
+huang
+bounds:2,2,9,9
+offsets:1,1,11,11
+qiu
+bounds:75,97,13,13
+offsets:1,1,15,15
+quan
+bounds:2,39,71,71
+offsets:1,1,73,73
+yan
+bounds:2,13,24,24
+offsets:1,1,26,26

@@ -1,6 +1,6 @@
 {
   "name": "Test.Client.PlayMode.Tests",
-  "references": ["Test.Client", "AwithGameFrame.Unity", "UnityEngine.UI", "Unity.InputSystem"],
+  "references": ["Test.Client", "BBads.Runtime", "BBads.Quality", "AwithGameFrame.Unity", "AwithGameFrame.Extensions", "UnityEngine.UI", "Unity.InputSystem"],
   "overrideReferences": true,
   "precompiledReferences": ["nunit.framework.dll", "AwithGameFrame.Core.dll", "AwithGameFrame.Gameplay.dll", "Test.Application.dll", "Test.Domain.dll"],
   "optionalUnityReferences": ["TestAssemblies"]

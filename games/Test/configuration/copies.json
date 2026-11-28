@@ -1,0 +1,26 @@
+﻿[
+  {
+    "source": "configuration/BBads/attack_profile.csv",
+    "destination": "client/Unity/Assets/BBads/Resources/BBads/Csv/attack_profile.csv"
+  },
+  {
+    "source": "configuration/BBads/encounter.csv",
+    "destination": "client/Unity/Assets/BBads/Resources/BBads/Csv/encounter.csv"
+  },
+  {
+    "source": "configuration/BBads/item.csv",
+    "destination": "client/Unity/Assets/BBads/Resources/BBads/Csv/item.csv"
+  },
+  {
+    "source": "configuration/BBads/item_spawn.csv",
+    "destination": "client/Unity/Assets/BBads/Resources/BBads/Csv/item_spawn.csv"
+  },
+  {
+    "source": "configuration/BBads/summon_position.csv",
+    "destination": "client/Unity/Assets/BBads/Resources/BBads/Csv/summon_position.csv"
+  },
+  {
+    "source": "configuration/BBads/unit.csv",
+    "destination": "client/Unity/Assets/BBads/Resources/BBads/Csv/unit.csv"
+  }
+]

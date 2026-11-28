@@ -1,0 +1,16 @@
+SmallSlime.png
+size:256,64
+filter:Linear,Linear
+pma:true
+qiu
+bounds:155,38,21,21
+offsets:1,1,23,23
+si
+bounds:80,18,73,41
+offsets:1,1,75,43
+tou
+bounds:2,2,76,57
+offsets:1,1,78,59
+ying
+bounds:80,3,70,13
+offsets:1,1,72,15

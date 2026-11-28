@@ -1,5 +1,19 @@
 # 最近验证
 
+## BBads 验证能力补强（2026-11-27）
+
+- Unity **2022.3.16f1** 后台导入、EditMode **16/16**、PlayMode **11/11** 通过。资源审计从现有配置和客户端入口生成 **60** 项，三张图集核对 **24/24** 个 Sprite。故意改错类型和必需键时报告失败，已登记的回退和可选缺失分别给出独立状态。正反例在 `artifacts/game-unity/Test/20261127-111702-06d5e4ac` 和 `20261127-105021-9d43fedc`。独立 UPM 工程也通过导入与模块生命周期检查。
+- 迁移预检首次报告 **109** 个断开的 Image 引用。Unity 中实测七张单图的 Sprite 子资源均导入为 fileID `21300000`，修复场景和 Prefab 共 **13** 处序列化引用后，复查 **5** 个场景和 **18** 个 Prefab，发现项为零。两次 JSON 在 `artifacts/bbads-framework`。
+- 同一 Windows Player 通过后台无图形及低档 D3D11 冒烟，后者保存三张运行时截图。动态截图通过像素检查。离屏场景用例在正常 BBads 场景通过，在隔离副本恢复旧版 TMP 字段后报告渲染异常并退出失败。证据位于 `artifacts/bbads-framework`。
+- Test 六张高低档 PNG 符合通用纹理导入配置，应用和复跑均为零改动。独立 Unity 夹具首次应用变更两张纹理，第二次零改动，并验证 Sprite 标识保留和异常发生后的元数据恢复。标准验证通过框架 **578/578**、模板 **13/13**、AgentKit 契约和 Headless 示例。 [BBads 验证入口](../../games/Test/design/bbads-integration/verification.md)
+
+## Test 接入 BBads 与美术流水线（2026-11-26）
+
+- Unity **2022.3.16f1** 隔离导入及 Windows Release 构建通过。EditMode **16/16**、PlayMode **11/11**、Test Application **97/97**、Domain **60/60**。标准验证通过框架 **577/577**、模板 **13/13**、AgentKit 契约和 Headless 示例。
+- Windows BBads 在无图形和两个画质档运行。每轮核对道具放置、拒绝非法放置、召唤、战斗受伤和基地败北停刷，覆盖重开、退出至粒子场景及再次进入。原 Rain Pass Release 冒烟通过三条原路线和 Boss 试炼。构建及截图在 `artifacts/game-unity/Test/20261126-172322-1e78ec50`。
+- 纹理规则首次修改 145 个导入器，重复应用为 0。Windows Release 实际绑定 BC7 背景，高档 1080×1920，低档 540×960。完整场景同战斗阶段的 20 帧对照中，开启图集后 Draw Calls 中位数由 28 降至 19。
+- Android 目标导入验证了代表资源的 ASTC 设置。临时准备 Unity 2022.3.16f1 的 OpenJDK、SDK 和 NDK 后，APK 构建通过前置检查并进入 Gradle，Gradle 组装失败且没有生成 APK。触控、移动 GPU 和画质待实机验证。 [运行与证据清单](../../games/Test/design/bbads-integration/verification.md)
+
 ## Test 并发后台验证（2026-11-26）
 
 - 修复前，两条并发 `game.ps1 build -Name Test` 命令在共享 ConfigGen 中间文件触发 `CS2012`。修复后复跑同一组命令，两条均退出 0。日志位于 `artifacts/game-concurrency-before` 和 `artifacts/game-concurrency-after`。

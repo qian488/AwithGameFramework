@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "assetRoots": ["Assets/BBads/Quality/Resources/BBads/Quality"],
+  "groups": [
+    {
+      "id": "background",
+      "pathPrefixes": [
+        "Assets/BBads/Quality/Resources/BBads/Quality/High/Art",
+        "Assets/BBads/Quality/Resources/BBads/Quality/Low/Art"
+      ],
+      "extensions": [".png"],
+      "settings": {
+        "filterMode": "Bilinear",
+        "mipmapEnabled": false,
+        "readable": false,
+        "platforms": [
+          { "name": "Standalone", "format": "BC7", "compressionQuality": 100 },
+          { "name": "Android", "format": "ASTC_6x6", "compressionQuality": 100 }
+        ]
+      }
+    },
+    {
+      "id": "item-icon",
+      "extensions": [".png"],
+      "settings": {
+        "filterMode": "Bilinear",
+        "mipmapEnabled": false,
+        "readable": false,
+        "platforms": [
+          { "name": "Standalone", "format": "RGBA32", "compressionQuality": 100 },
+          { "name": "Android", "format": "ASTC_4x4", "compressionQuality": 100 }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+using System;
+using System.Collections;
+using System.IO;
+using System.Linq;
+using Unity.Profiling;
+using UnityEngine;
+using UnityEngine.Profiling;
+using UnityEngine.Rendering;
+using UnityEngine.UI;
+
+namespace Test.BBads.AtlasTools
+{
+    // The verification script stages this component into a scratch Player assembly.
+    public sealed class BBadsAtlasProbe : MonoBehaviour
+    {
+        private const int Width = 960;
+        private const int Height = 320;
+        private const int WarmupFrames = 30;
+        private const int SampleFrames = 60;
+
+        [Serializable]
+        public sealed class SpriteReference
+        {
+            public Sprite sprite;
+            public string resourceKey;
+        }
+
+        [Serializable]
+        public sealed class Group
+        {
+            public string name;
+            public SpriteReference[] sprites;
+            public bool world;
+        }
+
+        [Serializable]
+        private sealed class TextureUse
+        {
+            public string name;
+            public int width;
+            public int height;
+            public string format;
+            public int mipCount;
+            public long runtimeBytes;
+        }
+
+        [Serializable]
+        private sealed class Result
+        {
+            public string group;
+            public string unity = Application.unityVersion;
+            public string graphicsApi = SystemInfo.graphicsDeviceType.ToString();
+            public string gpu = SystemInfo.graphicsDeviceName;
+            public string colorSpace = QualitySettings.activeColorSpace.ToString();
+            public int sprites;
+            public int packed;
+            public int resourcesLoaded;
+            public TextureUse[] textures;
+            public long textureRuntimeBytes;
+            public long[] batches = new long[SampleFrames];
+            public long[] draws = new long[SampleFrames];
+            public long[] setPass = new long[SampleFrames];
+            public int visiblePixels;
+            public int pixelsOver32;
+            public int maxChannelDelta;
+        }
+
+        public Group[] groups;
+
+        private IEnumerator Start()
+        {
+            Application.logMessageReceived += QuitOnError;
+            var arguments = Environment.GetCommandLineArgs();
+            string output = arguments[Array.IndexOf(arguments, "-atlasEvidence") + 1];
+            int baselineArgument = Array.IndexOf(arguments, "-atlasBaseline");
+            string baseline = baselineArgument >= 0 ? arguments[baselineArgument + 1] : null;
+            Directory.CreateDirectory(output);
+            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D11)
+                throw new InvalidOperationException("The atlas probe requires a Direct3D 11 graphics device.");
+
+            var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
+            var camera = gameObject.AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 2;
+            camera.transform.position = new Vector3(0, 0, -10);
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color32(31, 38, 49, 255);
+            camera.allowHDR = false;
+            camera.allowMSAA = false;
+            camera.targetTexture = target;
+
+            foreach (var group in groups)
+            {
+                var sprites = group.sprites.Select(LoadSprite).ToArray();
+                GameObject fixture = CreateFixture(group, camera, sprites);
+                var result = Inspect(group, sprites);
+                using (var batches = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count", 1))
+                using (var draws = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count", 1))
+                using (var setPass = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count", 1))
+                {
+                    for (int frame = 0; frame < WarmupFrames; frame++)
+                        yield return null;
+                    if (!batches.Valid || !draws.Valid || !setPass.Valid)
+                        throw new InvalidOperationException("Required rendering counters are unavailable in this Player.");
+
+                    for (int sample = 0; sample < SampleFrames; sample++)
+                    {
+                        yield return null;
+                        result.batches[sample] = batches.LastValue;
+                        result.draws[sample] = draws.LastValue;
+                        result.setPass[sample] = setPass.LastValue;
+                    }
+                }
+
+                yield return new WaitForEndOfFrame();
+                string screenshot = group.name + ".png";
+                Capture(target, Path.Combine(output, screenshot),
+                    baseline == null ? null : Path.Combine(baseline, screenshot), result);
+                File.WriteAllText(Path.Combine(output, group.name + ".json"), JsonUtility.ToJson(result, true));
+                fixture.SetActive(false);
+                Destroy(fixture);
+            }
+
+            camera.targetTexture = null;
+            Destroy(target);
+            Application.Quit(0);
+        }
+
+        private static void QuitOnError(string message, string stackTrace, LogType type)
+        {
+            if (type == LogType.Exception || type == LogType.Error || type == LogType.Assert)
+                Application.Quit(2);
+        }
+
+        private static Sprite LoadSprite(SpriteReference reference)
+        {
+            var sprite = reference.sprite;
+            if (!string.IsNullOrEmpty(reference.resourceKey))
+            {
+                sprite = Resources.Load<Sprite>(reference.resourceKey);
+                if (sprite == null || sprite.name != reference.sprite.name)
+                    sprite = Resources.LoadAll<Sprite>(reference.resourceKey)
+                        .SingleOrDefault(candidate => candidate.name == reference.sprite.name);
+                if (sprite != reference.sprite)
+                    throw new InvalidOperationException("Resource binding disagrees with the serialized sprite at " + reference.resourceKey);
+            }
+            if (sprite == null || sprite.texture == null)
+                throw new InvalidOperationException("Missing texture for " + reference.sprite);
+            return sprite;
+        }
+
+        private static GameObject CreateFixture(Group group, Camera camera, Sprite[] sprites)
+        {
+            var root = new GameObject(group.name);
+            if (!group.world)
+            {
+                var canvas = root.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1;
+            }
+
+            const int columns = 8;
+            int count = Math.Max(16, sprites.Length * 2);
+            for (int i = 0; i < count; i++)
+            {
+                Sprite sprite = sprites[i % sprites.Length];
+                int column = i % columns;
+                int row = i / columns;
+                if (group.world)
+                {
+                    var item = new GameObject(sprite.name);
+                    item.transform.SetParent(root.transform, false);
+                    var renderer = item.AddComponent<SpriteRenderer>();
+                    renderer.sprite = sprite;
+                    renderer.sortingOrder = i;
+                    item.transform.localPosition = new Vector3(-5.25f + column * 1.5f, 1.1f - row * 0.85f);
+                    float scale = 0.75f / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+                    item.transform.localScale = Vector3.one * scale;
+                }
+                else
+                {
+                    var item = new GameObject(sprite.name, typeof(RectTransform));
+                    item.transform.SetParent(root.transform, false);
+                    var image = item.AddComponent<Image>();
+                    image.sprite = sprite;
+                    image.preserveAspect = true;
+                    image.rectTransform.anchorMin = image.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                    image.rectTransform.sizeDelta = new Vector2(102, 64);
+                    image.rectTransform.anchoredPosition = new Vector2(-420 + column * 120, 120 - row * 76);
+                }
+            }
+            return root;
+        }
+
+        private static Result Inspect(Group group, Sprite[] sprites)
+        {
+            var textures = sprites.Select(sprite => sprite.texture).Distinct().Select(texture => new TextureUse
+            {
+                name = texture.name,
+                width = texture.width,
+                height = texture.height,
+                format = texture.graphicsFormat.ToString(),
+                mipCount = texture.mipmapCount,
+                runtimeBytes = Profiler.GetRuntimeMemorySizeLong(texture)
+            }).ToArray();
+            return new Result
+            {
+                group = group.name,
+                sprites = sprites.Length,
+                packed = sprites.Count(sprite => sprite.packed),
+                resourcesLoaded = group.sprites.Count(reference => !string.IsNullOrEmpty(reference.resourceKey)),
+                textures = textures,
+                textureRuntimeBytes = textures.Sum(texture => texture.runtimeBytes)
+            };
+        }
+
+        private static void Capture(RenderTexture target, string path, string baseline, Result result)
+        {
+            RenderTexture previous = RenderTexture.active;
+            var image = new Texture2D(Width, Height, TextureFormat.RGB24, false);
+            try
+            {
+                RenderTexture.active = target;
+                image.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+                image.Apply();
+                File.WriteAllBytes(path, image.EncodeToPNG());
+                var pixels = image.GetPixels32();
+                result.visiblePixels = pixels.Count(pixel => !pixel.Equals(pixels[0]));
+                if (baseline != null)
+                    ComparePixels(pixels, baseline, result);
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                Destroy(image);
+            }
+        }
+
+        private static void ComparePixels(Color32[] pixels, string baseline, Result result)
+        {
+            var reference = new Texture2D(2, 2, TextureFormat.RGB24, false);
+            try
+            {
+                if (!reference.LoadImage(File.ReadAllBytes(baseline)) || reference.width != Width || reference.height != Height)
+                    throw new InvalidOperationException("Invalid baseline image: " + baseline);
+                var expected = reference.GetPixels32();
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    var actual = pixels[i];
+                    var before = expected[i];
+                    int delta = Math.Max(Math.Abs(actual.r - before.r),
+                        Math.Max(Math.Abs(actual.g - before.g), Math.Abs(actual.b - before.b)));
+                    result.maxChannelDelta = Math.Max(result.maxChannelDelta, delta);
+                    if (delta > 32)
+                        result.pixelsOver32++;
+                }
+            }
+            finally
+            {
+                Destroy(reference);
+            }
+        }
+    }
+}

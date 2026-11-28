@@ -5,10 +5,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'unity-verification-cleanup.ps1')
 $editor = Get-Item -LiteralPath $EditorPath
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $validation = Join-Path $repository ('artifacts/UnityAddressablesValidation/' + [Guid]::NewGuid().ToString('N'))
 $project = if ($Name) { Join-Path $validation 'client/Fixture' } else { $validation }
+try {
 foreach ($directory in @('Assets/Editor', 'Packages', 'ProjectSettings')) {
     [IO.Directory]::CreateDirectory((Join-Path $project $directory)) | Out-Null
 }
@@ -55,6 +57,7 @@ function Invoke-AddressablesStep([string]$Name, [string[]]$Arguments) {
     try {
         if (!$process.WaitForExit(300000)) {
             $process.Kill()
+            $process.WaitForExit(10000) | Out-Null
             throw "Unity Addressables $Name timed out. See $log"
         }
         $process.Refresh()
@@ -86,3 +89,7 @@ try {
     Write-Host "Addressables asset build and PlayMode passed. See $runtime"
 }
 finally { [Environment]::SetEnvironmentVariable('ALLUSERSPROFILE', $previousProfile) }
+}
+finally {
+    Clear-UnityVerificationProjectFiles $project $validation
+}

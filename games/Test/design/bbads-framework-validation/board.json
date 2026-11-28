@@ -1,0 +1,486 @@
+{
+  "version": 1,
+  "id": "test-bbads-framework-validation",
+  "brief": "games/Test/design/bbads-framework-validation/brief.md",
+  "decisionSource": "用户要求在 Test 的 BBads 迁移基础上建立大型验证与补强任务，沿实际项目用例检验框架。此前约定暂缓打包，自动验证优先后台运行。",
+  "tickets": [
+    {
+      "id": "baseline",
+      "owner": "",
+      "priority": 0,
+      "dependsOn": [],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "记录当前迁移工作区和可重跑的对局验证基线",
+        "readModules": [
+          "game-test"
+        ],
+        "readPaths": [
+          "games/Test/design/bbads-integration/verification.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/BBadsSmokeProbe.cs",
+          "tools/verify-game-unity.ps1"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/baseline.md",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/Test.Client.PlayMode.Tests.asmdef",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsBaselineTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsBaselineTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "docs-verify",
+          "game-build"
+        ],
+        "requiredChecks": [
+          "docs-verify",
+          "game-build"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A1. 记录工作区版本、实际 Unity 版本、现有配置快照、场景入口和复跑命令。按结果写出 Test 的 EditMode 与 PlayMode 通过项、失败项和证据路径。",
+          "A2. 使用既有 Player 证据和当前场景的后台验证固定自动摆放、出兵、伤害、退出和重进基线。写明实际覆盖的路径、各切片可共享的测试装配及尚缺的证据。"
+        ]
+      }
+    },
+    {
+      "id": "host-transition",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "用 BBads 的进入、退出和重开验证宿主与转场",
+        "readModules": [
+          "game-test",
+          "core",
+          "gameplay",
+          "unity"
+        ],
+        "readPaths": [
+          "games/Test/client/Unity/Assets/BBads/Runtime/UI/BBadsSceneActions.cs",
+          "src/AwithGameFrame.Core/Runtime/Hosting/GameHost.cs",
+          "src/AwithGameFrame.Gameplay/Runtime/Scenes/SceneService.cs",
+          "adapters/unity/Runtime/Features/Scenes/UnitySceneBackend.cs"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/host-transition.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/UI/BBadsSceneActions.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsHostTransitionTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsHostTransitionTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A3. 从 SampleScene 进入战斗并快速重复触发进入和重开。分别核对实际加载次数、当前场景、活动会话和事件订阅数量。",
+          "A4. 让加载在确定位置失败并重试。检查退出后旧会话清理、失败时返回或保持可操作入口，以及新会话只初始化一次。"
+        ]
+      }
+    },
+    {
+      "id": "resource-leases",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证单位 Prefab 和共享 Sprite 的加载、取消和释放",
+        "readModules": [
+          "game-test",
+          "core",
+          "unity"
+        ],
+        "readPaths": [
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatSpawner.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatPresentationPool.cs",
+          "src/AwithGameFrame.Core/Runtime/Resources/ResourceStore.cs",
+          "src/AwithGameFrame.Core/Runtime/Resources/ResourceScope.cs",
+          "adapters/unity/Runtime/Engine/Hosting/UnityResourceLoader.cs"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/resource-leases.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatSpawner.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/BBadsResource.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsResourceLeaseTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsResourceLeaseTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A5. 在 Test 场景用真实单位 Prefab 和共享 Sprite 验证两个消费者、释放一个后的存活及最后释放后重新加载。",
+          "A6. 控制实际加载结果的交付时点，覆盖退出时取消和重进后旧结果晚到，记录请求、实例、池和租约的释放序列。"
+        ]
+      }
+    },
+    {
+      "id": "time-events",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证波次、召唤充能、命中在同一暂停语义下推进",
+        "readModules": [
+          "game-test",
+          "core"
+        ],
+        "readPaths": [
+          "games/Test/client/Unity/Assets/BBads/Runtime/Timeline/ScenarioRunner.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/BackpackController.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatActor.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatPresentationPool.cs",
+          "src/AwithGameFrame.Core/Runtime/Timing/GameClock.cs",
+          "src/AwithGameFrame.Core/Runtime/Events/EventBus.cs",
+          "games/Test/tests/Test.Application.Tests/BBadsSessionTests.cs"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/time-events.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Timeline/ScenarioRunner.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/BackpackController.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatActor.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatPresentationPool.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/Diagnostics/CombatBehaviorPanel.cs",
+          "games/Test/src/Test.Application/Runtime/BBads/Session",
+          "games/Test/tests/Test.Application.Tests/BBadsSessionTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsTimingTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsTimingTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A7. 以现有对局固定同时待刷怪、待充能及投射物在途的时间点。暂停期间各状态冻结，恢复后按原进度结算，事件次数与顺序由测试断言。",
+          "A8. 在暂停和待结算状态退出。重进后旧回调、事件订阅和计时状态均已清理。"
+        ]
+      }
+    },
+    {
+      "id": "pool-performance",
+      "owner": "",
+      "priority": 2,
+      "dependsOn": [
+        "baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验证真实战斗中的对象池回收与反复运行趋势",
+        "readModules": [
+          "game-test",
+          "core",
+          "unity"
+        ],
+        "readPaths": [
+          "games/Test/client/Unity/Assets/BBads/Runtime/Infrastructure/PrefabPool.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatSpawner.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/CombatPresentationPool.cs",
+          "src/AwithGameFrame.Core/Runtime/Pooling/ObjectPool.cs"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/pool-performance.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Infrastructure/PrefabPool.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Combat/UnitView.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsPoolingTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsPoolingTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A9. 运行固定现有波次，按对象类型记录创建、借还、峰值、空闲和活动数，核对重复借用时战斗与表现状态复位。",
+          "A10. 跑至少三轮重开或退出，检查会话结束后的活动实例与下次会话的基线。性能结论附采样条件、基线及比较结果。"
+        ]
+      }
+    },
+    {
+      "id": "drag-input",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "沿 Unity UI 事件链验证手动摆放和输入阻断",
+        "readModules": [
+          "game-test",
+          "gameplay",
+          "unity"
+        ],
+        "readPaths": [
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/ItemView.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/BackpackPresenter.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/BackpackController.cs",
+          "src/AwithGameFrame.Gameplay/Runtime/Input/InputService.cs"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/drag-input.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/ItemView.cs",
+          "games/Test/client/Unity/Assets/BBads/Runtime/Backpack/BackpackPresenter.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsDragInputTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsDragInputTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A11. 在实际战斗 Canvas 上以 EventSystem 和 GraphicRaycaster 走指针事件，断言合法落点、非法落点、托盘回退的物品与占格状态。",
+          "A12. 以输入上下文阻断和失焦事件覆盖拖拽取消，断言没有重复摆放或召唤。记录后台输入注入范围与人工鼠标验收项。"
+        ]
+      }
+    },
+    {
+      "id": "content-tools",
+      "owner": "",
+      "priority": 2,
+      "dependsOn": [
+        "baseline"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "用独立副本复现配置、资源和画面故障并检查诊断",
+        "readModules": [
+          "game-test",
+          "data",
+          "unity"
+        ],
+        "readPaths": [
+          "games/Test/design/bbads-integration/verification.md",
+          "games/Test/design/bbads-integration/write-resource-spec.ps1",
+          "games/Test/configuration/BBads/README.md",
+          "docs/reference/unity-visual-verification.md",
+          "tools/verify-game-unity.ps1",
+          "tools/verify-unity-migration.ps1"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/content-tools.md",
+          "games/Test/design/bbads-framework-validation/write-content-verification-spec.ps1"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A13. 在隔离副本验证配置副本过期、表字段类型错误和资源键缺失。记录能否定位到具体表、行、列或资源键。",
+          "A14. 用 Sprite 引用及战斗 HUD 画面异常复测迁移、图集及画面检查。对每种注入保存预期、工具报告和恢复后的复跑结果。"
+        ]
+      }
+    },
+    {
+      "id": "framework-fixes",
+      "owner": "",
+      "priority": 1,
+      "dependsOn": [
+        "host-transition",
+        "resource-leases",
+        "time-events",
+        "pool-performance",
+        "drag-input",
+        "content-tools"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "归集复现结果，并为确认的公共缺口建立修复任务和回归",
+        "readModules": [
+          "core",
+          "data",
+          "gameplay",
+          "unity"
+        ],
+        "readPaths": [
+          "docs/architecture/overview.md",
+          "agent/README.md",
+          "agent/tools.json"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/framework-fixes.md"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "portable-verify",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "portable-verify",
+          "docs-verify"
+        ],
+        "acceptance": [
+          "A15. 逐项记录复现入口、预期与实际、职责归属和证据。每项确认的公共缺口在单独任务中锁定模块写入范围，附修复前失败证据、修复后通过证据及现有调用方回归。",
+          "A16. 每个已列公共缺口都有实施和验证结论，或给出可重现的具体阻塞及影响。切片内已验证的框架能力也有证据。"
+        ]
+      }
+    },
+    {
+      "id": "integration",
+      "owner": "",
+      "priority": 0,
+      "dependsOn": [
+        "framework-fixes"
+      ],
+      "scope": {
+        "schemaVersion": 1,
+        "objective": "验收 BBads 完整对局、跨切片行为和 Test 原有示例",
+        "readModules": [
+          "game-test",
+          "core",
+          "gameplay",
+          "unity"
+        ],
+        "readPaths": [
+          "games/Test/design/bbads-integration/verification.md",
+          "games/Test/client/Unity/Assets/BBads/Runtime/BBadsSmokeProbe.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/ParticleSceneTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/CombatSceneTests.cs",
+          "tools/verify-game-unity.ps1"
+        ],
+        "writePaths": [
+          "games/Test/design/bbads-framework-validation/integration.md",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsFrameworkIntegrationTests.cs",
+          "games/Test/client/Unity/Assets/Tests/PlayMode/BBadsFrameworkIntegrationTests.cs.meta"
+        ],
+        "protectedPaths": [
+          "src",
+          "adapters",
+          "tools",
+          "samples",
+          "games/Test/client/Unity/Packages/com.awithgameframe.workspace",
+          "games/Test/client/Unity/Assets/BBads/Spine"
+        ],
+        "allowedTools": [
+          "portable-verify",
+          "game-build",
+          "docs-verify"
+        ],
+        "requiredChecks": [
+          "portable-verify",
+          "game-build",
+          "docs-verify"
+        ],
+        "parameters": {
+          "gameName": "Test"
+        },
+        "acceptance": [
+          "A17. 整合拖拽召唤、暂停恢复、退出时资源加载和重进、基地败北与时间轴结束。核对停止刷怪、无旧事件、池与租约按序释放。",
+          "A18. 从 Test 的隔离 Unity 工程后台复跑 EditMode、PlayMode、Rain Pass、粒子和 BBads 检查，列出运行版本、日志、画面证据和待人工验收项。"
+        ]
+      }
+    }
+  ]
+}

@@ -3,11 +3,15 @@ param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z][A-Za-z0-9_]*$')][string]$Name,
     [Parameter(Mandatory = $true)][string]$EditorPath,
     [string]$BuildScene,
-    [ValidateSet('Windows64', 'WebGL', 'WeChatMiniGame')][string]$PlayerTarget = 'Windows64',
+    [ValidateSet('Windows64', 'Android', 'WebGL', 'WeChatMiniGame')][string]$PlayerTarget = 'Windows64',
     [string]$WeChatSdkPath,
     [switch]$RunTests,
+    [ValidateSet('All', 'EditMode', 'PlayMode')][string]$TestMode = 'All',
+    [ValidatePattern('^[A-Za-z_][A-Za-z0-9_.+]*$')][string]$TestFilter,
     [ValidateRange(60, 3600)][int]$TimeoutSeconds = 600,
     [string]$VisualSpec,
+    [string]$ResourceSpec,
+    [string]$AtlasSpec,
     [switch]$KeepProject,
     [string[]]$AdditionalBuildScenes = @(),
     [switch]$ReleasePlayer
@@ -15,7 +19,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if (($TestMode -ne 'All' -or $TestFilter) -and -not $RunTests) { throw 'Test selection requires -RunTests.' }
+if ($TestFilter -and $TestMode -eq 'All') { throw '-TestFilter requires -TestMode EditMode or PlayMode.' }
 . (Join-Path $PSScriptRoot 'verify-game-unity-metadata.ps1')
+. (Join-Path $PSScriptRoot 'unity-verification-cleanup.ps1')
 $repository = Split-Path -Parent $PSScriptRoot
 $root = Join-Path $repository "games/$Name"
 $gameFile = Join-Path $root 'game.json'
@@ -29,6 +36,16 @@ Assert-GameUnityMetadata -AssetsPath $assets
 $versionText = [IO.File]::ReadAllText((Join-Path $project 'ProjectSettings/ProjectVersion.txt'))
 if ($versionText -notmatch '(?m)^m_EditorVersion: (\S+)') { throw "No Unity version recorded in $project" }
 $expectedVersion = $Matches[1]
+if ($ResourceSpec) {
+    $resourceSpecification = Get-Item -LiteralPath $ResourceSpec
+    if ($resourceSpecification.PSIsContainer) { throw 'ResourceSpec must be a JSON file.' }
+    $ResourceSpec = $resourceSpecification.FullName
+}
+if ($AtlasSpec) {
+    $atlasSpecification = Get-Item -LiteralPath $AtlasSpec
+    if ($atlasSpecification.PSIsContainer) { throw 'AtlasSpec must be a JSON file.' }
+    $AtlasSpec = $atlasSpecification.FullName
+}
 $visualWithGraphics = $false
 if ($VisualSpec) {
     $specification = Get-Item -LiteralPath $VisualSpec
@@ -56,45 +73,7 @@ $evidence = Join-Path $repository "artifacts/game-unity/$Name/$runId"
 $isolatedGame = $evidence
 $isolatedClientDirectory = "$Name-Unity-Verification"
 $isolated = Join-Path $isolatedGame ('client/' + $isolatedClientDirectory)
-[IO.Directory]::CreateDirectory($isolated) | Out-Null
 Write-Host "Unity verification evidence: $evidence"
-Copy-Item -LiteralPath $gameFile -Destination $isolatedGame
-foreach ($entry in @('Assets', 'Packages', 'ProjectSettings')) {
-    $source = Join-Path $project $entry
-    $linked = Get-ChildItem -LiteralPath $source -Recurse -Force | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 } | Select-Object -First 1
-    if ($linked) { throw "Linked project entry is not supported: $($linked.FullName)" }
-    [IO.Directory]::CreateDirectory((Join-Path $isolated $entry)) | Out-Null
-    foreach ($item in Get-ChildItem -LiteralPath $source -Force) {
-        if ($entry -eq 'Packages' -and $item.Name -eq 'com.awithgameframe.workspace') { continue }
-        Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $isolated $entry) -Recurse
-    }
-}
-$settingsPath = Join-Path $isolated 'ProjectSettings/ProjectSettings.asset'
-if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
-    $settings = [IO.File]::ReadAllText($settingsPath)
-    $settings = [Text.RegularExpressions.Regex]::Replace($settings, '(?m)^(\s*productName:\s*).*$', ('$1' + $Name + ' - Verification'))
-    [IO.File]::WriteAllText($settingsPath, $settings)
-}
-$manifest = Join-Path $isolated 'Packages/manifest.json'
-$packages = [IO.File]::ReadAllText($manifest) | ConvertFrom-Json
-foreach ($dependency in $packages.dependencies.PSObject.Properties) {
-    if ($dependency.Value -notlike 'file:*') { continue }
-    $relative = $dependency.Value.Substring(5)
-    if ([IO.Path]::IsPathRooted($relative)) { continue }
-    if (Test-Path -LiteralPath (Join-Path (Join-Path $isolated 'Packages') $relative)) { continue }
-    $resolvedPackage = [IO.Path]::GetFullPath((Join-Path (Join-Path $project 'Packages') $relative))
-    $dependency.Value = 'file:' + $resolvedPackage.Replace('\', '/')
-}
-[IO.File]::WriteAllText($manifest, ($packages | ConvertTo-Json -Depth 20))
-if ($WeChatSdkPath) {
-    $sdk = Get-Item -LiteralPath $WeChatSdkPath
-    $sdkDefinition = Get-Content -LiteralPath (Join-Path $sdk.FullName 'package.json') -Raw | ConvertFrom-Json
-    if ($sdkDefinition.name -ne 'com.qq.weixin.minigame') { throw 'Expected the WeChat Mini Game SDK package directory.' }
-    $embeddedSdk = Join-Path $isolated 'Packages/com.qq.weixin.minigame'
-    if (Test-Path -LiteralPath $embeddedSdk) { throw 'The verification project already has an embedded WeChat SDK.' }
-    Copy-Item -LiteralPath $sdk.FullName -Destination $embeddedSdk -Recurse
-}
-
 $identityPath = Join-Path $evidence 'verification.json'
 $identity = [ordered]@{
     schemaVersion = 1
@@ -108,12 +87,10 @@ $identity = [ordered]@{
     retained = [bool]$KeepProject
     cacheRemnant = $false
 }
-$identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identityPath -Encoding UTF8
 
-& (Join-Path $PSScriptRoot 'game.ps1') sync -Name $Name -ClientGameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory
 $portableBuildManifest = Join-Path $evidence 'portable-build.json'
-Copy-Item -LiteralPath (Join-Path $isolated 'Packages/com.awithgameframe.workspace/build.json') -Destination $portableBuildManifest
 
+function Initialize-VerificationProbe {
 $probe = Join-Path $isolated 'Assets/AwithGameWorkspaceProbe/Editor'
 [IO.Directory]::CreateDirectory($probe) | Out-Null
 [IO.File]::WriteAllText((Join-Path $probe 'Probe.cs'), @'
@@ -180,6 +157,8 @@ if ($PlayerTarget -eq 'WeChatMiniGame') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'UnityFixtures/WeChatMiniGameBuild.cs') -Destination $probe
 }
 
+}
+
 function Invoke-Unity {
     param([string]$Step, [string[]]$Extra, [switch]$WithGraphics)
     $log = Join-Path $evidence ($Step + '.log')
@@ -199,6 +178,7 @@ function Invoke-Unity {
     finally { if ($restoreProfile) { $env:ALLUSERSPROFILE = $null } }
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
         Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
+        $process.WaitForExit(10000) | Out-Null
         throw "Unity $Step exceeded $TimeoutSeconds seconds. Inspect $log"
     }
     $process.Refresh()
@@ -210,65 +190,153 @@ function Invoke-Unity {
     }
 }
 
-function Remove-DisposableProject([string]$Path) {
-    if (-not (Test-Path -LiteralPath $Path)) { return $true }
-    $fullPath = [IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
-    $evidencePath = [IO.Path]::GetFullPath($evidence).TrimEnd([char[]]@('\', '/'))
-    if (-not $fullPath.StartsWith($evidencePath + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Refusing to remove a path outside the verification evidence directory: $Path"
-    }
-    for ($attempt = 1; $attempt -le 4; $attempt++) {
-        try {
-            [IO.Directory]::Delete($fullPath, $true)
-            return $true
-        }
-        catch {
-            if ($attempt -eq 4) {
-                $projectMarker = Join-Path $Path 'ProjectSettings/ProjectVersion.txt'
-                if (-not (Test-Path -LiteralPath $projectMarker -PathType Leaf)) {
-                    Write-Warning "Unity cache remnants remain after cleanup, but the verification project marker was removed: $Path"
-                    return $true
-                }
-                Write-Warning "Could not remove disposable Unity verification project after $attempt attempts: $Path. The project was retained for diagnosis."
-                return $false
-            }
-            Start-Sleep -Milliseconds (250 * $attempt)
-        }
-    }
-    return $false
+$testReports = [ordered]@{}
+$summary = [ordered]@{
+    game = $Name; unity = $null; recordedUnity = $expectedVersion; evidence = $evidence
+    mode = 'headless'; status = 'incomplete'; failedStep = $null; error = $null
+    importVerified = $false; importLog = (Join-Path $evidence 'import.log'); portableBuildManifest = $portableBuildManifest
+    testsRequested = [bool]$RunTests; testsRun = $false; testMode = $TestMode; testFilter = $TestFilter; tests = $testReports
+    buildScene = $BuildScene; buildScenes = @($buildScenes | Where-Object { $_ }); playerTarget = $(if ($BuildScene) { $PlayerTarget })
+    buildVerified = $false; releasePlayer = [bool]$ReleasePlayer
+    buildLog = $null; player = $null
+    verificationProject = $isolated; verificationProjectRetained = [bool]$KeepProject; verificationIdentity = $identityPath
+    runtimeVerified = $false; manualReview = 'not-run'
+    visual = @{ status = 'not-run' }
+    resources = @{ status = 'not-run' }
+    atlases = @{ status = 'not-run' }
 }
-
-$summary = $null
+$step = 'stage'
 try {
+    [IO.Directory]::CreateDirectory($isolated) | Out-Null
+    Copy-Item -LiteralPath $gameFile -Destination $isolatedGame
+    foreach ($entry in @('Assets', 'Packages', 'ProjectSettings')) {
+        $source = Join-Path $project $entry
+        $linked = Get-ChildItem -LiteralPath $source -Recurse -Force | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 } | Select-Object -First 1
+        if ($linked) { throw "Linked project entry is not supported: $($linked.FullName)" }
+        [IO.Directory]::CreateDirectory((Join-Path $isolated $entry)) | Out-Null
+        foreach ($item in Get-ChildItem -LiteralPath $source -Force) {
+            if ($entry -eq 'Packages' -and $item.Name -eq 'com.awithgameframe.workspace') { continue }
+            $destination = Join-Path $isolated $entry
+            if ([IO.Path]::DirectorySeparatorChar -eq '\' -and $item.PSIsContainer) {
+                # Windows PowerShell's recursive Copy-Item fails on long Unity asset paths.
+                $copyLog = & robocopy $item.FullName (Join-Path $destination $item.Name) /E /XJ /R:0 /W:0 /NJH /NJS /NFL /NDL /NP
+                if ($LASTEXITCODE -ge 8) { throw "Could not copy $($item.FullName): $($copyLog -join [Environment]::NewLine)" }
+            }
+            else {
+                Copy-Item -LiteralPath $item.FullName -Destination $destination -Recurse
+            }
+        }
+    }
+    $settingsPath = Join-Path $isolated 'ProjectSettings/ProjectSettings.asset'
+    if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+        $settings = [IO.File]::ReadAllText($settingsPath)
+        $settings = [Text.RegularExpressions.Regex]::Replace($settings, '(?m)^(\s*productName:\s*).*$', ('$1' + $Name + ' - Verification'))
+        [IO.File]::WriteAllText($settingsPath, $settings)
+    }
+    $manifest = Join-Path $isolated 'Packages/manifest.json'
+    $packages = [IO.File]::ReadAllText($manifest) | ConvertFrom-Json
+    foreach ($dependency in $packages.dependencies.PSObject.Properties) {
+        if ($dependency.Value -notlike 'file:*') { continue }
+        $relative = $dependency.Value.Substring(5)
+        if ([IO.Path]::IsPathRooted($relative)) { continue }
+        if (Test-Path -LiteralPath (Join-Path (Join-Path $isolated 'Packages') $relative)) { continue }
+        $resolvedPackage = [IO.Path]::GetFullPath((Join-Path (Join-Path $project 'Packages') $relative))
+        $dependency.Value = 'file:' + $resolvedPackage.Replace('\', '/')
+    }
+    [IO.File]::WriteAllText($manifest, ($packages | ConvertTo-Json -Depth 20))
+    if ($WeChatSdkPath) {
+        $sdk = Get-Item -LiteralPath $WeChatSdkPath
+        $sdkDefinition = Get-Content -LiteralPath (Join-Path $sdk.FullName 'package.json') -Raw | ConvertFrom-Json
+        if ($sdkDefinition.name -ne 'com.qq.weixin.minigame') { throw 'Expected the WeChat Mini Game SDK package directory.' }
+        $embeddedSdk = Join-Path $isolated 'Packages/com.qq.weixin.minigame'
+        if (Test-Path -LiteralPath $embeddedSdk) { throw 'The verification project already has an embedded WeChat SDK.' }
+        Copy-Item -LiteralPath $sdk.FullName -Destination $embeddedSdk -Recurse
+    }
+    Initialize-VerificationProbe
+    $step = 'sync'
+    & (Join-Path $PSScriptRoot 'game.ps1') sync -Name $Name -ClientGameRoot $isolatedGame -ClientDirectory $isolatedClientDirectory
+    Copy-Item -LiteralPath (Join-Path $isolated 'Packages/com.awithgameframe.workspace/build.json') -Destination $portableBuildManifest
+    $step = 'import'
     $marker = Join-Path $evidence 'import.ok'
     Invoke-Unity 'import' @('-quit', '-executeMethod', 'AwithGameWorkspaceProbe.Verify', '-awith-game-import-marker', $marker)
     if (-not (Test-Path -LiteralPath $marker)) { throw "Unity did not complete its import checks. Inspect $evidence/import.log" }
     $actualVersion = [IO.File]::ReadAllText($marker)
+    $summary.unity = $actualVersion
+    $summary.importVerified = $true
     if ($actualVersion -ne $expectedVersion) { Write-Warning "Workspace records $expectedVersion and used $actualVersion." }
-    $testReports = [ordered]@{}
     if ($RunTests) {
-        foreach ($mode in @('EditMode', 'PlayMode')) {
+        $summary.testsRun = $true
+        $modes = if ($TestMode -eq 'All') { @('EditMode', 'PlayMode') } else { @($TestMode) }
+        foreach ($mode in $modes) {
+            $step = $mode
             $results = Join-Path $evidence ($mode + '.xml')
-            Invoke-Unity $mode @('-runTests', '-testPlatform', $mode, '-testResults', $results)
-            if (-not (Test-Path -LiteralPath $results)) { throw "Unity did not produce $results" }
-            $testRun = ([xml][IO.File]::ReadAllText($results)).'test-run'
-            if ([int]$testRun.total -eq 0 -or $testRun.result -ne 'Passed') { throw "$mode tests did not pass: $results" }
-            $testReports[$mode] = @{ passed = [int]$testRun.passed; total = [int]$testRun.total; results = $results }
+            $testArguments = @('-runTests', '-testPlatform', $mode, '-testResults', $results)
+            if ($TestFilter) { $testArguments += @('-testFilter', $TestFilter) }
+            $testReport = @{ status = 'incomplete'; log = (Join-Path $evidence ($mode + '.log')); results = $results }
+            $testReports[$mode] = $testReport
+            try { Invoke-Unity $mode $testArguments }
+            finally {
+                if (Test-Path -LiteralPath $results) {
+                    $testRun = ([xml][IO.File]::ReadAllText($results)).'test-run'
+                    if ($testRun) {
+                        $testReport.passed = [int]$testRun.passed
+                        $testReport.total = [int]$testRun.total
+                        $testReport.status = 'failed'
+                        if ($testReport.total -gt 0 -and $testRun.result -eq 'Passed') { $testReport.status = 'passed' }
+                    }
+                }
+            }
+            if ($testReport.status -ne 'passed') { throw "$mode tests did not pass. Inspect $results and $($testReport.log)." }
         }
     }
-    $player = $null
+    if ($ResourceSpec) {
+        $step = 'resources'
+        $resourceReport = Join-Path $evidence 'resource-report.json'
+        $summary.resources = @{ status = 'failed'; report = $resourceReport; log = (Join-Path $evidence 'resources.log') }
+        Invoke-Unity 'resources' @('-quit', '-executeMethod', 'AwithGameFrame.Unity.Editor.UnityResourceAudit.RunBatch',
+            '-awith-resource-spec', $ResourceSpec, '-awith-resource-output', $resourceReport)
+        if (-not (Test-Path -LiteralPath $resourceReport -PathType Leaf) -or
+            ([IO.File]::ReadAllText($resourceReport) | ConvertFrom-Json).passed -ne $true) {
+            throw "Unity resource audit failed. Inspect $resourceReport"
+        }
+        $summary.resources.status = 'passed'
+    }
+    if ($AtlasSpec) {
+        $step = 'atlases'
+        $atlasReport = Join-Path $evidence 'atlas-report.json'
+        $summary.atlases = @{ status = 'failed'; report = $atlasReport; log = (Join-Path $evidence 'atlases.log') }
+        Invoke-Unity 'atlases' @('-quit', '-executeMethod', 'AwithGameFrame.Unity.Editor.Content.UnitySpriteAtlasAudit.RunBatch',
+            '-awith-atlas-spec', $AtlasSpec, '-awith-atlas-output', $atlasReport)
+        if (-not (Test-Path -LiteralPath $atlasReport -PathType Leaf) -or
+            ([IO.File]::ReadAllText($atlasReport) | ConvertFrom-Json).passed -ne $true) {
+            throw "Sprite Atlas audit failed. Inspect $atlasReport"
+        }
+        $summary.atlases.status = 'passed'
+    }
     $buildLog = $null
     if ($BuildScene) {
+        $step = 'Player-build'
         $isWebGL = $PlayerTarget -eq 'WebGL'
         $isWeChat = $PlayerTarget -eq 'WeChatMiniGame'
-        $nativeTarget = if ($isWebGL) { 'WebGL' } else { 'StandaloneWindows64' }
-        $editorTarget = if ($isWebGL -or $isWeChat) { 'WebGL' } else { 'Win64' }
+        $nativeTarget = switch ($PlayerTarget) {
+            'Android' { 'Android' }
+            'WebGL' { 'WebGL' }
+            default { 'StandaloneWindows64' }
+        }
+        $editorTarget = switch ($PlayerTarget) {
+            'Android' { 'Android' }
+            'WebGL' { 'WebGL' }
+            'WeChatMiniGame' { 'WebGL' }
+            default { 'Win64' }
+        }
         $buildOutput = switch ($PlayerTarget) {
+            'Android' { Join-Path $evidence "Player/$Name.apk" }
             'WebGL' { Join-Path $evidence 'Player/WebGL' }
             'WeChatMiniGame' { Join-Path $evidence 'Player/WeChatMiniGame' }
             default { Join-Path $evidence "Player/$Name.exe" }
         }
         $buildLog = Join-Path $evidence 'Player-build.log'
+        $summary.buildLog = $buildLog
         $buildMethod = if ($isWeChat) { 'AwithWeChatMiniGameBuild.Run' } else { 'AwithGameWorkspaceProbe.Build' }
         $buildArguments = @('-quit', '-buildTarget', $editorTarget, '-executeMethod', $buildMethod,
             '-awith-game-build-target', $nativeTarget,
@@ -282,19 +350,11 @@ try {
             throw "Unity did not produce the $PlayerTarget Player entry point. Inspect $buildLog"
         }
         Write-Host "$PlayerTarget Player built: $player"
-    }
-    $summary = [ordered]@{
-        game = $Name; unity = $actualVersion; recordedUnity = $expectedVersion; evidence = $evidence
-        mode = 'headless'; importVerified = $true; importLog = (Join-Path $evidence 'import.log'); portableBuildManifest = $portableBuildManifest
-        testsRun = [bool]$RunTests; tests = $testReports
-        buildScene = $BuildScene; buildScenes = @($buildScenes | Where-Object { $_ }); playerTarget = $(if ($BuildScene) { $PlayerTarget })
-        buildVerified = [bool]$BuildScene; releasePlayer = [bool]$ReleasePlayer
-        buildLog = $buildLog; player = $player
-        verificationProject = $isolated; verificationProjectRetained = [bool]$KeepProject; verificationIdentity = $identityPath
-        runtimeVerified = $false; manualReview = 'not-run'
-        visual = @{ status = 'not-run' }
+        $summary.buildVerified = $true
+        $summary.player = $player
     }
     if ($VisualSpec) {
+        $step = 'visual'
         $visualOutput = Join-Path $evidence 'Visual'
         $visualReport = Join-Path $visualOutput 'visual-report.json'
         $visualMode = if ($visualWithGraphics) { 'offscreen' } else { 'image-only' }
@@ -308,18 +368,23 @@ try {
         $summary.visual.status = 'passed'
         Write-Host "Unity visual verification passed. Report: $visualReport"
     }
+    $summary.status = 'passed'
+}
+catch {
+    $summary.status = 'failed'
+    $summary.failedStep = $step
+    $summary.error = $_.Exception.Message
+    throw
 }
 finally {
     $projectRemoved = $true
-    if (-not $KeepProject) { $projectRemoved = Remove-DisposableProject $isolated }
+    if (-not $KeepProject) { $projectRemoved = Remove-UnityVerificationDirectory $isolated $evidence }
     $identity.retained = [bool]$KeepProject -or -not $projectRemoved
     $identity.cacheRemnant = Test-Path -LiteralPath $isolated
     $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identityPath -Encoding UTF8
-    if ($summary -ne $null) {
-        $summary.verificationProjectRetained = $identity.retained
-        $summary.verificationCacheRemnant = $identity.cacheRemnant
-        $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding UTF8
-    }
+    $summary.verificationProjectRetained = $identity.retained
+    $summary.verificationCacheRemnant = $identity.cacheRemnant
+    $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding UTF8
     if ($KeepProject) { Write-Host "Retained Unity verification project: $isolated" }
     elseif ($projectRemoved) { Write-Host "Removed disposable Unity verification project. Use -KeepProject to retain it." }
 }

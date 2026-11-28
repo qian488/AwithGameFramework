@@ -1,0 +1,766 @@
+fileFormatVersion: 2
+guid: f3f319ff275b47d4cb677990b609e4d5
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -793962127967694920
+    second: SnowExplosionSkill_0
+  - first:
+      213: -250897114996239516
+    second: SnowExplosionSkill_1
+  - first:
+      213: -7488739347890518065
+    second: SnowExplosionSkill_2
+  - first:
+      213: -666804550965882953
+    second: SnowExplosionSkill_3
+  - first:
+      213: 500433179507188705
+    second: SnowExplosionSkill_4
+  - first:
+      213: 8125509596370513443
+    second: SnowExplosionSkill_5
+  - first:
+      213: 6580796895279394189
+    second: SnowExplosionSkill_6
+  - first:
+      213: -714225226563307753
+    second: SnowExplosionSkill_7
+  - first:
+      213: -2401033209651493839
+    second: SnowExplosionSkill_8
+  - first:
+      213: 259031700647890515
+    second: SnowExplosionSkill_9
+  - first:
+      213: 1049773855357727698
+    second: SnowExplosionSkill_10
+  - first:
+      213: 3665227221311481534
+    second: SnowExplosionSkill_11
+  - first:
+      213: 3380852168116392999
+    second: SnowExplosionSkill_12
+  - first:
+      213: 1374317163425402555
+    second: SnowExplosionSkill_13
+  - first:
+      213: -192188555687756705
+    second: SnowExplosionSkill_14
+  - first:
+      213: -3905374258217828224
+    second: SnowExplosionSkill_15
+  - first:
+      213: -9152694426719373425
+    second: SnowExplosionSkill_16
+  - first:
+      213: 7689689945505120271
+    second: SnowExplosionSkill_17
+  - first:
+      213: -6228313878169592127
+    second: SnowExplosionSkill_18
+  - first:
+      213: -5657857930126046403
+    second: SnowExplosionSkill_19
+  - first:
+      213: 5889807706853201637
+    second: SnowExplosionSkill_20
+  - first:
+      213: 3741571679920583053
+    second: SnowExplosionSkill_21
+  - first:
+      213: 1538829825391329938
+    second: SnowExplosionSkill_22
+  - first:
+      213: -8120246500635003904
+    second: SnowExplosionSkill_23
+  externalObjects: {}
+  serializedVersion: 12
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 0
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Server
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: SnowExplosionSkill_0
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 276
+        width: 294
+        height: 235
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8bf4f55b6a74bf4f0800000000000000
+      internalID: -793962127967694920
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_1
+      rect:
+        serializedVersion: 2
+        x: 295
+        y: 466
+        width: 41
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4639a793762a48cf0800000000000000
+      internalID: -250897114996239516
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_2
+      rect:
+        serializedVersion: 2
+        x: 295
+        y: 394
+        width: 42
+        height: 72
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc7ce797d37a21890800000000000000
+      internalID: -7488739347890518065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_3
+      rect:
+        serializedVersion: 2
+        x: 148
+        y: 208
+        width: 55
+        height: 68
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7bf80153bc80fb6f0800000000000000
+      internalID: -666804550965882953
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_4
+      rect:
+        serializedVersion: 2
+        x: 295
+        y: 276
+        width: 106
+        height: 118
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e3685a4355e1f600800000000000000
+      internalID: 500433179507188705
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_5
+      rect:
+        serializedVersion: 2
+        x: 37
+        y: 162
+        width: 53
+        height: 47
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32e21b65deb93c070800000000000000
+      internalID: 8125509596370513443
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_6
+      rect:
+        serializedVersion: 2
+        x: 325
+        y: 112
+        width: 127
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8d2f12e8efa35b50800000000000000
+      internalID: 6580796895279394189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_7
+      rect:
+        serializedVersion: 2
+        x: 459
+        y: 178
+        width: 66
+        height: 93
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7173219c0ff8616f0800000000000000
+      internalID: -714225226563307753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_8
+      rect:
+        serializedVersion: 2
+        x: 649
+        y: 52
+        width: 322
+        height: 211
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1348ecc5401ddaed0800000000000000
+      internalID: -2401033209651493839
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_9
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 1
+        width: 309
+        height: 247
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35ecea695f3489300800000000000000
+      internalID: 259031700647890515
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_10
+      rect:
+        serializedVersion: 2
+        x: 1280
+        y: 1
+        width: 225
+        height: 226
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d3f61f62cb819e00800000000000000
+      internalID: 1049773855357727698
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_11
+      rect:
+        serializedVersion: 2
+        x: 1505
+        y: 1
+        width: 222
+        height: 222
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb6ec531db08dd230800000000000000
+      internalID: 3665227221311481534
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_12
+      rect:
+        serializedVersion: 2
+        x: 1727
+        y: 1
+        width: 221
+        height: 196
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 724dfa662233bee20800000000000000
+      internalID: 3380852168116392999
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_13
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 114
+        width: 49
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bbe81bebd2e821310800000000000000
+      internalID: 1374317163425402555
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_14
+      rect:
+        serializedVersion: 2
+        x: 258
+        y: 105
+        width: 67
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5cf550e685355df0800000000000000
+      internalID: -192188555687756705
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_15
+      rect:
+        serializedVersion: 2
+        x: 468
+        y: 54
+        width: 81
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 080c8ffbdc25dc9c0800000000000000
+      internalID: -3905374258217828224
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_16
+      rect:
+        serializedVersion: 2
+        x: 544
+        y: 103
+        width: 105
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f87b1b579e81bf080800000000000000
+      internalID: -9152694426719373425
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_17
+      rect:
+        serializedVersion: 2
+        x: 1948
+        y: 73
+        width: 48
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f00c9b2834447ba60800000000000000
+      internalID: 7689689945505120271
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_18
+      rect:
+        serializedVersion: 2
+        x: 1996
+        y: 73
+        width: 51
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ced01ed6859099a0800000000000000
+      internalID: -6228313878169592127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_19
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 1
+        width: 59
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d3bc53d60304b71b0800000000000000
+      internalID: -5657857930126046403
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_20
+      rect:
+        serializedVersion: 2
+        x: 167
+        y: 55
+        width: 60
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5e6d75267ecccb150800000000000000
+      internalID: 5889807706853201637
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_21
+      rect:
+        serializedVersion: 2
+        x: 358
+        y: 1
+        width: 75
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d81f3538e9bbce330800000000000000
+      internalID: 3741571679920583053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_22
+      rect:
+        serializedVersion: 2
+        x: 683
+        y: 1
+        width: 88
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2920a38b2950b5510800000000000000
+      internalID: 1538829825391329938
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SnowExplosionSkill_23
+      rect:
+        serializedVersion: 2
+        x: 1948
+        y: 1
+        width: 78
+        height: 72
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 004ba01a4d61f4f80800000000000000
+      internalID: -8120246500635003904
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      SnowExplosionSkill_0: -793962127967694920
+      SnowExplosionSkill_1: -250897114996239516
+      SnowExplosionSkill_10: 1049773855357727698
+      SnowExplosionSkill_11: 3665227221311481534
+      SnowExplosionSkill_12: 3380852168116392999
+      SnowExplosionSkill_13: 1374317163425402555
+      SnowExplosionSkill_14: -192188555687756705
+      SnowExplosionSkill_15: -3905374258217828224
+      SnowExplosionSkill_16: -9152694426719373425
+      SnowExplosionSkill_17: 7689689945505120271
+      SnowExplosionSkill_18: -6228313878169592127
+      SnowExplosionSkill_19: -5657857930126046403
+      SnowExplosionSkill_2: -7488739347890518065
+      SnowExplosionSkill_20: 5889807706853201637
+      SnowExplosionSkill_21: 3741571679920583053
+      SnowExplosionSkill_22: 1538829825391329938
+      SnowExplosionSkill_23: -8120246500635003904
+      SnowExplosionSkill_3: -666804550965882953
+      SnowExplosionSkill_4: 500433179507188705
+      SnowExplosionSkill_5: 8125509596370513443
+      SnowExplosionSkill_6: 6580796895279394189
+      SnowExplosionSkill_7: -714225226563307753
+      SnowExplosionSkill_8: -2401033209651493839
+      SnowExplosionSkill_9: 259031700647890515
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

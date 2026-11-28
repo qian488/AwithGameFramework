@@ -2,9 +2,15 @@
 param([Parameter(Mandatory = $true)][string]$EditorPath)
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'unity-verification-cleanup.ps1')
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $editor = Get-Item -LiteralPath $EditorPath
 $validationRoot = Join-Path $repositoryRoot ('artifacts/UnityMinimalValidation/' + [Guid]::NewGuid().ToString('N'))
+$previousProfile = $env:ALLUSERSPROFILE
+try {
+if (!$previousProfile -and [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+    $env:ALLUSERSPROFILE = [Environment]::GetFolderPath('CommonApplicationData')
+}
 foreach ($directory in @('Assets/Editor', 'Packages', 'ProjectSettings')) {
     New-Item -ItemType Directory -Force -Path (Join-Path $validationRoot $directory) | Out-Null
 }
@@ -94,7 +100,7 @@ $options = @{
 if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { $options.WindowStyle = 'Hidden' }
 Write-Host "Validating plugin-free Unity $version project: $validationRoot"
 $process = Start-Process @options
-if (-not $process.WaitForExit(300000)) { $process.Kill(); throw "Minimal Unity validation timed out. See $logPath" }
+if (-not $process.WaitForExit(300000)) { $process.Kill(); $process.WaitForExit(10000) | Out-Null; throw "Minimal Unity validation timed out. See $logPath" }
 $process.Refresh()
 if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $logPath) -or
     -not (Select-String -LiteralPath $logPath -SimpleMatch 'UNITY_MINIMAL_ADAPTER_PASSED' -Quiet) -or
@@ -107,3 +113,8 @@ foreach ($name in @('Foundation', 'Unity.Legacy', 'Unity.Compatibility', 'Unity.
     }
 }
 Write-Host "Plugin-free Unity import and module lifecycle passed. Log: $logPath"
+}
+finally {
+    $env:ALLUSERSPROFILE = $previousProfile
+    Clear-UnityVerificationProjectFiles $validationRoot $validationRoot
+}

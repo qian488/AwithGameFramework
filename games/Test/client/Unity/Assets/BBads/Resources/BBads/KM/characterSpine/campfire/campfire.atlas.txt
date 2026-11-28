@@ -1,0 +1,17 @@
+campfire.png
+size:256,256
+filter:Linear,Linear
+pma:true
+guang
+bounds:2,64,155,154
+offsets:9,10,174,174
+huo
+bounds:159,56,54,66
+rotate:90
+shenti
+bounds:159,112,106,68
+offsets:1,1,108,70
+rotate:90
+yingzi
+bounds:2,2,128,60
+offsets:1,1,130,62

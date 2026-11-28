@@ -59,7 +59,9 @@ namespace AwithGameFrame.Unity.Scenes
             public Task ActivateAsync(CancellationToken token)
             {
                 Verify(); token.ThrowIfCancellationRequested();
-                if (!scene.IsValid() || !scene.isLoaded || !SceneManager.SetActiveScene(scene)) throw new InvalidOperationException("Cannot activate Unity scene: " + scene.path);
+                if (!scene.IsValid() || !scene.isLoaded ||
+                    (SceneManager.GetActiveScene() != scene && !SceneManager.SetActiveScene(scene)))
+                    throw new InvalidOperationException("Cannot activate Unity scene: " + scene.path);
                 return Task.CompletedTask;
             }
             public ValueTask DisposeAsync()

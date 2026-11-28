@@ -12,6 +12,16 @@
       "timeoutSeconds": 300
     },
     {
+      "id": "game-unity-tests",
+      "description": "Import, compile and run a named Unity game's EditMode and PlayMode tests in a hidden disposable project.",
+      "executable": "$powershell",
+      "arguments": ["-NoProfile", "-File", "tools/verify-game-unity.ps1", "-Name", "{gameName}", "-EditorPath", "{editorPath}", "-RunTests"],
+      "parameters": ["gameName", "editorPath"],
+      "inputs": ["tools/verify-game-unity.ps1", "tools/verify-game-unity-metadata.ps1", "tools/unity-verification-cleanup.ps1"],
+      "requiresApproval": false,
+      "timeoutSeconds": 3600
+    },
+    {
       "id": "agent-contracts",
       "description": "Validate module descriptors, task templates and fixed tool recipes without invoking an engine.",
       "executable": "dotnet",
@@ -53,7 +63,7 @@
       "executable": "$powershell",
       "arguments": ["-NoProfile", "-File", "tools/verify-unity-editor-automation.ps1", "-EditorPath", "{editorPath}"],
       "parameters": ["editorPath"],
-      "inputs": ["tools/verify-unity-editor-automation.ps1", "tools/unity-editor.ps1"],
+      "inputs": ["tools/verify-unity-editor-automation.ps1", "tools/unity-editor.ps1", "tools/unity-verification-cleanup.ps1"],
       "requiresApproval": false,
       "timeoutSeconds": 900
     },
@@ -63,7 +73,7 @@
       "executable": "$powershell",
       "arguments": ["-NoProfile", "-File", "tools/verify-unity-addressables.ps1", "-EditorPath", "{editorPath}"],
       "parameters": ["editorPath"],
-      "inputs": ["tools/verify-unity-addressables.ps1", "tools/UnityFixtures/AddressablesSmoke.cs"],
+      "inputs": ["tools/verify-unity-addressables.ps1", "tools/UnityFixtures/AddressablesSmoke.cs", "tools/unity-verification-cleanup.ps1"],
       "requiresApproval": false,
       "timeoutSeconds": 900
     },
@@ -73,7 +83,7 @@
       "executable": "$powershell",
       "arguments": ["-NoProfile", "-File", "tools/verify-unity-hybridclr.ps1", "-EditorPath", "{editorPath}", "-HybridClrPackagePath", "{hybridClrPackagePath}", "-PatchedIl2CppPath", "{patchedIl2CppPath}"],
       "parameters": ["editorPath", "hybridClrPackagePath", "patchedIl2CppPath"],
-      "inputs": ["tools/verify-unity-hybridclr.ps1", "tools/UnityFixtures/HybridCLR/HybridSmoke.cs", "tools/UnityFixtures/HybridCLR/Editor/HybridBuild.cs"],
+      "inputs": ["tools/verify-unity-hybridclr.ps1", "tools/UnityFixtures/HybridCLR/HybridSmoke.cs", "tools/UnityFixtures/HybridCLR/Editor/HybridBuild.cs", "tools/unity-verification-cleanup.ps1"],
       "requiresApproval": false,
       "timeoutSeconds": 3600
     },
@@ -83,7 +93,7 @@
       "executable": "$powershell",
       "arguments": ["-NoProfile", "-File", "tools/verify-unity.ps1", "-EditorPath", "{editorPath}", "-RunSmoke"],
       "parameters": ["editorPath"],
-      "inputs": ["tools/verify-unity.ps1"],
+      "inputs": ["tools/verify-unity.ps1", "tools/unity-verification-cleanup.ps1"],
       "requiresApproval": true,
       "timeoutSeconds": 3600
     },
