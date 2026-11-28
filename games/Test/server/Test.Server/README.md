@@ -2,6 +2,8 @@
 
 .NET 8 进程入口，组合本游戏的 Application 与 `GameHost`。提供 JSON 配置、标准输出 JSONL 日志、固定步长 Tick、Ctrl+C 关闭；Linux/macOS 另外处理 SIGTERM。按配置开放本机探针或委托成绩服务。
 
+`PvpPort` 默认配置为 `17840`，启动后在回环地址提供 `/pvp/session` 和 `/pvp/status`。设为 `0` 可关闭。这条入口支持 Rain Pass 与 BBads 房间。 [启动和验证](../../design/pvp-framework-validation/integration.md)
+
 启动时读取输出目录的 `server.json`，`TickRate` 范围为 1–240，`DispatchBudgetPerTick` 范围为 1–65536。可用 `--config <路径>` 指定其他文件，路径相对当前工作目录；`--run-for-seconds <正数>` 在指定秒数后正常关闭，便于本地检查。未知参数和非法配置以非零退出码结束。
 
 `Program` 在同一线程创建并驱动宿主，通过同步上下文泵送异步生命周期和 Dispatcher；启动、关闭期间仍持续驱动清理。普通 `await` 回到宿主线程，后台任务需要使用 Dispatcher；不要在模块中用 `ConfigureAwait(false)` 后直接访问线程绑定资源，也不要同步阻塞等待排队工作。

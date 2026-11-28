@@ -36,6 +36,332 @@ namespace Test.Application.Protocol
     }
 
     [DataContract]
+    public sealed class PvpAckMessage
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "snapshotSequence", IsRequired = true)]
+        public long SnapshotSequence { get; set; }
+        [DataMember(Name = "inputSequence", IsRequired = true)]
+        public long InputSequence { get; set; }
+        [DataMember(Name = "serverTick", IsRequired = true)]
+        public long ServerTick { get; set; }
+        [DataMember(Name = "accepted", IsRequired = true)]
+        public bool Accepted { get; set; }
+        [DataMember(Name = "reason", IsRequired = false)]
+        public string Reason { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpCombatCue
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "snapshotSequence", IsRequired = true)]
+        public long SnapshotSequence { get; set; }
+        [DataMember(Name = "cueSequence", IsRequired = true)]
+        public long CueSequence { get; set; }
+        [DataMember(Name = "serverTick", IsRequired = true)]
+        public long ServerTick { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "cueType", IsRequired = true)]
+        public string CueType { get; set; }
+        [DataMember(Name = "value", IsRequired = true)]
+        public int Value { get; set; }
+        [DataMember(Name = "isArrow", IsRequired = false)]
+        public bool IsArrow { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpFrameControls
+    {
+        [DataMember(Name = "buttons", IsRequired = true)]
+        public int Buttons { get; set; }
+        [DataMember(Name = "moveX", IsRequired = true)]
+        public int MoveX { get; set; }
+        [DataMember(Name = "moveY", IsRequired = true)]
+        public int MoveY { get; set; }
+        [DataMember(Name = "aimX", IsRequired = true)]
+        public int AimX { get; set; }
+        [DataMember(Name = "aimY", IsRequired = true)]
+        public int AimY { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpInputFrame
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "inputSequence", IsRequired = true)]
+        public long InputSequence { get; set; }
+        [DataMember(Name = "simulationTick", IsRequired = true)]
+        public long SimulationTick { get; set; }
+        [DataMember(Name = "buttons", IsRequired = true)]
+        public int Buttons { get; set; }
+        [DataMember(Name = "moveX", IsRequired = true)]
+        public int MoveX { get; set; }
+        [DataMember(Name = "moveY", IsRequired = true)]
+        public int MoveY { get; set; }
+        [DataMember(Name = "aimX", IsRequired = true)]
+        public int AimX { get; set; }
+        [DataMember(Name = "aimY", IsRequired = true)]
+        public int AimY { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpJoinRequest
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "clientEpoch", IsRequired = true)]
+        public long ClientEpoch { get; set; }
+        [DataMember(Name = "lastSnapshotSequence", IsRequired = true)]
+        public long LastSnapshotSequence { get; set; }
+        [DataMember(Name = "lastInputSequence", IsRequired = true)]
+        public long LastInputSequence { get; set; }
+        [DataMember(Name = "mode", IsRequired = false)]
+        public string Mode { get; set; }
+        [DataMember(Name = "resumeToken", IsRequired = false)]
+        public string ResumeToken { get; set; }
+        [DataMember(Name = "lastSimulationTick", IsRequired = false)]
+        public int LastSimulationTick { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpJoinResponse
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "playerSlot", IsRequired = true)]
+        public int PlayerSlot { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "snapshotSequence", IsRequired = true)]
+        public long SnapshotSequence { get; set; }
+        [DataMember(Name = "serverTick", IsRequired = true)]
+        public long ServerTick { get; set; }
+        [DataMember(Name = "roomState", IsRequired = true)]
+        public string RoomState { get; set; }
+        [DataMember(Name = "accepted", IsRequired = true)]
+        public bool Accepted { get; set; }
+        [DataMember(Name = "reason", IsRequired = false)]
+        public string Reason { get; set; }
+        [DataMember(Name = "resumeToken", IsRequired = false)]
+        public string ResumeToken { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpPlayerSnapshot
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "snapshotSequence", IsRequired = true)]
+        public long SnapshotSequence { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "playerSlot", IsRequired = true)]
+        public int PlayerSlot { get; set; }
+        [DataMember(Name = "positionX", IsRequired = true)]
+        public double PositionX { get; set; }
+        [DataMember(Name = "positionY", IsRequired = true)]
+        public double PositionY { get; set; }
+        [DataMember(Name = "health", IsRequired = true)]
+        public int Health { get; set; }
+        [DataMember(Name = "posture", IsRequired = true)]
+        public int Posture { get; set; }
+        [DataMember(Name = "arrows", IsRequired = true)]
+        public int Arrows { get; set; }
+        [DataMember(Name = "actionState", IsRequired = true)]
+        public int ActionState { get; set; }
+        [DataMember(Name = "alive", IsRequired = true)]
+        public bool Alive { get; set; }
+        [DataMember(Name = "facingX", IsRequired = false)]
+        public double FacingX { get; set; }
+        [DataMember(Name = "facingY", IsRequired = false)]
+        public double FacingY { get; set; }
+        [DataMember(Name = "weapon", IsRequired = false)]
+        public int Weapon { get; set; }
+        [DataMember(Name = "phaseProgress", IsRequired = false)]
+        public double PhaseProgress { get; set; }
+        [DataMember(Name = "guarding", IsRequired = false)]
+        public bool Guarding { get; set; }
+        [DataMember(Name = "dodging", IsRequired = false)]
+        public bool Dodging { get; set; }
+        [DataMember(Name = "moving", IsRequired = false)]
+        public bool Moving { get; set; }
+        [DataMember(Name = "broken", IsRequired = false)]
+        public bool Broken { get; set; }
+        [DataMember(Name = "lockedTarget", IsRequired = false)]
+        public int LockedTarget { get; set; }
+        [DataMember(Name = "backpack", IsRequired = false)]
+        public string[] Backpack { get; set; }
+        [DataMember(Name = "ready", IsRequired = false)]
+        public bool Ready { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpRecoveryRequest
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "lastSnapshotSequence", IsRequired = true)]
+        public long LastSnapshotSequence { get; set; }
+        [DataMember(Name = "lastInputSequence", IsRequired = true)]
+        public long LastInputSequence { get; set; }
+        [DataMember(Name = "reason", IsRequired = true)]
+        public string Reason { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpRecoveryResponse
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "snapshotSequence", IsRequired = true)]
+        public long SnapshotSequence { get; set; }
+        [DataMember(Name = "serverTick", IsRequired = true)]
+        public long ServerTick { get; set; }
+        [DataMember(Name = "accepted", IsRequired = true)]
+        public bool Accepted { get; set; }
+        [DataMember(Name = "isFullSnapshot", IsRequired = true)]
+        public bool IsFullSnapshot { get; set; }
+        [DataMember(Name = "stateHash", IsRequired = false)]
+        public string StateHash { get; set; }
+        [DataMember(Name = "playerCount", IsRequired = true)]
+        public int PlayerCount { get; set; }
+        [DataMember(Name = "cueCount", IsRequired = true)]
+        public int CueCount { get; set; }
+        [DataMember(Name = "reason", IsRequired = false)]
+        public string Reason { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpRoomMessage
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "serverEpoch", IsRequired = true)]
+        public long ServerEpoch { get; set; }
+        [DataMember(Name = "serverTick", IsRequired = true)]
+        public long ServerTick { get; set; }
+        [DataMember(Name = "roomState", IsRequired = true)]
+        public string RoomState { get; set; }
+        [DataMember(Name = "playerCount", IsRequired = true)]
+        public int PlayerCount { get; set; }
+        [DataMember(Name = "maxPlayers", IsRequired = true)]
+        public int MaxPlayers { get; set; }
+        [DataMember(Name = "playerId", IsRequired = true)]
+        public string PlayerId { get; set; }
+        [DataMember(Name = "playerSlot", IsRequired = true)]
+        public int PlayerSlot { get; set; }
+        [DataMember(Name = "reason", IsRequired = false)]
+        public string Reason { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpSimulationFrame
+    {
+        [DataMember(Name = "tick", IsRequired = true)]
+        public int Tick { get; set; }
+        [DataMember(Name = "controls", IsRequired = true)]
+        public PvpFrameControls[] Controls { get; set; }
+        [DataMember(Name = "stateHash", IsRequired = true)]
+        public string StateHash { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpSnapshotMessage
+    {
+        [DataMember(Name = "protocolVersion", IsRequired = true)]
+        public int ProtocolVersion { get; set; }
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "sessionEpoch", IsRequired = true)]
+        public long SessionEpoch { get; set; }
+        [DataMember(Name = "snapshotSequence", IsRequired = true)]
+        public long SnapshotSequence { get; set; }
+        [DataMember(Name = "serverTick", IsRequired = true)]
+        public long ServerTick { get; set; }
+        [DataMember(Name = "confirmedInputSequence", IsRequired = true)]
+        public long ConfirmedInputSequence { get; set; }
+        [DataMember(Name = "stateHash", IsRequired = true)]
+        public string StateHash { get; set; }
+        [DataMember(Name = "playerCount", IsRequired = true)]
+        public int PlayerCount { get; set; }
+        [DataMember(Name = "cueCount", IsRequired = true)]
+        public int CueCount { get; set; }
+        [DataMember(Name = "roomState", IsRequired = false)]
+        public string RoomState { get; set; }
+        [DataMember(Name = "winner", IsRequired = false)]
+        public int Winner { get; set; }
+        [DataMember(Name = "remainingTicks", IsRequired = false)]
+        public int RemainingTicks { get; set; }
+        [DataMember(Name = "mode", IsRequired = false)]
+        public string Mode { get; set; }
+        [DataMember(Name = "peerConnected", IsRequired = false)]
+        public bool PeerConnected { get; set; }
+        [DataMember(Name = "phase", IsRequired = false)]
+        public string Phase { get; set; }
+    }
+
+    [DataContract]
     public sealed class GetContractLeaderboardRequest
     {
         [DataMember(Name = "playerId", IsRequired = true)]

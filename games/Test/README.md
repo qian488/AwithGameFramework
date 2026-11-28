@@ -51,6 +51,8 @@ Test.Domain 处理格子、合并与伤害。Test.Application 处理配置、刷
 
 [BBads 框架能力验证与补强](design/bbads-framework-validation/brief.md)覆盖完整对局、框架接入、工具回归和工单交接。
 
+从 `CombatShowcase` 选关页的 `Online PvP` 可进入采用帧同步的 Rain Pass 双人决斗，或采用状态同步的 BBads 双背包自动对战。 [启动和验证](design/pvp-framework-validation/integration.md) · [框架验证结论](design/pvp-framework-validation/framework-feedback.md)
+
 ## 雨夜委托
 
 在营地接取委托，进入杉林挑战 Cedar Sentinel。加载时可以取消。在战斗中按 `Esc` 暂停后可以撤退，战败后可以从当前检查点重试。胜利后结算保存完成记录，随后可以返回营地。重开后可以看到完成记录并再次挑战。存档位于 `Application.persistentDataPath/RainPassContract`。

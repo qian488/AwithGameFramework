@@ -1,5 +1,18 @@
 # 最近验证
 
+## Test PvP 帧同步与状态同步（2026-11-28）
+
+- Unity **2022.3.16f1** 完成后台导入、EditMode **16/16**、PlayMode **32/32** 和 Windows Release 构建。两个隐藏 Player 的 Rain Pass 客户端各自演算到第 **263** 帧，覆盖斜向移动、弓箭和结算，终局哈希均为 `e997e4d011612a5e11b47a34c758e58276fabb5a3d75ced00635501ca2da5e8e`。BBads 服务端在第 **269** 步结算，两端本地模拟计数均为 **0**，收到的终局哈希均为 `8cb0a4e6c9a263c54cb9de568057576ff1ea2133730f2067edde99fe31494cbb`。
+- 服务端集成测试 **3/3** 对比实际 WebSocket 载荷，验证 Rain Pass 断线前尚未应用的输入帧在重连后重放，以及 BBads 从最新快照恢复。Test.Domain **60/60**、Test.Application **108/108**。原生验证在无图形模式执行，输入手感和画面留待试玩。 [复跑入口](../../games/Test/design/pvp-framework-validation/integration.md)
+- 跨运行时对照复现了第 0 帧的带符号零，以及第 35 帧斜向发箭的速度末位差异。统一向量哈希的零编码并明确标量计算顺序后，Mono 与 .NET 8 对相同的 120 帧输入逐帧得到相同哈希。 [帧同步与回放](../../games/Test/design/pvp-framework-validation/determinism-replay.md)
+
+## Test Rain Pass 与 BBads 双客户端 PvP（2026-11-28）
+
+- Unity **2022.3.16f1** 后台隔离导入、EditMode **16/16**、PlayMode **32/32** 和 Windows Release 构建通过。
+- 每种模式以两个后台 Windows Player 连接本机 .NET 8 Test.Server。Rain Pass 在第 **270** 步结束，双方状态哈希均为 `a505becd58251ef8a41cf82403fc41dd2784c66404ab99af95cd2407fd97d226`。BBads 完成双方不同背包、就绪、倒计时和自动战斗，在第 **271** 步结束，双方哈希均为 `301e9a030770fe59bc34935119ac686df4994731bc4d93af7d8e240b92ac1a4d`。两场胜者均为席位 0。
+- Test.Domain **60/60**、Test.Application **108/108**、Test.Server 集成 **3/3**。集成覆盖两种模式的真实 WebSocket 断开和同局重连、迟到、重复、乱序与超窗输入，以及服务器重启后原房间凭据失效。框架测试 **578/578**、模板 **13/13**、AgentKit 与 Headless 通过。
+- 原 Rain Pass 和 BBads Windows Player 无图形冒烟通过。粒子示例由 EditMode 和 PlayMode 覆盖。PvP 的实体输入手感、镜头、音画和界面可读性留待人工体验。 [复跑与体验入口](../../games/Test/design/pvp-framework-validation/integration.md)
+
 ## BBads 验证能力补强（2026-11-27）
 
 - Unity **2022.3.16f1** 后台导入、EditMode **16/16**、PlayMode **11/11** 通过。资源审计从现有配置和客户端入口生成 **60** 项，三张图集核对 **24/24** 个 Sprite。故意改错类型和必需键时报告失败，已登记的回退和可选缺失分别给出独立状态。正反例在 `artifacts/game-unity/Test/20261127-111702-06d5e4ac` 和 `20261127-105021-9d43fedc`。独立 UPM 工程也通过导入与模块生命周期检查。

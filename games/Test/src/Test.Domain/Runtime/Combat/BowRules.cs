@@ -15,14 +15,16 @@ namespace Test.Domain.Combat
         public static ArrowFlight Launch(Vector3 origin, Vector3 target, Vector3 forward)
         {
             var offset = target - origin;
-            float distance = offset.Length();
-            if (distance < .25f || Vector3.Dot(offset, forward) <= 0)
+            double distance = CombatVectorMath.Length(offset);
+            if (distance < .25f || CombatVectorMath.Dot(offset, forward) <= 0)
             {
                 offset = forward * AimDistance;
                 distance = AimDistance;
             }
-            float flightTime = Math.Min(distance, AimDistance) / Speed;
-            var velocity = offset / distance * Speed - Gravity * (.5f * flightTime);
+            double flightTime = Math.Min(distance, AimDistance) / Speed;
+            double scale = Speed / distance;
+            var velocity = new Vector3((float)(offset.X * scale),
+                (float)(offset.Y * scale - Gravity.Y * (.5d * flightTime)), (float)(offset.Z * scale));
             return new ArrowFlight(origin, velocity, 0);
         }
 

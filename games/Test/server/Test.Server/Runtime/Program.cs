@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AwithGameFrame.Core.Hosting;
 using Test.Application;
+using Test.Server.Pvp;
 
 namespace Test.Server
 {
@@ -50,6 +51,7 @@ namespace Test.Server
             try
             {
                 host.AddModule(new TestModule());
+                if (options.PvpPort != 0) host.AddModule(new PvpRealtimeModule(options.PvpPort));
                 if (options.OnlineProbePort != 0) host.AddModule(new OnlineProbeModule(options.OnlineProbePort));
                 if (options.ScorePort != 0) host.AddModule(new ContractScoresModule(options));
                 Task startup = host.StartAsync(startupCancellation.Token);

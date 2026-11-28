@@ -95,7 +95,7 @@ namespace Test.Client.Combat
         public int ArchitectureCount => world?.ArchitectureCount ?? 0;
         public string CurrentArea => run?.Encounter.ToString();
         public int SimulationTick => run?.Tick ?? 0;
-        public bool IsTrialSelection => run != null && !expedition && run.TrialOpponent == null;
+        public bool IsTrialSelection => run != null && !expedition && run.TrialOpponent == null && ActivePvp == null;
         public bool TrialsReady => opponents != null;
         internal bool CommissionReady => mapBossOptions != null;
         internal bool CommissionUnavailable => mapBossError != null || Failure != null;
@@ -105,20 +105,25 @@ namespace Test.Client.Combat
 
         public void RestartRun()
         {
-            if (run == null || trials?.IsSaving == true) return;
+            if (run == null || ActivePvp != null || trials?.IsSaving == true) return;
             expedition = true;
             run.Restart();
         }
 
         public void RetryEncounter()
         {
-            if (trials?.IsSaving == true) return;
+            if (ActivePvp != null || trials?.IsSaving == true) return;
             if (run?.TrialOpponent != null) trials.Start(run.TrialOpponent);
             else run?.Retry();
         }
 
         public void ShowTrialSelection()
         {
+            if (ActivePvp != null)
+            {
+                ClosePvp();
+                return;
+            }
             if (run == null || trials?.IsSaving == true) return;
             Debug.Log($"Rain Pass stage=return-selection map={run.Map?.Name ?? "Original"} objects={GetComponentsInChildren<Transform>(true).Length}.", this);
             expedition = false;
@@ -435,7 +440,7 @@ namespace Test.Client.Combat
         {
             base.Update();
             if (run == null || Failure != null || !IsReady) return;
-            if (playingReplay != null) return;
+            if (playingReplay != null || ActivePvp != null) return;
             bool automation = PassEvidence.Requested || evidenceInput != null;
             bool focused = RainPassGamepad.HasFocus;
             if (!automation && !UnityEngine.Application.isBatchMode && !focused && previousFocus && Playing) run.TogglePause();
@@ -506,7 +511,8 @@ namespace Test.Client.Combat
             }
         }
 
-        private bool Playing => !IsTrialSelection && (run.Status == RunStatus.Fighting || run.Status == RunStatus.Proceed);
+        private bool Playing => ActivePvp == null && !IsTrialSelection &&
+            (run.Status == RunStatus.Fighting || run.Status == RunStatus.Proceed);
 
         private async Task ObserveTrialSave(Task save)
         {
@@ -578,6 +584,11 @@ namespace Test.Client.Combat
 
         private void Receive(InputActionEvent message)
         {
+            if (ActivePvp != null)
+            {
+                ActivePvp.ReceiveInput(message);
+                return;
+            }
             if (run == null || IsTrialSelection || PassEvidence.Requested || playingReplay != null) return;
             bool pressed = message.Phase == InputActionPhase.Pressed;
             bool held = message.Phase != InputActionPhase.Released;
@@ -612,10 +623,11 @@ namespace Test.Client.Combat
 
         private void OnGUI()
         {
-            if (hud == null || run == null || playingReplay != null) return;
+            if (hud == null || run == null || playingReplay != null || ActivePvp != null) return;
             if (IsTrialSelection)
             {
                 hud.DrawTrialSelection(this, opponents, trials, mapBossOptions, trialCatalogError, mapBossError, ref opponentScroll);
+                if (IsTrialSelection && !commission && !PassEvidence.Requested) DrawPvpEntry();
                 return;
             }
             hud.Draw(run, space, lens, debug, EffectiveEnvironmentParameters.seed, world.LayoutDigest,

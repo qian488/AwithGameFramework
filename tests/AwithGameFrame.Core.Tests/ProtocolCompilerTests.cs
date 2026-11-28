@@ -43,6 +43,17 @@ namespace AwithGameFrame.Tests
         }
 
         [Test]
+        public void NamedMessagesCanContainArraysOfOtherNamedMessages()
+        {
+            var nested = Schema.Replace("\"endpoints\"", "\"types\":[" +
+                "{\"name\":\"Frame\",\"fields\":[{\"name\":\"Inputs\",\"wireName\":\"inputs\",\"type\":\"Controls[]\"}]}," +
+                "{\"name\":\"Controls\",\"fields\":[{\"name\":\"Buttons\",\"wireName\":\"buttons\",\"type\":\"int\"}]}],\"endpoints\"");
+            Assert.That(ProtocolCompiler.Compile(nested, nested), Does.Contain("public Controls[] Inputs"));
+            Assert.Throws<InvalidDataException>(() => ProtocolCompiler.Compile(nested.Replace("Controls[]", "Missing[]")));
+            Assert.Throws<InvalidDataException>(() => ProtocolCompiler.Compile(nested.Replace("Controls[]", "int[]"), nested));
+        }
+
+        [Test]
         public void GeneratedDtosUseActualCodecWireNames()
         {
             var codec = new DataContractJsonProtocolCodec();

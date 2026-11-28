@@ -12,7 +12,9 @@
                         "games/Test/game.json",
         "games/Test/src/Test.Application/Test.Application.csproj",
         "games/Test/configuration/schema.json",
-        "games/Test/protocol/README.md"
+        "games/Test/protocol/README.md",
+        "games/Test/server/Test.Server/README.md",
+        "games/Test/design/pvp-framework-validation/integration.md"
                     ],
     "readme":  "games/Test/README.md",
     "dependencies":  [

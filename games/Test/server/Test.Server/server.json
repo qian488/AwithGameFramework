@@ -1,4 +1,5 @@
 {
   "TickRate": 30,
-  "DispatchBudgetPerTick": 64
+  "DispatchBudgetPerTick": 64,
+  "PvpPort": 17840
 }

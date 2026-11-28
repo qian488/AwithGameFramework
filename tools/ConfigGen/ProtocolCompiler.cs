@@ -86,7 +86,7 @@ namespace AwithGameFrame.Tools.Configuration
                         throw new InvalidDataException("Invalid or duplicate protocol type.");
                 }
                 foreach (var type in typeDefinitions.EnumerateArray())
-                    ValidateFields(type.GetProperty("name").GetString(), type.GetProperty("fields"), Types);
+                    ValidateFields(type.GetProperty("name").GetString(), type.GetProperty("fields"), knownTypes);
             }
             foreach (var endpoint in root.GetProperty("endpoints").EnumerateArray())
             {

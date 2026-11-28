@@ -21,6 +21,199 @@
         { "name": "Rank", "wireName": "rank", "type": "int" },
         { "name": "IsMine", "wireName": "isMine", "type": "bool" }
       ]
+    },
+    {
+      "name": "PvpRoomMessage",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "ServerEpoch", "wireName": "serverEpoch", "type": "long" },
+        { "name": "ServerTick", "wireName": "serverTick", "type": "long" },
+        { "name": "RoomState", "wireName": "roomState", "type": "string" },
+        { "name": "PlayerCount", "wireName": "playerCount", "type": "int" },
+        { "name": "MaxPlayers", "wireName": "maxPlayers", "type": "int" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "PlayerSlot", "wireName": "playerSlot", "type": "int" },
+        { "name": "Reason", "wireName": "reason", "type": "string", "required": false }
+      ]
+    },
+    {
+      "name": "PvpJoinRequest",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "ClientEpoch", "wireName": "clientEpoch", "type": "long" },
+        { "name": "LastSnapshotSequence", "wireName": "lastSnapshotSequence", "type": "long" },
+        { "name": "LastInputSequence", "wireName": "lastInputSequence", "type": "long" },
+        { "name": "Mode", "wireName": "mode", "type": "string", "required": false },
+        {"name": "ResumeToken", "wireName": "resumeToken", "type": "string", "required": false},
+        { "name": "LastSimulationTick", "wireName": "lastSimulationTick", "type": "int", "required": false }
+      ]
+    },
+    {
+      "name": "PvpJoinResponse",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "PlayerSlot", "wireName": "playerSlot", "type": "int" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "SnapshotSequence", "wireName": "snapshotSequence", "type": "long" },
+        { "name": "ServerTick", "wireName": "serverTick", "type": "long" },
+        { "name": "RoomState", "wireName": "roomState", "type": "string" },
+        { "name": "Accepted", "wireName": "accepted", "type": "bool" },
+        { "name": "Reason", "wireName": "reason", "type": "string", "required": false },
+        {"name": "ResumeToken", "wireName": "resumeToken", "type": "string", "required": false}
+      ]
+    },
+    {
+      "name": "PvpInputFrame",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "InputSequence", "wireName": "inputSequence", "type": "long" },
+        { "name": "SimulationTick", "wireName": "simulationTick", "type": "long" },
+        { "name": "Buttons", "wireName": "buttons", "type": "int" },
+        { "name": "MoveX", "wireName": "moveX", "type": "int" },
+        { "name": "MoveY", "wireName": "moveY", "type": "int" },
+        { "name": "AimX", "wireName": "aimX", "type": "int" },
+        { "name": "AimY", "wireName": "aimY", "type": "int" }
+      ]
+    },
+    {
+      "name": "PvpPlayerSnapshot",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "SnapshotSequence", "wireName": "snapshotSequence", "type": "long" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "PlayerSlot", "wireName": "playerSlot", "type": "int" },
+        { "name": "PositionX", "wireName": "positionX", "type": "double" },
+        { "name": "PositionY", "wireName": "positionY", "type": "double" },
+        { "name": "Health", "wireName": "health", "type": "int" },
+        { "name": "Posture", "wireName": "posture", "type": "int" },
+        { "name": "Arrows", "wireName": "arrows", "type": "int" },
+        { "name": "ActionState", "wireName": "actionState", "type": "int" },
+        { "name": "Alive", "wireName": "alive", "type": "bool" },
+        {"name": "FacingX", "wireName": "facingX", "type": "double", "required": false},
+        {"name": "FacingY", "wireName": "facingY", "type": "double", "required": false},
+        {"name": "Weapon", "wireName": "weapon", "type": "int", "required": false},
+        {"name": "PhaseProgress", "wireName": "phaseProgress", "type": "double", "required": false},
+        {"name": "Guarding", "wireName": "guarding", "type": "bool", "required": false},
+        {"name": "Dodging", "wireName": "dodging", "type": "bool", "required": false},
+        {"name": "Moving", "wireName": "moving", "type": "bool", "required": false},
+        {"name": "Broken", "wireName": "broken", "type": "bool", "required": false},
+        {"name": "LockedTarget", "wireName": "lockedTarget", "type": "int", "required": false},
+        {"name": "Backpack", "wireName": "backpack", "type": "string[]", "required": false},
+        {"name": "Ready", "wireName": "ready", "type": "bool", "required": false}
+      ]
+    },
+    {
+      "name": "PvpCombatCue",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "SnapshotSequence", "wireName": "snapshotSequence", "type": "long" },
+        { "name": "CueSequence", "wireName": "cueSequence", "type": "long" },
+        { "name": "ServerTick", "wireName": "serverTick", "type": "long" },
+        { "name": "PlayerId", "wireName": "playerId", "type": "string" },
+        { "name": "CueType", "wireName": "cueType", "type": "string" },
+        { "name": "Value", "wireName": "value", "type": "int" },
+        {"name": "IsArrow", "wireName": "isArrow", "type": "bool", "required": false}
+      ]
+    },
+    {
+      "name": "PvpFrameControls",
+      "fields": [
+        { "name": "Buttons", "wireName": "buttons", "type": "int" },
+        { "name": "MoveX", "wireName": "moveX", "type": "int" },
+        { "name": "MoveY", "wireName": "moveY", "type": "int" },
+        { "name": "AimX", "wireName": "aimX", "type": "int" },
+        { "name": "AimY", "wireName": "aimY", "type": "int" }
+      ]
+    },
+    {
+      "name": "PvpSimulationFrame",
+      "fields": [
+        { "name": "Tick", "wireName": "tick", "type": "int" },
+        { "name": "Controls", "wireName": "controls", "type": "PvpFrameControls[]" },
+        { "name": "StateHash", "wireName": "stateHash", "type": "string" }
+      ]
+    },
+    {
+      "name": "PvpSnapshotMessage",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "SnapshotSequence", "wireName": "snapshotSequence", "type": "long" },
+        { "name": "ServerTick", "wireName": "serverTick", "type": "long" },
+        { "name": "ConfirmedInputSequence", "wireName": "confirmedInputSequence", "type": "long" },
+        { "name": "StateHash", "wireName": "stateHash", "type": "string" },
+        { "name": "PlayerCount", "wireName": "playerCount", "type": "int" },
+        { "name": "CueCount", "wireName": "cueCount", "type": "int" },
+        {"name": "RoomState", "wireName": "roomState", "type": "string", "required": false},
+        {"name": "Winner", "wireName": "winner", "type": "int", "required": false},
+        {"name": "RemainingTicks", "wireName": "remainingTicks", "type": "int", "required": false},
+        {"name": "Mode", "wireName": "mode", "type": "string", "required": false},
+        {"name": "PeerConnected", "wireName": "peerConnected", "type": "bool", "required": false},
+        { "name": "Phase", "wireName": "phase", "type": "string", "required": false }
+      ]
+    },
+    {
+      "name": "PvpAckMessage",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "SnapshotSequence", "wireName": "snapshotSequence", "type": "long" },
+        { "name": "InputSequence", "wireName": "inputSequence", "type": "long" },
+        { "name": "ServerTick", "wireName": "serverTick", "type": "long" },
+        { "name": "Accepted", "wireName": "accepted", "type": "bool" },
+        { "name": "Reason", "wireName": "reason", "type": "string", "required": false }
+      ]
+    },
+    {
+      "name": "PvpRecoveryRequest",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "LastSnapshotSequence", "wireName": "lastSnapshotSequence", "type": "long" },
+        { "name": "LastInputSequence", "wireName": "lastInputSequence", "type": "long" },
+        { "name": "Reason", "wireName": "reason", "type": "string" }
+      ]
+    },
+    {
+      "name": "PvpRecoveryResponse",
+      "fields": [
+        { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "SessionEpoch", "wireName": "sessionEpoch", "type": "long" },
+        { "name": "SnapshotSequence", "wireName": "snapshotSequence", "type": "long" },
+        { "name": "ServerTick", "wireName": "serverTick", "type": "long" },
+        { "name": "Accepted", "wireName": "accepted", "type": "bool" },
+        { "name": "IsFullSnapshot", "wireName": "isFullSnapshot", "type": "bool" },
+        { "name": "StateHash", "wireName": "stateHash", "type": "string", "required": false },
+        { "name": "PlayerCount", "wireName": "playerCount", "type": "int" },
+        { "name": "CueCount", "wireName": "cueCount", "type": "int" },
+        { "name": "Reason", "wireName": "reason", "type": "string", "required": false }
+      ]
     }
   ],
   "endpoints": [
