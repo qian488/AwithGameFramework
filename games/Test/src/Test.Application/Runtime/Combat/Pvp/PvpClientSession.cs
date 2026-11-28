@@ -28,6 +28,9 @@ namespace Test.Application.Combat.Pvp
         private long sequence;
         private long lastSnapshot;
         private RainPassPvpNetworkMatch simulation;
+        private string simulationMatchId;
+        private bool tournament;
+        private PvpTournamentState tournamentState;
         private int simulationTick;
         private int replayedFrames;
         private int disposed;
@@ -56,27 +59,42 @@ namespace Test.Application.Combat.Pvp
         public event Action<IReadOnlyList<Vector3>> ArrowsReceived;
         public event Action<PvpRecoveryResponse> RecoveryReceived;
         public event Action<PvpMatchResultMessage> ResultReceived;
+        public event Action<PvpTournamentState> TournamentChanged;
 
         public async Task<PvpJoinResponse> JoinAsync(string requestedRoomId, string requestedPlayerId, string mode = "rain-pass",
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, string resumeToken = null)
         {
             if (running != null) throw new InvalidOperationException("This PvP session has already been started.");
             if (mode == "rain-pass" || mode == null) simulation = new RainPassPvpNetworkMatch();
+            tournament = mode == PvpTournamentRules.Tournament;
             using var cancelInitialJoin = cancellationToken.Register(() =>
             {
                 if (!initialJoin.Task.IsCompletedSuccessfully) lifetime.Cancel();
             });
             running = RunAsync(new PvpJoinRequest
             {
-                ProtocolVersion = GameProtocol.Version, RoomId = requestedRoomId, PlayerId = requestedPlayerId, Mode = mode
+                ProtocolVersion = GameProtocol.Version, RoomId = requestedRoomId, PlayerId = requestedPlayerId,
+                Mode = mode, ResumeToken = resumeToken
             });
             return await initialJoin.Task.ConfigureAwait(false);
         }
 
+        public Task ReadyTournamentAsync(CancellationToken cancellationToken = default)
+        {
+            var state = Volatile.Read(ref tournamentState);
+            if (!IsConnected || state?.Phase != PvpTournament.AwaitingReady)
+                throw new InvalidOperationException("The tournament is not waiting for players to ready up.");
+            return SendAsync("tournamentReady", new PvpTournamentReady
+            {
+                TournamentId = state.TournamentId, TournamentVersion = state.TournamentVersion
+            }, cancellationToken);
+        }
+
         public Task SendInputAsync(long simulationTick, PvpButtons buttons, int moveX, int moveY, int aimX, int aimY,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, string expectedMatchId = null)
         {
             var current = Volatile.Read(ref active);
+            if (expectedMatchId != null && expectedMatchId != current?.MatchId) return Task.CompletedTask;
             if (current == null || !realtime.IsConnected) throw new RealtimeDisconnectedException("The PvP session is reconnecting.");
             return SendAsync("input", new WireInput
             {
@@ -109,9 +127,10 @@ namespace Test.Application.Combat.Pvp
             Exception failure = null;
             try
             {
-                for (int attempt = 0; attempt < 4; attempt++)
+                int attempts = tournament ? 20 : 4;
+                for (int attempt = 0; attempt < attempts; attempt++)
                 {
-                    if (attempt != 0) await Task.Delay(attempt * 250, token).ConfigureAwait(false);
+                    if (attempt != 0) await Task.Delay(tournament ? 500 : attempt * 250, token).ConfigureAwait(false);
                     var reply = new TaskCompletionSource<PvpJoinResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
                     Task connection = realtime.RunSessionAsync(0, (push, cancellation) =>
                         ApplyAsync(push, reply, cancellation), cancellationToken: token);
@@ -123,6 +142,7 @@ namespace Test.Application.Combat.Pvp
                             await Task.Delay(20, token).ConfigureAwait(false);
                         }
                         request.LastSimulationTick = SimulationTick;
+                        request.LastMatchId = simulationMatchId;
                         await SendAsync("join", request, token).ConfigureAwait(false);
                         var join = await AwaitJoinAsync(reply.Task, connection, token).ConfigureAwait(false);
                         initialJoin.TrySetResult(join);
@@ -198,6 +218,9 @@ namespace Test.Application.Combat.Pvp
                     if (join.Accepted) Volatile.Write(ref active, join);
                     reply.TrySetResult(join);
                     break;
+                case "tournamentState":
+                    ApplyTournament(message.ToObject<PvpTournamentState>());
+                    break;
                 case "snapshot":
                     if (simulation != null) throw new RealtimeProtocolException("Rain Pass expects input frames.");
                     ApplySnapshot(message);
@@ -213,6 +236,31 @@ namespace Test.Application.Combat.Pvp
                     break;
             }
             return Task.CompletedTask;
+        }
+
+        private void ApplyTournament(PvpTournamentState state)
+        {
+            var current = Volatile.Read(ref active);
+            if (!tournament || current == null || state.RoomId != current.RoomId) return;
+            var previous = Volatile.Read(ref tournamentState);
+            if (previous != null && (previous.TournamentId != state.TournamentId ||
+                previous.TournamentVersion > state.TournamentVersion)) return;
+            if (state.MatchId != simulationMatchId)
+            {
+                simulation = state.Mode == PvpTournamentRules.RainPass && state.MatchId != null
+                    ? new RainPassPvpNetworkMatch() : null;
+                simulationMatchId = state.MatchId;
+                Volatile.Write(ref simulationTick, 0);
+                Interlocked.Exchange(ref lastSnapshot, 0);
+            }
+            Volatile.Write(ref active, new PvpJoinResponse
+            {
+                Accepted = true, ProtocolVersion = current.ProtocolVersion, RoomId = current.RoomId,
+                MatchId = state.MatchId, PlayerId = current.PlayerId, PlayerSlot = current.PlayerSlot,
+                SessionEpoch = current.SessionEpoch, ResumeToken = current.ResumeToken, RoomState = state.Phase
+            });
+            Volatile.Write(ref tournamentState, state);
+            TournamentChanged?.Invoke(state);
         }
 
         private void ApplySnapshot(JToken message)

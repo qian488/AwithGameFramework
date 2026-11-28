@@ -53,6 +53,8 @@ Test.Domain 处理格子、合并与伤害。Test.Application 处理配置、刷
 
 从 `CombatShowcase` 选关页的 `Online PvP` 可进入采用帧同步的 Rain Pass 双人决斗，或采用状态同步的 BBads 双背包自动对战。 [启动和验证](design/pvp-framework-validation/integration.md) · [框架验证结论](design/pvp-framework-validation/framework-feedback.md)
 
+同一入口选择 **Tournament** 可以打一场双玩法擂台赛。两名玩家用相同房间码、不同玩家名入场，按局就绪，最后查看比分、各局胜负和 BBads 终局背包。 [双玩法擂台赛](design/dual-mode-tournament/verification.md)
+
 ## 雨夜委托
 
 在营地接取委托，进入杉林挑战 Cedar Sentinel。加载时可以取消。在战斗中按 `Esc` 暂停后可以撤退，战败后可以从当前检查点重试。胜利后结算保存完成记录，随后可以返回营地。重开后可以看到完成记录并再次挑战。存档位于 `Application.persistentDataPath/RainPassContract`。

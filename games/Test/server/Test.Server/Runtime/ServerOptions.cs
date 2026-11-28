@@ -11,14 +11,17 @@ namespace Test.Server
         public int DispatchBudgetPerTick { get; set; } = 64;
         public int OnlineProbePort { get; set; }
         public int PvpPort { get; set; }
+        public string PvpTournamentDirectory { get; set; } =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AwithGameFrame", "Test", "PvpTournaments");
         public int ScorePort { get; set; }
         public string ScoreDirectory { get; set; }
         public bool DropFirstScoreConfirmation { get; set; }
 
-        internal static ServerOptions Load(string[] args, out double? runForSeconds)
+        internal static ServerOptions Load(string[] args, out double? runForSeconds, out string verifyTournament)
         {
             string path = Path.Combine(AppContext.BaseDirectory, "server.json");
             runForSeconds = null;
+            verifyTournament = null;
             for (int i = 0; i < args.Length; i++)
             {
                 string key = args[i];
@@ -27,6 +30,7 @@ namespace Test.Server
                 switch (key)
                 {
                     case "--config": path = Path.GetFullPath(value); break;
+                    case "--verify-pvp-tournament": verifyTournament = value; break;
                     case "--run-for-seconds":
                         if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
                             || !double.IsFinite(seconds) || seconds <= 0)
@@ -52,6 +56,8 @@ namespace Test.Server
                 throw new InvalidDataException("PvpPort must be zero (disabled) or a valid TCP port.");
             if (options.PvpPort != 0 && options.PvpPort == options.OnlineProbePort)
                 throw new InvalidDataException("PvpPort must be distinct from OnlineProbePort.");
+            if (options.PvpPort != 0 && string.IsNullOrWhiteSpace(options.PvpTournamentDirectory))
+                throw new InvalidDataException("PvpTournamentDirectory must be set when PvP is enabled.");
             if (options.ScorePort < 0 || options.ScorePort > 65535 ||
                 options.ScorePort != 0 && (options.ScorePort == options.OnlineProbePort || options.ScorePort == options.PvpPort || string.IsNullOrWhiteSpace(options.ScoreDirectory)))
                 throw new InvalidDataException("ScorePort needs a distinct TCP port and a score directory.");

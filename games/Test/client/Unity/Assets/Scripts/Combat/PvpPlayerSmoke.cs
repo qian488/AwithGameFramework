@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Test.Application.Combat.Pvp;
 using Test.Application.Protocol;
 using Test.Domain.Combat.Pvp;
 using UnityEngine;
@@ -19,6 +21,10 @@ namespace Test.Client.Combat
         private PvpClientShowcase client;
         private string endReason;
         private string sessionFailure;
+        private bool splitSeries;
+        private int readyVersion;
+        private string lastActiveRound;
+        private PvpTournamentState finishedTournament;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void StartFromCommandLine()
@@ -41,8 +47,10 @@ namespace Test.Client.Combat
                 report.playerId = RequiredArgument("-pvp-player");
                 report.unityVersion = UnityEngine.Application.unityVersion;
                 report.batchMode = UnityEngine.Application.isBatchMode;
-                if (report.mode != PvpClientShowcase.RainPassMode && report.mode != PvpClientShowcase.BBadsMode)
-                    throw new ArgumentException("-pvp-smoke expects rain-pass or bbads.");
+                splitSeries = Array.IndexOf(Environment.GetCommandLineArgs(), "-pvp-split") >= 0;
+                if (report.mode != PvpClientShowcase.RainPassMode && report.mode != PvpClientShowcase.BBadsMode &&
+                    report.mode != PvpTournamentRules.Tournament)
+                    throw new ArgumentException("-pvp-smoke expects rain-pass, bbads or tournament.");
 
                 UnityEngine.Application.runInBackground = true;
                 QualitySettings.vSyncCount = 0;
@@ -64,10 +72,13 @@ namespace Test.Client.Combat
                 await client.StartSmokeAsync(this, report.server, report.roomId, report.playerId, report.mode);
                 if (report.slot < 0) throw new InvalidOperationException(client.ConnectionError ?? "PvP join failed.");
 
-                await WaitForAsync(() => report.finalSnapshot != null || sessionFailure != null, 35,
+                bool tournament = report.mode == PvpTournamentRules.Tournament;
+                await WaitForAsync(() => (tournament ? finishedTournament != null : report.finalSnapshot != null) || sessionFailure != null,
+                    tournament ? 90 : 35,
                     "Timed out waiting for the final PvP snapshot.");
                 if (sessionFailure != null) throw new InvalidOperationException(sessionFailure);
-                ValidateResult();
+                if (tournament) ValidateTournament();
+                else ValidateResult();
                 report.passed = true;
             }
             catch (Exception exception)
@@ -119,14 +130,34 @@ namespace Test.Client.Combat
         internal void RecordSentInput() => report.inputsSent++;
         internal void RecordFailure(string message) => sessionFailure = message;
 
+        internal void RecordTournament(PvpTournamentState state)
+        {
+            bool finished = state.Phase == PvpTournament.Finished;
+            string observed = $"{state.Phase}:{state.RoundNumber}:{state.MatchId}:{state.FirstScore}:{state.SecondScore}";
+            if (!report.tournamentStages.Contains(observed)) report.tournamentStages.Add(observed);
+            if (finished) finishedTournament = state;
+            if (state.Phase == PvpTournament.StorageError) RecordFailure("Tournament storage failed.");
+            if (state.Phase != PvpTournament.AwaitingReady || state.ConnectedMask != 3 ||
+                state.TournamentVersion == readyVersion) return;
+            readyVersion = state.TournamentVersion;
+            _ = client.StartTournamentReadyAsync();
+        }
+
         internal void RecordSnapshot(PvpSnapshotMessage snapshot, PlayerSnapshot[] players, int localSimulationTick)
         {
+            bool tournament = report.mode == PvpTournamentRules.Tournament;
+            if (tournament && snapshot.ServerTick >= 12 && snapshot.MatchId != lastActiveRound)
+            {
+                lastActiveRound = snapshot.MatchId;
+                Debug.Log($"PVP_SMOKE_ROUND_ACTIVE mode={snapshot.Mode} matchId={lastActiveRound}");
+            }
             var evidence = new Snapshot
             {
                 sequence = snapshot.SnapshotSequence,
                 serverTick = snapshot.ServerTick,
                 localSimulationTick = localSimulationTick,
                 stateHash = snapshot.StateHash,
+                matchId = snapshot.MatchId,
                 sessionEpoch = snapshot.SessionEpoch,
                 confirmedInputSequence = snapshot.ConfirmedInputSequence,
                 roomState = snapshot.RoomState,
@@ -139,7 +170,14 @@ namespace Test.Client.Combat
             report.snapshots.Add(evidence);
             if (!string.IsNullOrEmpty(evidence.phase) && !report.phases.Contains(evidence.phase))
                 report.phases.Add(evidence.phase);
-            if (report.finalSnapshot != null || snapshot.RoomState != Finished && snapshot.Phase != Finished) return;
+            if (snapshot.RoomState != Finished && snapshot.Phase != Finished) return;
+            if (tournament)
+            {
+                if (!report.roundFinals.Any(round => round.matchId == evidence.matchId))
+                    report.roundFinals.Add(evidence);
+                return;
+            }
+            if (report.finalSnapshot != null) return;
 
             report.finalSnapshot = evidence;
             report.winner = snapshot.Winner;
@@ -162,8 +200,9 @@ namespace Test.Client.Combat
 
         internal InputFrame BuildInput(PvpSnapshotMessage snapshot, PlayerSnapshot[] players, int slot, long tick)
         {
-            if (report.mode == PvpClientShowcase.BBadsMode)
-                return BuildBackpackInput(snapshot, players[slot], slot, tick);
+            if (snapshot.Mode == PvpClientShowcase.BBadsMode)
+                return BuildBackpackInput(snapshot, players[slot], slot, tick,
+                    splitSeries ? (slot == 1 ? 1 : 2) : slot + 1);
 
             var local = players[slot];
             var peer = players[1 - slot];
@@ -193,11 +232,10 @@ namespace Test.Client.Combat
             };
         }
 
-        private static InputFrame BuildBackpackInput(PvpSnapshotMessage snapshot, PlayerSnapshot local, int slot, long tick)
+        private static InputFrame BuildBackpackInput(PvpSnapshotMessage snapshot, PlayerSnapshot local, int slot, long tick, int fishColumn)
         {
             if (snapshot.Phase != "Preparing" || local.Ready) return null;
             var placements = local.Backpack ?? Array.Empty<string>();
-            int fishColumn = slot + 1;
             if (Array.IndexOf(placements, "Weapon:0:0") < 0)
                 return new InputFrame { SimulationTick = tick, Buttons = (int)(PvpButtons.EquipSword | PvpButtons.AttackPressed) };
             if (Array.IndexOf(placements, $"Fish:{fishColumn}:0") < 0)
@@ -208,6 +246,30 @@ namespace Test.Client.Combat
                     MoveX = fishColumn * 1000
                 };
             return new InputFrame { SimulationTick = tick, Buttons = (int)PvpButtons.Finish };
+        }
+
+        private void ValidateTournament()
+        {
+            var state = finishedTournament;
+            int expectedSecond = splitSeries ? 1 : 0;
+            if (state.EndReason != "Completed" || state.Winner != 0 || state.FirstScore != 2 ||
+                state.SecondScore != expectedSecond || state.Rounds.Length != 2 + expectedSecond)
+                throw new InvalidOperationException($"Unexpected tournament result {state.FirstScore}:{state.SecondScore} ({state.EndReason}).");
+            foreach (var round in state.Rounds)
+            {
+                var final = report.roundFinals.SingleOrDefault(snapshot => snapshot.matchId == round.MatchId);
+                bool rainPass = round.Mode == PvpTournamentRules.RainPass;
+                if (final == null || final.stateHash != round.StateHash || final.serverTick != round.FinalTick ||
+                    final.localSimulationTick != (rainPass ? round.FinalTick : 0) ||
+                    final.players[report.slot].playerId != report.playerId ||
+                    !rainPass && (!round.FirstBackpack.SequenceEqual(final.players[0].backpack) ||
+                        !round.SecondBackpack.SequenceEqual(final.players[1].backpack)))
+                    throw new InvalidOperationException("Tournament report did not match the final gameplay state for " + round.MatchId);
+            }
+            report.winner = state.Winner;
+            report.firstScore = state.FirstScore;
+            report.secondScore = state.SecondScore;
+            report.tournamentId = state.TournamentId;
         }
 
         private void ValidateResult()
@@ -229,7 +291,7 @@ namespace Test.Client.Combat
             if (report.mode == PvpClientShowcase.RainPassMode &&
                 (final.localSimulationTick != final.serverTick ||
                  final.players[0].arrows >= Test.Domain.Combat.BowRules.QuiverCapacity ||
-                 Math.Abs(final.players[0].positionY) < .01))
+                 !report.snapshots.Any(snapshot => Math.Abs(snapshot.players[0].positionY) >= .01)))
                 throw new InvalidOperationException("Rain Pass did not confirm movement, bow use and a locally simulated final frame.");
         }
 
@@ -266,10 +328,14 @@ namespace Test.Client.Combat
             public string error, mode, server, roomId, playerId, matchId, unityVersion, endReason;
             public bool batchMode;
             public int slot = -1, winner = -1, inputsSent;
+            public string tournamentId;
+            public int firstScore, secondScore;
             public long joinEpoch;
             public Snapshot finalSnapshot;
             public List<string> phases = new List<string>();
             public List<Snapshot> snapshots = new List<Snapshot>();
+            public List<Snapshot> roundFinals = new List<Snapshot>();
+            public List<string> tournamentStages = new List<string>();
         }
 
         [Serializable]
@@ -277,7 +343,7 @@ namespace Test.Client.Combat
         {
             public long sequence, serverTick, sessionEpoch, confirmedInputSequence;
             public int localSimulationTick;
-            public string stateHash, roomState, phase;
+            public string stateHash, roomState, phase, matchId;
             public bool peerConnected;
             public int remainingTicks, cueCount;
             public Player[] players;

@@ -1,5 +1,12 @@
 # 最近验证
 
+## Test 双玩法擂台赛（2026-11-28）
+
+- Unity **2022.3.16f1** 后台隔离导入、EditMode **16/16**、PlayMode **32/32** 和 Windows Release 构建通过。两组隐藏 Windows Player 打完 **2 比 0** 和 **2 比 1**。后一组在 BBads 进行中重启 Test.Server，保留了 1 比 0 的比分和原席位，以新对局 ID 重赛，再完成 Rain Pass 决胜。两端战报一致，Rain Pass 可按存档逐帧复算，BBads 终局背包与服务端快照一致。 [后台复跑及人工验收](../../games/Test/design/dual-mode-tournament/verification.md)
+- Test.Domain **60/60**、Test.Application **108/108**、Test.Server **11/11**。真实 WebSocket 检验了 Rain Pass 补帧、局间续接、BBads 快照恢复、上一局迟到输入、确认丢失后只计一次分、弃权超时及重启后读取终局战报。平局计分由规则用例覆盖。
+- 标准 `tools/verify.ps1` 通过，公共测试 **579/579**、模板 **13/13**。临时工程由后台脚本清理。局间界面、战报布局和输入手感待人工试玩。
+- 最终 Windows Player 在同一构建上复跑了独立 Rain Pass、独立 BBads、擂台赛全胜和擂台赛重启决胜，四条路径通过。结果保存在 `artifacts/game-unity/Test/20261128-170626-a46ba902` 下各路径的 `report.json`。
+
 ## Test PvP 帧同步与状态同步（2026-11-28）
 
 - Unity **2022.3.16f1** 完成后台导入、EditMode **16/16**、PlayMode **32/32** 和 Windows Release 构建。两个隐藏 Player 的 Rain Pass 客户端各自演算到第 **263** 帧，覆盖斜向移动、弓箭和结算，终局哈希均为 `e997e4d011612a5e11b47a34c758e58276fabb5a3d75ced00635501ca2da5e8e`。BBads 服务端在第 **269** 步结算，两端本地模拟计数均为 **0**，收到的终局哈希均为 `8cb0a4e6c9a263c54cb9de568057576ff1ea2133730f2067edde99fe31494cbb`。

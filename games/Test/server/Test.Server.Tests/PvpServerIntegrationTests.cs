@@ -22,7 +22,7 @@ namespace Test.Server.Tests
 {
     [TestFixture]
     [NonParallelizable]
-    public sealed class PvpServerIntegrationTests
+    public sealed partial class PvpServerIntegrationTests
     {
         [Test]
         public async Task RestartRejectsAnOldMatchAndAllowsTheSameRoomCodeToStartANewMatch()
@@ -173,12 +173,19 @@ namespace Test.Server.Tests
         {
             private Transport current;
             private int interruptOnFrame, framePushes, statePushes;
+            private int interruptOnTournamentResult;
+            private int droppedTournamentResults;
             internal readonly ConcurrentQueue<string> Rejections = new();
             internal int FramePushes => Volatile.Read(ref framePushes);
             internal int StatePushes => Volatile.Read(ref statePushes);
 
             public void Interrupt() => Volatile.Read(ref current).Interrupted.TrySetResult(true);
             public void InterruptOnNextFrame() => Interlocked.Exchange(ref interruptOnFrame, 1);
+            public void InterruptOnTournamentResult() => Interlocked.Exchange(ref interruptOnTournamentResult, 1);
+            public int DroppedTournamentResults => Volatile.Read(ref droppedTournamentResults);
+            public Task SendCommandAsync(byte[] command, CancellationToken token) =>
+                Volatile.Read(ref current).SendAsync(new BinaryRealtimeCodec().Encode(
+                    new RealtimeMessage(RealtimeMessageKind.Business, command)), token);
 
             public IWebSocketTransport Create(int maxMessageBytes)
             {
@@ -206,6 +213,12 @@ namespace Test.Server.Tests
                         throw new IOException("Injected disconnect before the client applied the frame batch.");
                 }
                 if (type == "snapshot") Interlocked.Increment(ref statePushes);
+                if (type == "tournamentState" && payload.GetProperty("rounds").GetArrayLength() != 0 &&
+                    Interlocked.Exchange(ref interruptOnTournamentResult, 0) != 0)
+                {
+                    Interlocked.Increment(ref droppedTournamentResults);
+                    throw new IOException("Injected disconnect after the tournament commit and before its confirmation.");
+                }
                 if (type == "ack" && payload.TryGetProperty("reason", out var reason) &&
                     reason.ValueKind == JsonValueKind.String)
                     Rejections.Enqueue(reason.GetString());
@@ -259,7 +272,7 @@ namespace Test.Server.Tests
                 Session = new Uri($"ws://127.0.0.1:{port}/pvp/session");
             }
 
-            internal static async Task<ServerProcess> StartAsync(CancellationToken token, int port = 0)
+            internal static async Task<ServerProcess> StartAsync(CancellationToken token, int port = 0, string tournamentDirectory = null)
             {
                 if (port == 0)
                 {
@@ -269,7 +282,12 @@ namespace Test.Server.Tests
                     listener.Stop();
                 }
                 string config = Path.GetTempFileName();
-                await File.WriteAllTextAsync(config, $"{{\"pvpPort\":{port}}}", token);
+                var settings = new Dictionary<string, object>
+                {
+                    ["pvpPort"] = port,
+                    ["pvpTournamentDirectory"] = tournamentDirectory ?? config + "-tournaments"
+                };
+                await File.WriteAllTextAsync(config, JsonSerializer.Serialize(settings), token);
                 var start = new ProcessStartInfo("dotnet")
                 {
                     RedirectStandardOutput = true, RedirectStandardError = true,

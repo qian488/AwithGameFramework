@@ -23,6 +23,45 @@
       ]
     },
     {
+      "name": "PvpTournamentReady",
+      "fields": [
+        { "name": "TournamentId", "wireName": "tournamentId", "type": "string" },
+        { "name": "TournamentVersion", "wireName": "tournamentVersion", "type": "int" }
+      ]
+    },
+    {
+      "name": "PvpTournamentRoundSummary",
+      "fields": [
+        { "name": "MatchId", "wireName": "matchId", "type": "string" },
+        { "name": "Mode", "wireName": "mode", "type": "string" },
+        { "name": "Winner", "wireName": "winner", "type": "int" },
+        { "name": "Reason", "wireName": "reason", "type": "string" },
+        { "name": "FinalTick", "wireName": "finalTick", "type": "int" },
+        { "name": "StateHash", "wireName": "stateHash", "type": "string" },
+        { "name": "FirstBackpack", "wireName": "firstBackpack", "type": "string[]", "required": false },
+        { "name": "SecondBackpack", "wireName": "secondBackpack", "type": "string[]", "required": false }
+      ]
+    },
+    {
+      "name": "PvpTournamentState",
+      "fields": [
+        { "name": "RoomId", "wireName": "roomId", "type": "string" },
+        { "name": "TournamentId", "wireName": "tournamentId", "type": "string" },
+        { "name": "TournamentVersion", "wireName": "tournamentVersion", "type": "int" },
+        { "name": "Phase", "wireName": "phase", "type": "string" },
+        { "name": "RoundNumber", "wireName": "roundNumber", "type": "int" },
+        { "name": "Mode", "wireName": "mode", "type": "string", "required": false },
+        { "name": "MatchId", "wireName": "matchId", "type": "string", "required": false },
+        { "name": "FirstScore", "wireName": "firstScore", "type": "int" },
+        { "name": "SecondScore", "wireName": "secondScore", "type": "int" },
+        { "name": "ReadyMask", "wireName": "readyMask", "type": "int" },
+        { "name": "ConnectedMask", "wireName": "connectedMask", "type": "int" },
+        { "name": "Winner", "wireName": "winner", "type": "int" },
+        { "name": "EndReason", "wireName": "endReason", "type": "string", "required": false },
+        { "name": "Rounds", "wireName": "rounds", "type": "PvpTournamentRoundSummary[]" }
+      ]
+    },
+    {
       "name": "PvpRoomMessage",
       "fields": [
         { "name": "ProtocolVersion", "wireName": "protocolVersion", "type": "int" },
@@ -50,7 +89,8 @@
         { "name": "LastInputSequence", "wireName": "lastInputSequence", "type": "long" },
         { "name": "Mode", "wireName": "mode", "type": "string", "required": false },
         {"name": "ResumeToken", "wireName": "resumeToken", "type": "string", "required": false},
-        { "name": "LastSimulationTick", "wireName": "lastSimulationTick", "type": "int", "required": false }
+        { "name": "LastSimulationTick", "wireName": "lastSimulationTick", "type": "int", "required": false },
+        { "name": "LastMatchId", "wireName": "lastMatchId", "type": "string", "required": false }
       ]
     },
     {

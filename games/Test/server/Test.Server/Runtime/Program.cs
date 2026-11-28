@@ -16,8 +16,20 @@ namespace Test.Server
         {
             ServerOptions options;
             double? runForSeconds;
-            try { options = ServerOptions.Load(args, out runForSeconds); }
+            string verifyTournament;
+            try { options = ServerOptions.Load(args, out runForSeconds, out verifyTournament); }
             catch (Exception error) { Log("error", "configuration_failed", error.ToString()); return 1; }
+            if (verifyTournament != null)
+            {
+                try
+                {
+                    var verified = PvpRealtimeModule.VerifyTournamentAsync(options.PvpTournamentDirectory, verifyTournament)
+                        .GetAwaiter().GetResult();
+                    Log("info", "pvp_tournament_replay_verified", verified);
+                    return 0;
+                }
+                catch (Exception error) { Log("error", "pvp_tournament_replay_failed", error.ToString()); return 1; }
+            }
 
             var previousContext = SynchronizationContext.Current;
             var context = new HostSynchronizationContext();
@@ -51,7 +63,7 @@ namespace Test.Server
             try
             {
                 host.AddModule(new TestModule());
-                if (options.PvpPort != 0) host.AddModule(new PvpRealtimeModule(options.PvpPort));
+                if (options.PvpPort != 0) host.AddModule(new PvpRealtimeModule(options));
                 if (options.OnlineProbePort != 0) host.AddModule(new OnlineProbeModule(options.OnlineProbePort));
                 if (options.ScorePort != 0) host.AddModule(new ContractScoresModule(options));
                 Task startup = host.StartAsync(startupCancellation.Token);

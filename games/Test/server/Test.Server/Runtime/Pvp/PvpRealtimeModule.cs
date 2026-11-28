@@ -21,7 +21,7 @@ using WireCue = Test.Application.Protocol.PvpCombatCue;
 
 namespace Test.Server.Pvp
 {
-    internal sealed class PvpRealtimeModule : GameModule
+    internal sealed partial class PvpRealtimeModule : GameModule
     {
         private const int Rate = PvpCombatConfig.StepsPerSecond;
         private const int InputWindow = 12;
@@ -42,11 +42,16 @@ namespace Test.Server.Pvp
         private long clock;
         private long epoch;
 
-        internal PvpRealtimeModule(int port) => this.port = port;
+        internal PvpRealtimeModule(ServerOptions options)
+        {
+            port = options.PvpPort;
+            tournamentDirectory = options.PvpTournamentDirectory;
+        }
         public override string Id => "Test.pvp-realtime";
 
         public override async Task StartAsync(GameContext context, CancellationToken token)
         {
+            await LoadTournamentsAsync(token);
             var builder = WebApplication.CreateBuilder();
             builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
             web = builder.Build();
@@ -88,6 +93,7 @@ namespace Test.Server.Pvp
 
         private void Advance(Room room)
         {
+            if (room.Tournament != null && !AdvanceTournament(room)) return;
             if ((room.State == "WaitingForPlayers" || room.State == "Finished") && room.Players.All(seat => seat?.Peer == null))
             {
                 rooms.Remove(room.Id);
@@ -187,8 +193,9 @@ namespace Test.Server.Pvp
 
         private static async Task PumpSendsAsync(Peer peer, CancellationToken token)
         {
-            await foreach (var message in peer.Outbound.Reader.ReadAllAsync(token))
-                await peer.Socket.SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, token);
+            await foreach (var messages in peer.Outbound.Reader.ReadAllAsync(token))
+                foreach (var message in messages)
+                    await peer.Socket.SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, token);
         }
 
         private async Task PumpReceivesAsync(Peer peer, CancellationToken token)
@@ -212,15 +219,15 @@ namespace Test.Server.Pvp
                 {
                     if (message.Kind == RealtimeMessageKind.Ping)
                         peer.Enqueue(new RealtimeMessage(RealtimeMessageKind.Pong, heartbeatId: message.HeartbeatId));
-                    else if (message.Kind == RealtimeMessageKind.Business)
-                        Command(peer, message.Payload);
-                    else
+                    else if (message.Kind != RealtimeMessageKind.Business)
                         throw new RealtimeProtocolException("Expected Ping or Business.");
                 }
+                if (message.Kind == RealtimeMessageKind.Business)
+                    await CommandAsync(peer, message.Payload, token);
             }
         }
 
-        private void Command(Peer peer, byte[] data)
+        private async Task CommandAsync(Peer peer, byte[] data, CancellationToken token)
         {
             using var document = JsonDocument.Parse(data);
             var body = document.RootElement;
@@ -228,21 +235,55 @@ namespace Test.Server.Pvp
                 !body.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String)
                 throw new RealtimeProtocolException("A PvP command type is required.");
 
-            switch (type.GetString())
+            if (type.GetString() == "join")
             {
-                case "join": Join(peer, body.Deserialize<PvpJoinRequest>(Json)); break;
-                case "input": Input(peer, body.Deserialize<WireInput>(Json)); break;
-                case "recovery":
-                    if (peer.Room != null) Broadcast(peer.Room);
-                    break;
-                case "leave": Detach(peer, true); break;
-                default: throw new RealtimeProtocolException("Unknown PvP command.");
+                var request = body.Deserialize<PvpJoinRequest>(Json);
+                while (true)
+                {
+                    Task pending;
+                    lock (gate)
+                    {
+                        string roomId = request.Mode == PvpTournamentRules.Tournament
+                            ? request.RoomId?.ToLowerInvariant() : request.RoomId;
+                        rooms.TryGetValue(roomId ?? "", out var room);
+                        pending = room?.Pending;
+                        if (pending == null)
+                        {
+                            Join(peer, request);
+                            return;
+                        }
+                    }
+                    await pending.WaitAsync(token);
+                }
+            }
+
+            lock (gate)
+            {
+                switch (type.GetString())
+                {
+                    case "input": Input(peer, body.Deserialize<WireInput>(Json)); break;
+                    case "tournamentReady": ReadyTournament(peer, body.Deserialize<PvpTournamentReady>(Json)); break;
+                    case "recovery":
+                        if (peer.Room != null)
+                        {
+                            if (peer.Room.Tournament != null) BroadcastTournament(peer.Room);
+                            if (peer.Room.Pending == null) Broadcast(peer.Room);
+                        }
+                        break;
+                    case "leave": Detach(peer, true); break;
+                    default: throw new RealtimeProtocolException("Unknown PvP command.");
+                }
             }
         }
 
         private void Join(Peer peer, PvpJoinRequest request)
         {
             string mode = request.Mode ?? "rain-pass";
+            if (mode == PvpTournamentRules.Tournament)
+            {
+                JoinTournament(peer, request);
+                return;
+            }
             string reason = null;
             rooms.TryGetValue(request.RoomId ?? "", out var room);
             Seat seat = null;
@@ -253,24 +294,20 @@ namespace Test.Server.Pvp
             else if (!string.IsNullOrEmpty(request.ResumeToken))
             {
                 seat = room?.Players.SingleOrDefault(candidate => candidate?.Id == request.PlayerId);
-                if (seat == null || seat.ResumeToken != request.ResumeToken || room.Mode != mode)
+                if (seat == null || seat.ResumeToken != request.ResumeToken || room.Tournament != null || room.Mode != mode)
                     reason = "MatchExpired";
                 else if (room.Frames != null && (request.LastSimulationTick < 0 || request.LastSimulationTick > room.Frames.Count ||
                     room.Frames.Count - request.LastSimulationTick > MaxReplayFrames))
                     reason = "FrameHistoryUnavailable";
             }
-            else if (room != null && room.Mode != mode) reason = "ModeMismatch";
+            else if (room != null && (room.Tournament != null || room.Mode != mode)) reason = "ModeMismatch";
             else if (room != null && room.Players.Any(candidate => candidate?.Id == request.PlayerId)) reason = "PlayerTaken";
             else if (room != null && (room.State != "WaitingForPlayers" || room.Players.All(candidate => candidate != null))) reason = "RoomFull";
-            else if (room == null && rooms.Count >= 64) reason = "RoomLimit";
+            else if (room == null && rooms.Values.Count(candidate => candidate.Tournament?.IsFinished != true) >= 64) reason = "RoomLimit";
 
             if (reason != null)
             {
-                peer.Send("joinResponse", new PvpJoinResponse
-                {
-                    ProtocolVersion = GameProtocol.Version, RoomId = request.RoomId ?? "", MatchId = "",
-                    PlayerId = request.PlayerId ?? "", PlayerSlot = -1, RoomState = "", Reason = reason
-                });
+                RejectJoin(peer, request, reason);
                 return;
             }
 
@@ -286,7 +323,26 @@ namespace Test.Server.Pvp
                 seat = new Seat(request.PlayerId, slot);
                 room.Players[slot] = seat;
             }
-            else if (seat.Peer != null)
+            Attach(peer, room, seat);
+            peer.LastSentFrame = room.Frames != null && !string.IsNullOrEmpty(request.ResumeToken)
+                ? request.LastSimulationTick : 0;
+            if (room.Players.All(candidate => candidate != null) && room.State == "WaitingForPlayers")
+                room.State = "Running";
+            SendJoin(peer);
+            SendReplay(room, peer);
+            Broadcast(room);
+        }
+
+        private static void RejectJoin(Peer peer, PvpJoinRequest request, string reason) =>
+            peer.Send("joinResponse", new PvpJoinResponse
+            {
+                ProtocolVersion = GameProtocol.Version, RoomId = request.RoomId ?? "", MatchId = "",
+                PlayerId = request.PlayerId ?? "", PlayerSlot = -1, RoomState = "", Reason = reason
+            });
+
+        private void Attach(Peer peer, Room room, Seat seat)
+        {
+            if (seat.Peer != null)
             {
                 seat.Peer.Room = null;
                 seat.Peer.Seat = null;
@@ -299,28 +355,34 @@ namespace Test.Server.Pvp
             seat.LastApplied = null;
             peer.Room = room;
             peer.Seat = seat;
-            peer.LastSentFrame = room.Frames != null && !string.IsNullOrEmpty(request.ResumeToken)
-                ? request.LastSimulationTick : 0;
-            seat.LastQueuedTick = room.Match.Snapshot.Tick;
-            if (room.Players.All(candidate => candidate != null) && room.State == "WaitingForPlayers")
-                room.State = "Running";
+            seat.LastQueuedTick = room.Match?.Snapshot.Tick ?? 0;
+        }
 
+        private static void SendJoin(Peer peer)
+        {
+            var room = peer.Room;
+            var seat = peer.Seat;
             peer.Send("joinResponse", new PvpJoinResponse
             {
-                ProtocolVersion = GameProtocol.Version, RoomId = room.Id, MatchId = room.MatchId,
+                ProtocolVersion = GameProtocol.Version, RoomId = room.Id, MatchId = room.MatchId ?? "",
                 PlayerId = seat.Id, PlayerSlot = seat.Slot, SessionEpoch = seat.Epoch,
-                SnapshotSequence = room.Sequence, ServerTick = room.Match.Snapshot.Tick,
+                SnapshotSequence = room.Sequence, ServerTick = room.Match?.Snapshot.Tick ?? 0,
                 RoomState = room.State, Accepted = true, ResumeToken = seat.ResumeToken
             });
+        }
+
+        private static void SendReplay(Room room, Peer peer)
+        {
             if (room.Frames != null)
             {
+                var messages = new List<byte[]>();
                 while (peer.LastSentFrame < room.Frames.Count)
                 {
                     var batch = TakeFrames(room, peer, ReplayBatchSize);
-                    peer.Send("frameReplay", batch);
+                    messages.Add(peer.EncodePush("frameReplay", batch));
                 }
+                if (messages.Count != 0) peer.EnqueueReplay(messages);
             }
-            Broadcast(room);
         }
 
         private static bool ValidId(string value) => value != null && value.Length is >= 1 and <= 48 &&
@@ -330,7 +392,7 @@ namespace Test.Server.Pvp
         {
             var room = peer.Room;
             var seat = peer.Seat;
-            long tick = room?.Match.Snapshot.Tick ?? 0;
+            long tick = room?.Match?.Snapshot.Tick ?? 0;
             const int buttonMask = (int)(PvpButtons.Attack | PvpButtons.Guard | PvpButtons.Dodge | PvpButtons.Lock |
                 PvpButtons.Finish | PvpButtons.EquipSword | PvpButtons.EquipBow | PvpButtons.AttackPressed | PvpButtons.AttackReleased);
             string reason = null;
@@ -338,7 +400,8 @@ namespace Test.Server.Pvp
             else if (room == null || seat == null) reason = "SessionNotAttached";
             else if (input.RoomId != room.Id || input.MatchId != room.MatchId || input.PlayerId != seat.Id || input.SessionEpoch != seat.Epoch)
                 reason = "SessionMismatch";
-            else if (room.State != "Running" || !room.Players.All(candidate => candidate?.Peer != null)) reason = "NotRunning";
+            else if (room.State != "Running" || room.Pending != null || room.StorageFailed ||
+                !room.Players.All(candidate => candidate?.Peer != null)) reason = "NotRunning";
             else if (input.InputSequence <= 0 || (input.Buttons & ~buttonMask) != 0 ||
                 !ValidMoveX(room, input.MoveX) || !ValidAxis(input.MoveY) || !ValidAxis(input.AimX) || !ValidAxis(input.AimY))
                 reason = "InvalidInput";
@@ -376,8 +439,13 @@ namespace Test.Server.Pvp
             seat.Peer = null;
             seat.Inputs.Clear();
             seat.LastApplied = null;
-            seat.LastQueuedTick = room.Match.Snapshot.Tick;
+            seat.LastQueuedTick = room.Match?.Snapshot.Tick ?? 0;
             seat.ResumeThrough = clock + ReconnectTicks;
+            if (room.Tournament != null)
+            {
+                DetachTournament(room, seat, leave);
+                return;
+            }
             if (room.State == "Running" && leave)
                 Finish(room, 1 - seat.Slot, "PlayerLeft");
             else if (room.State == "WaitingForPlayers")
@@ -385,9 +453,14 @@ namespace Test.Server.Pvp
             Broadcast(room);
         }
 
-        private static void Finish(Room room, int winner, string reason)
+        private void Finish(Room room, int winner, string reason)
         {
             if (room.State == "Finished") return;
+            if (room.Tournament != null)
+            {
+                FinishTournamentRound(room, winner, reason);
+                return;
+            }
             room.State = "Finished";
             room.Winner = winner;
             room.EndReason = reason;
@@ -398,6 +471,7 @@ namespace Test.Server.Pvp
 
         private static void Broadcast(Room room)
         {
+            if (room.Match == null) return;
             long sequence = ++room.Sequence;
             foreach (var seat in room.Players)
                 if (seat?.Peer != null) SendState(room, seat.Peer, room.Cues, sequence);
@@ -473,7 +547,8 @@ namespace Test.Server.Pvp
         private sealed class Peer
         {
             internal readonly WebSocket Socket;
-            internal readonly Channel<byte[]> Outbound = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(64)
+            internal readonly Channel<IReadOnlyList<byte[]>> Outbound =
+                Channel.CreateBounded<IReadOnlyList<byte[]>>(new BoundedChannelOptions(64)
             {
                 SingleReader = true
             });
@@ -483,38 +558,66 @@ namespace Test.Server.Pvp
             private long sequence;
             internal Peer(WebSocket socket) => Socket = socket;
 
-            internal void Send(string type, object message)
+            internal byte[] EncodePush(string type, object message)
             {
                 var payload = JsonSerializer.SerializeToUtf8Bytes(new { type, message }, Json);
-                Enqueue(new RealtimeMessage(RealtimeMessageKind.Push, payload, ++sequence));
+                return Codec.Encode(new RealtimeMessage(RealtimeMessageKind.Push, payload, ++sequence));
             }
 
-            internal void Enqueue(RealtimeMessage message)
+            internal void Send(string type, object message) => EnqueueReplay(new[] { EncodePush(type, message) });
+            internal void Enqueue(RealtimeMessage message) => EnqueueReplay(new[] { Codec.Encode(message) });
+
+            internal void EnqueueReplay(IReadOnlyList<byte[]> messages)
             {
-                if (!Outbound.Writer.TryWrite(Codec.Encode(message))) Socket.Abort();
+                if (!Outbound.Writer.TryWrite(messages)) Socket.Abort();
             }
         }
 
         private sealed class Room
         {
             internal readonly string Id;
-            internal readonly string Mode;
-            internal readonly string MatchId = Guid.NewGuid().ToString("N");
+            internal string Mode;
+            internal string MatchId;
             internal readonly Seat[] Players = new Seat[2];
-            internal readonly IPvpNetworkMatch Match;
-            internal readonly List<PvpSimulationFrame> Frames;
+            internal IPvpNetworkMatch Match;
+            internal List<PvpSimulationFrame> Frames;
             internal readonly List<PvpNetworkCue> Cues = new List<PvpNetworkCue>();
             internal string State = "WaitingForPlayers";
             internal string EndReason;
             internal int Winner = -1;
             internal long Sequence;
+            internal PvpTournament Tournament;
+            internal Task Pending;
+            internal int ReadyMask;
+            internal int LeaveMask;
+            internal bool StorageFailed;
+            internal bool WaitingForRecovery;
 
             internal Room(string id, string mode)
             {
                 Id = id;
+                if (mode != PvpTournamentRules.Tournament)
+                    StartRound(mode, Guid.NewGuid().ToString("N"));
+            }
+
+            internal void StartRound(string mode, string matchId)
+            {
                 Mode = mode;
+                MatchId = matchId;
                 Match = mode == "bbads" ? new BBadsPvpNetworkMatch() : new RainPassPvpNetworkMatch();
-                if (mode == "rain-pass") Frames = new List<PvpSimulationFrame>();
+                Frames = mode == "rain-pass" ? new List<PvpSimulationFrame>() : null;
+                Sequence = 0;
+                Winner = -1;
+                EndReason = null;
+                Cues.Clear();
+                foreach (var seat in Players)
+                {
+                    if (seat == null) continue;
+                    seat.Inputs.Clear();
+                    seat.LastApplied = null;
+                    seat.LastReceived = seat.LastQueuedTick = seat.Confirmed = 0;
+                    if (seat.Peer != null) seat.Peer.LastSentFrame = 0;
+                }
             }
         }
 
@@ -522,7 +625,7 @@ namespace Test.Server.Pvp
         {
             internal readonly string Id;
             internal readonly int Slot;
-            internal readonly string ResumeToken = Guid.NewGuid().ToString("N");
+            internal readonly string ResumeToken;
             internal readonly Dictionary<int, WireInput> Inputs = new Dictionary<int, WireInput>();
             internal Peer Peer;
             internal WireInput LastApplied;
@@ -532,10 +635,11 @@ namespace Test.Server.Pvp
             internal long Confirmed;
             internal long ResumeThrough;
 
-            internal Seat(string id, int slot)
+            internal Seat(string id, int slot, string resumeToken = null)
             {
                 Id = id;
                 Slot = slot;
+                ResumeToken = resumeToken ?? Guid.NewGuid().ToString("N");
             }
         }
     }

@@ -150,6 +150,8 @@ namespace Test.Application.Protocol
         public string ResumeToken { get; set; }
         [DataMember(Name = "lastSimulationTick", IsRequired = false)]
         public int LastSimulationTick { get; set; }
+        [DataMember(Name = "lastMatchId", IsRequired = false)]
+        public string LastMatchId { get; set; }
     }
 
     [DataContract]
@@ -359,6 +361,69 @@ namespace Test.Application.Protocol
         public bool PeerConnected { get; set; }
         [DataMember(Name = "phase", IsRequired = false)]
         public string Phase { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpTournamentReady
+    {
+        [DataMember(Name = "tournamentId", IsRequired = true)]
+        public string TournamentId { get; set; }
+        [DataMember(Name = "tournamentVersion", IsRequired = true)]
+        public int TournamentVersion { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpTournamentRoundSummary
+    {
+        [DataMember(Name = "matchId", IsRequired = true)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "mode", IsRequired = true)]
+        public string Mode { get; set; }
+        [DataMember(Name = "winner", IsRequired = true)]
+        public int Winner { get; set; }
+        [DataMember(Name = "reason", IsRequired = true)]
+        public string Reason { get; set; }
+        [DataMember(Name = "finalTick", IsRequired = true)]
+        public int FinalTick { get; set; }
+        [DataMember(Name = "stateHash", IsRequired = true)]
+        public string StateHash { get; set; }
+        [DataMember(Name = "firstBackpack", IsRequired = false)]
+        public string[] FirstBackpack { get; set; }
+        [DataMember(Name = "secondBackpack", IsRequired = false)]
+        public string[] SecondBackpack { get; set; }
+    }
+
+    [DataContract]
+    public sealed class PvpTournamentState
+    {
+        [DataMember(Name = "roomId", IsRequired = true)]
+        public string RoomId { get; set; }
+        [DataMember(Name = "tournamentId", IsRequired = true)]
+        public string TournamentId { get; set; }
+        [DataMember(Name = "tournamentVersion", IsRequired = true)]
+        public int TournamentVersion { get; set; }
+        [DataMember(Name = "phase", IsRequired = true)]
+        public string Phase { get; set; }
+        [DataMember(Name = "roundNumber", IsRequired = true)]
+        public int RoundNumber { get; set; }
+        [DataMember(Name = "mode", IsRequired = false)]
+        public string Mode { get; set; }
+        [DataMember(Name = "matchId", IsRequired = false)]
+        public string MatchId { get; set; }
+        [DataMember(Name = "firstScore", IsRequired = true)]
+        public int FirstScore { get; set; }
+        [DataMember(Name = "secondScore", IsRequired = true)]
+        public int SecondScore { get; set; }
+        [DataMember(Name = "readyMask", IsRequired = true)]
+        public int ReadyMask { get; set; }
+        [DataMember(Name = "connectedMask", IsRequired = true)]
+        public int ConnectedMask { get; set; }
+        [DataMember(Name = "winner", IsRequired = true)]
+        public int Winner { get; set; }
+        [DataMember(Name = "endReason", IsRequired = false)]
+        public string EndReason { get; set; }
+        [DataMember(Name = "rounds", IsRequired = true)]
+        public PvpTournamentRoundSummary[] Rounds { get; set; }
     }
 
     [DataContract]

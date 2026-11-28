@@ -19,7 +19,7 @@ using Numerics = System.Numerics;
 namespace Test.Client.Combat
 {
     [DisallowMultipleComponent]
-    public sealed class PvpClientShowcase : MonoBehaviour
+    public sealed partial class PvpClientShowcase : MonoBehaviour
     {
         internal const string RainPassMode = "rain-pass";
         internal const string BBadsMode = "bbads";
@@ -48,6 +48,7 @@ namespace Test.Client.Combat
         private Task disconnect = Task.CompletedTask;
         private PvpJoinResponse joined;
         private PvpSnapshotMessage snapshot, pendingSnapshot;
+        private int pendingSimulationTick;
         private Task sending;
         private long sentTick, cueSequence;
         private int rematch;
@@ -110,6 +111,7 @@ namespace Test.Client.Combat
 
         private void OnEnable()
         {
+            tournament = null;
             ResetMatchView();
             if (connectOnEnable) _ = ConnectAsync();
         }
@@ -124,8 +126,8 @@ namespace Test.Client.Combat
         internal void SelectMode(string value)
         {
             if (connection != null || value == mode) return;
-            if (roomId == "rain-pass-test" || roomId == "bbads-test")
-                roomId = value == BBadsMode ? "bbads-test" : "rain-pass-test";
+            if (roomId == "rain-pass-test" || roomId == "bbads-test" || roomId == "tournament-test")
+                roomId = value + "-test";
             mode = value;
             rematch = 0;
             activeRoom = null;
@@ -149,6 +151,7 @@ namespace Test.Client.Combat
             }
 
             ResetMatchView();
+            tournament = null;
             error = null;
             activeRoom = RoomForRound(roomId.Trim(), rematch);
             var websocket = new UriBuilder(new Uri(httpUri, "/pvp/session"))
@@ -159,10 +162,15 @@ namespace Test.Client.Combat
             var current = new Connection(websocket);
             connection = current;
             current.Session.RoomChanged += value => current.Post(() => ReceiveRoom(value));
-            current.Session.SnapshotReceived += value => current.Post(() => ReceiveSnapshot(value));
+            current.Session.SnapshotReceived += value =>
+            {
+                int simulationTick = current.Session.SimulationTick;
+                current.Post(() => ReceiveSnapshot(value, simulationTick));
+            };
             current.Session.PlayerReceived += value => current.Post(() => ReceivePlayer(value));
             current.Session.CueReceived += value => current.Post(() => ReceiveCue(value));
             current.Session.ArrowsReceived += value => current.Post(() => ReceiveArrows(value));
+            current.Session.TournamentChanged += value => current.Post(() => ReceiveTournament(value));
             current.Session.RecoveryReceived += value => current.Post(() =>
             {
                 error = value.Reason;
@@ -180,9 +188,15 @@ namespace Test.Client.Combat
                 if (connection != current) return;
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(current.Token);
                 timeout.CancelAfter(TimeSpan.FromSeconds(8));
-                var response = await current.Session.JoinAsync(activeRoom, playerId.Trim(), mode, timeout.Token);
+                var response = await current.Session.JoinAsync(activeRoom, playerId.Trim(), mode, timeout.Token,
+                    IsTournament && smoke == null ? PlayerPrefs.GetString(TournamentSeatKey) : null);
                 if (connection != current) return;
                 if (!AcceptJoin(response)) await DisconnectAsync();
+                else if (IsTournament && smoke == null)
+                {
+                    PlayerPrefs.SetString(TournamentSeatKey, response.ResumeToken);
+                    PlayerPrefs.Save();
+                }
             }
             catch (Exception exception)
             {
@@ -250,7 +264,7 @@ namespace Test.Client.Combat
             }
             bool inCombat = InCombat;
             if (owner != null) SetCursor(inCombat);
-            if (arena != null && mode == RainPassMode)
+            if (arena != null && GameplayMode == RainPassMode)
             {
                 PoseFighters();
                 var center = (fighters[0].Root.position + fighters[1].Root.position) * .5f + Vector3.up * 1.1f;
@@ -260,7 +274,7 @@ namespace Test.Client.Combat
             }
         }
 
-        private bool ControlsEnabled => joined != null && roomState == Running && !menu && mode == RainPassMode;
+        private bool ControlsEnabled => joined != null && roomState == Running && !menu && GameplayMode == RainPassMode;
         private bool InCombat => ControlsEnabled && IsConnected;
 
         internal void ReceiveInput(InputActionEvent action)
@@ -269,7 +283,7 @@ namespace Test.Client.Combat
             bool held = action.Phase != InputActionPhase.Released;
             if (action.Action == "pause" && pressed)
             {
-                if (roomState == Running && mode == RainPassMode)
+                if (roomState == Running && GameplayMode == RainPassMode)
                 {
                     menu = !menu;
                     ResetInput();
@@ -302,7 +316,7 @@ namespace Test.Client.Combat
 
         internal InputFrame SampleInput(bool enabled)
         {
-            if (mode == BBadsMode)
+            if (GameplayMode == BBadsMode)
                 return new InputFrame
                 {
                     SimulationTick = snapshot.ServerTick + InputLead,
@@ -341,7 +355,7 @@ namespace Test.Client.Combat
                 sending = SendInputAsync(current, frame);
                 return;
             }
-            if (mode == BBadsMode && backpackCommand == PvpButtons.None) return;
+            if (GameplayMode == BBadsMode && backpackCommand == PvpButtons.None) return;
             bool focused = owner != null && owner.BattleInput.IsFocused;
             if (!focused) ResetInput();
             var input = SampleInput(InCombat && focused);
@@ -356,7 +370,7 @@ namespace Test.Client.Combat
             try
             {
                 await current.Session.SendInputAsync(input.SimulationTick, (PvpButtons)input.Buttons,
-                    input.MoveX, input.MoveY, input.AimX, input.AimY, current.Token);
+                    input.MoveX, input.MoveY, input.AimX, input.AimY, current.Token, snapshot?.MatchId);
                 if (connection == current) smoke?.RecordSentInput();
             }
             catch (OperationCanceledException) { }
@@ -365,7 +379,7 @@ namespace Test.Client.Combat
 
         internal bool AcceptJoin(PvpJoinResponse value)
         {
-            if (value == null || !value.Accepted || string.IsNullOrEmpty(value.MatchId) ||
+            if (value == null || !value.Accepted || (!IsTournament && string.IsNullOrEmpty(value.MatchId)) ||
                 value.PlayerSlot < 0 || value.PlayerSlot >= players.Length)
             {
                 error = value?.Reason ?? "The server did not assign a player slot.";
@@ -377,7 +391,7 @@ namespace Test.Client.Combat
             return true;
         }
 
-        private bool IsCurrent(string match) => joined != null && match == joined.MatchId;
+        private bool IsCurrent(string match) => joined != null && match == (IsTournament ? tournament?.MatchId : joined.MatchId);
 
         private void ReceiveRoom(PvpRoomMessage value)
         {
@@ -387,12 +401,13 @@ namespace Test.Client.Combat
             if (!IsFinished) roomState = value.RoomState;
         }
 
-        internal void ReceiveSnapshot(PvpSnapshotMessage value)
+        internal void ReceiveSnapshot(PvpSnapshotMessage value, int simulationTick = 0)
         {
             if (value == null || !IsCurrent(value.MatchId) ||
                 value.SnapshotSequence <= (pendingSnapshot?.SnapshotSequence ?? snapshot?.SnapshotSequence ?? 0)) return;
             if (value.PlayerCount != players.Length) return;
             pendingSnapshot = value;
+            pendingSimulationTick = simulationTick;
             Array.Clear(pendingPlayers, 0, pendingPlayers.Length);
         }
 
@@ -409,7 +424,7 @@ namespace Test.Client.Combat
             pendingSnapshot = null;
             if (snapshot.RoomState == Finished || snapshot.Phase == Finished) EndMatch(snapshot.Winner);
             else if (!IsFinished) roomState = string.IsNullOrEmpty(snapshot.RoomState) ? Running : snapshot.RoomState;
-            smoke?.RecordSnapshot(snapshot, players, connection?.Session.SimulationTick ?? 0);
+            smoke?.RecordSnapshot(snapshot, players, pendingSimulationTick);
         }
 
         private void ReceiveCue(WireCue value)
@@ -423,7 +438,7 @@ namespace Test.Client.Combat
 
         internal void ReceiveArrows(IReadOnlyList<Numerics.Vector3> positions)
         {
-            if (arena == null || mode != RainPassMode) return;
+            if (arena == null || GameplayMode != RainPassMode) return;
             int count = positions?.Count ?? 0;
             for (int index = 0; index < count; index++)
             {
@@ -493,6 +508,11 @@ namespace Test.Client.Combat
         private void ResetMatchView()
         {
             joined = null;
+            ResetRoundView();
+        }
+
+        private void ResetRoundView()
+        {
             snapshot = pendingSnapshot = null;
             Array.Clear(players, 0, players.Length);
             Array.Clear(pendingPlayers, 0, pendingPlayers.Length);
@@ -508,7 +528,7 @@ namespace Test.Client.Combat
             if (arena != null)
             {
                 foreach (var arrow in arrows) arrow.gameObject.SetActive(false);
-                arena.gameObject.SetActive(mode == RainPassMode);
+                arena.gameObject.SetActive(GameplayMode == RainPassMode);
                 PoseFighters();
             }
         }
@@ -544,13 +564,15 @@ namespace Test.Client.Combat
             }
             else
             {
-                GUILayout.BeginArea(new Rect(width * .5f - 205, height * .5f - 170, 410, 340), GUI.skin.box);
-                GUILayout.Label(mode == RainPassMode ? "Rain Pass PvP" : "BBads PvP");
+                float panelHeight = IsTournament ? 468 : 340;
+                GUILayout.BeginArea(new Rect(width * .5f - 205, height * .5f - panelHeight / 2, 410, panelHeight), GUI.skin.box);
+                GUILayout.Label(IsTournament ? "Dual-Mode Tournament" : mode == RainPassMode ? "Rain Pass PvP" : "BBads PvP");
                 if (connection == null && joined == null)
                 {
                     GUILayout.BeginHorizontal();
                     if (GUILayout.Button("Rain Pass")) SelectMode(RainPassMode);
                     if (GUILayout.Button("BBads")) SelectMode(BBadsMode);
+                    if (GUILayout.Button("Tournament")) SelectMode(PvpTournamentRules.Tournament);
                     GUILayout.EndHorizontal();
                     serverUrl = Field("Server", serverUrl);
                     var editedRoom = Field("Room", roomId);
@@ -565,9 +587,10 @@ namespace Test.Client.Combat
                     if (snapshot != null)
                     {
                         if (roomState == Running && !snapshot.PeerConnected) GUILayout.Label("Opponent reconnecting");
-                        if (mode == BBadsMode) DrawBBadsPhase();
+                        if (GameplayMode == BBadsMode) DrawBBadsPhase();
                     }
-                    if (IsFinished)
+                    if (IsTournament && tournament != null && tournament.Phase != Running) DrawTournament();
+                    else if (!IsTournament && IsFinished)
                     {
                         GUILayout.Label(winner < 0 ? "Match ended" : winner == joined?.PlayerSlot ? "Victory" : "Defeat");
                         if (GUILayout.Button("Play again")) _ = PlayAgainAsync();
@@ -594,7 +617,7 @@ namespace Test.Client.Combat
             GUILayout.BeginArea(area, GUI.skin.box);
             var heading = player.PlayerId + (slot == joined?.PlayerSlot ? " (you)" : "");
             GUILayout.Label(heading);
-            if (mode == RainPassMode)
+            if (GameplayMode == RainPassMode)
             {
                 GUILayout.Label($"HP {player.Health}   Posture {player.Posture}   Arrows {player.Arrows}");
                 if (player.FacingX != 0 || player.FacingY != 0)
@@ -684,13 +707,15 @@ namespace Test.Client.Combat
 
         private async Task ReconnectAsync()
         {
-            await LeaveAsync();
+            if (IsTournament) await DisconnectAsync();
+            else await LeaveAsync();
             if (this != null && isActiveAndEnabled) await ConnectAsync();
         }
 
         internal Task LeaveAsync()
         {
             var closing = DisconnectAsync(leave: true);
+            tournament = null;
             ResetMatchView();
             return closing;
         }
